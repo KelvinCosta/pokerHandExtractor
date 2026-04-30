@@ -42,7 +42,7 @@ class GGPokerTokenizer:
         
         # Captura ações e blinds. O truque `(?:.*?\$([0-9\.]+))?` pega o ÚLTIMO valor em dólar da linha, 
         # perfeito para "raises $0.02 to $0.04"
-        self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind)(?:.*?\$([0-9\.]+))?")
+        self.re_action = self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind)(?:.*\$([0-9\.]+))?")
 
     def parse_line(self, line: str) -> Optional[Token]:
         line = line.strip()
