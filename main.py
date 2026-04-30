@@ -1,6 +1,8 @@
 from src.parser.tokenizer import GGPokerTokenizer
-from src.fsm.states import InitState, TerminalState
+from src.fsm.states import InitState
+from src.etl.loader import HandLoader
 
+# A mão bruta que vamos extrair
 raw_hand_text = """
 Poker Hand #RC4095246938: Hold'em No Limit ($0.01/$0.02) - 2025/12/03 12:11:28
 Table 'RushAndCash36790234' 6-max Seat #1 is the button
@@ -48,32 +50,34 @@ Board [Qs 2h 9s 6s 5s]
 
 def main():
     tokenizer = GGPokerTokenizer()
-    
-    # 1. Iniciamos a Máquina de Estados
     current_state = InitState()
     hand_context = None
+    
+    # Lista para simular o acúmulo de mãos processadas
+    finished_hands = []
     
     print("Iniciando o Processamento Completo (Tokenizador -> FSM)...\n")
     
     for line in raw_hand_text.strip().split('\n'):
-        # Passamos a linha pela Anti-Corruption Layer
         token = tokenizer.parse_line(line)
-        
         if token:
-            # 2. Empurramos o token para o estado atual
-            # A mágica acontece aqui: current_state é reatribuído com o próximo estado!
             current_state, hand_context = current_state.process(token, hand_context)
 
-    # No final do loop, hand_context deve conter o estado imutável de TODA a mão.
-    print("=== DUMP FINAL DO HAND CONTEXT IMUTÁVEL ===")
-    print(f"ID da Mão: {hand_context.hand_id}")
-    print(f"Pote Final: ${hand_context.current_pot:.2f}")
-    print(f"Bordo (Board): {hand_context.board_cards}")
-    print(f"Total de Ações Processadas: {len(hand_context.actions)}")
+    # Adicionamos a mão finalizada à nossa lista
+    if hand_context:
+        finished_hands.append(hand_context)
+
+    print("Iniciando a carga no Polars (ETL - Camada Silver)...\n")
     
-    print("\nÚltimas 5 ações registradas:")
-    for action in hand_context.actions[-5:]:
-        print(f" - {action.player} -> {action.action_type} (${action.amount})")
+    # Passa a lista de mãos para o Loader processar
+    loader = HandLoader()
+    df = loader.process_and_save(finished_hands)
+    
+    print("\n=== SCHEMA INFERIDO PELO POLARS ===")
+    print(df.schema)
+    
+    print("\n=== PREVIEW DO DATAFRAME (Aninhado) ===")
+    print(df)
 
 if __name__ == "__main__":
     main()
