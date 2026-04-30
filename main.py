@@ -1,83 +1,70 @@
 from src.parser.tokenizer import GGPokerTokenizer
 from src.fsm.states import InitState
 from src.etl.loader import HandLoader
+from pathlib import Path
 
-# A mão bruta que vamos extrair
-raw_hand_text = """
-Poker Hand #RC4095246938: Hold'em No Limit ($0.01/$0.02) - 2025/12/03 12:11:28
-Table 'RushAndCash36790234' 6-max Seat #1 is the button
-Seat 1: db22980c ($3.83 in chips)
-Seat 2: Hero ($0.66 in chips)
-Seat 3: 3d3afbef ($2.67 in chips)
-Seat 4: a56c444f ($1.03 in chips)
-Seat 5: 2ab6828d ($2.43 in chips)
-Seat 6: 3eeb7226 ($1.47 in chips)
-Hero: posts small blind $0.01
-3d3afbef: posts big blind $0.02
-*** HOLE CARDS ***
-Dealt to db22980c 
-Dealt to Hero [4h Jh]
-Dealt to 3d3afbef 
-Dealt to a56c444f 
-Dealt to 2ab6828d 
-Dealt to 3eeb7226 
-a56c444f: raises $0.02 to $0.04
-2ab6828d: folds
-3eeb7226: calls $0.04
-db22980c: folds
-Hero: folds
-3d3afbef: folds
-*** FLOP *** [Qs 2h 9s]
-a56c444f: checks
-3eeb7226: bets $0.06
-a56c444f: calls $0.06
-*** TURN *** [Qs 2h 9s] [6s]
-a56c444f: checks
-3eeb7226: bets $0.12
-a56c444f: calls $0.12
-*** RIVER *** [Qs 2h 9s 6s] [5s]
-a56c444f: checks
-3eeb7226: bets $0.24
-a56c444f: calls $0.24
-3eeb7226: shows [Js 8s] (a flush Queen high)
-a56c444f: shows [Kh Ts] (a flush Queen high)
-*** SHOWDOWN ***
-3eeb7226 collected $0.88 from pot
-*** SUMMARY ***
-Total pot $0.95 | Rake $0.04 | Jackpot $0.03 | Bingo $0 | Fortune $0 | Tax $0
-Board [Qs 2h 9s 6s 5s]
-"""
-
-def main():
+def process_file(filepath: Path) -> list:
+    """Processa um único arquivo de texto e retorna a lista de mãos parseadas."""
     tokenizer = GGPokerTokenizer()
     current_state = InitState()
     hand_context = None
-    
-    # Lista para simular o acúmulo de mãos processadas
     finished_hands = []
     
-    print("Iniciando o Processamento Completo (Tokenizador -> FSM)...\n")
+    print(f" -> Lendo o arquivo: {filepath.name}...")
     
-    for line in raw_hand_text.strip().split('\n'):
-        token = tokenizer.parse_line(line)
-        if token:
-            current_state, hand_context = current_state.process(token, hand_context)
+    with open(filepath, 'r', encoding='utf-8') as file:
+        for line in file:
+            token = tokenizer.parse_line(line)
+            if token:
+                # Se for o início de uma NOVA mão e já tínhamos um contexto aberto,
+                # significa que a mão anterior acabou de fato. Salvamos e resetamos.
+                if token.__class__.__name__ == "HandStartEvent" and hand_context is not None:
+                    finished_hands.append(hand_context)
+                    current_state = InitState()
+                    hand_context = None
 
-    # Adicionamos a mão finalizada à nossa lista
-    if hand_context:
-        finished_hands.append(hand_context)
+                # Empurra o token para a Máquina de Estados
+                current_state, hand_context = current_state.process(token, hand_context)
 
-    print("Iniciando a carga no Polars (ETL - Camada Silver)...\n")
+        # Fim do arquivo (EOF - End Of File). 
+        # Não podemos esquecer de salvar a última mão que ficou retida na memória!
+        if hand_context is not None:
+            finished_hands.append(hand_context)
+            
+    return finished_hands
+
+def main():
+    # 1. Define os caminhos das camadas do nosso Data Lake local
+    bronze_dir = Path("D:/ggpoker/Dados/bronze")
+    silver_dir = Path("D:/ggpoker/Dados/silver")
     
-    # Passa a lista de mãos para o Loader processar
-    loader = HandLoader()
-    df = loader.process_and_save(finished_hands)
+    # Garante que a pasta bronze exista (para não quebrar se for a primeira vez)
+    bronze_dir.mkdir(parents=True, exist_ok=True)
+
+    # 2. Busca todos os arquivos .txt dentro da camada bronze
+    txt_files = list(bronze_dir.glob("*.txt"))
+
+    if not txt_files:
+        print(f"⚠️ Nenhum arquivo .txt encontrado em '{bronze_dir}'.")
+        print("Cole seus históricos de mãos lá e rode o script novamente.")
+        return
+
+    print(f"🚀 Iniciando Processamento Batch ({len(txt_files)} arquivos encontrados na Bronze)...\n")
     
-    print("\n=== SCHEMA INFERIDO PELO POLARS ===")
-    print(df.schema)
+    all_finished_hands = []
+
+    # 3. Itera sobre cada arquivo encontrado e acumula os resultados
+    for file_path in txt_files:
+        hands_from_file = process_file(file_path)
+        all_finished_hands.extend(hands_from_file)
+
+    print(f"\n✅ Extração concluída! Total geral de mãos em memória: {len(all_finished_hands)}")
+    print("💾 Iniciando a carga no Polars (ETL - Camada Silver)...\n")
     
-    print("\n=== PREVIEW DO DATAFRAME (Aninhado) ===")
-    print(df)
+    # 4. Envia tudo para o Loader salvar em um único Parquet massivo
+    # Note que passamos o silver_dir convertendo pra string, pois o os.path no Loader espera string
+    loader = HandLoader(output_dir=str(silver_dir))
+    df = loader.process_and_save(all_finished_hands, filename="historico_consolidado.parquet")
 
 if __name__ == "__main__":
     main()

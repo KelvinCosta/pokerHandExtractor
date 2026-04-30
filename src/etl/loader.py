@@ -8,7 +8,7 @@ class HandLoader:
     Responsável por converter os objetos de domínio em DataFrames aninhados
     e persisti-los no disco (Camada Silver).
     """
-    def __init__(self, output_dir: str = "data/silver"):
+    def __init__(self, output_dir: str = "D:/ggpoker/Dados/silver"):
         self.output_dir = output_dir
         # Garante que a pasta de destino exista
         os.makedirs(self.output_dir, exist_ok=True)
