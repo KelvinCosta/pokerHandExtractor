@@ -1,6 +1,6 @@
 from src.parser.tokenizer import GGPokerTokenizer
+from src.fsm.states import InitState, TerminalState
 
-# A mão que você forneceu, colada como uma string bruta
 raw_hand_text = """
 Poker Hand #RC4095246938: Hold'em No Limit ($0.01/$0.02) - 2025/12/03 12:11:28
 Table 'RushAndCash36790234' 6-max Seat #1 is the button
@@ -44,24 +44,36 @@ a56c444f: shows [Kh Ts] (a flush Queen high)
 *** SUMMARY ***
 Total pot $0.95 | Rake $0.04 | Jackpot $0.03 | Bingo $0 | Fortune $0 | Tax $0
 Board [Qs 2h 9s 6s 5s]
-Seat 1: db22980c (button) folded before Flop (didn't bet)
-Seat 2: Hero (small blind) folded before Flop
-Seat 3: 3d3afbef (big blind) folded before Flop
-Seat 4: a56c444f showed [Kh Ts] and lost with a flush Queen high
-Seat 5: 2ab6828d folded before Flop (didn't bet)
-Seat 6: 3eeb7226 showed [Js 8s] and won ($0.88) with a flush Queen high
 """
 
 def main():
     tokenizer = GGPokerTokenizer()
     
-    print("Iniciando o Parsing de Eventos (Camada Pydantic)...\n")
+    # 1. Iniciamos a Máquina de Estados
+    current_state = InitState()
+    hand_context = None
+    
+    print("Iniciando o Processamento Completo (Tokenizador -> FSM)...\n")
     
     for line in raw_hand_text.strip().split('\n'):
-        event = tokenizer.parse_line(line)
-        if event:
-            # Imprimimos o evento Pydantic gerado
-            print(event)
+        # Passamos a linha pela Anti-Corruption Layer
+        token = tokenizer.parse_line(line)
+        
+        if token:
+            # 2. Empurramos o token para o estado atual
+            # A mágica acontece aqui: current_state é reatribuído com o próximo estado!
+            current_state, hand_context = current_state.process(token, hand_context)
+
+    # No final do loop, hand_context deve conter o estado imutável de TODA a mão.
+    print("=== DUMP FINAL DO HAND CONTEXT IMUTÁVEL ===")
+    print(f"ID da Mão: {hand_context.hand_id}")
+    print(f"Pote Final: ${hand_context.current_pot:.2f}")
+    print(f"Bordo (Board): {hand_context.board_cards}")
+    print(f"Total de Ações Processadas: {len(hand_context.actions)}")
+    
+    print("\nÚltimas 5 ações registradas:")
+    for action in hand_context.actions[-5:]:
+        print(f" - {action.player} -> {action.action_type} (${action.amount})")
 
 if __name__ == "__main__":
     main()
