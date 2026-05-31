@@ -25,12 +25,7 @@ class CardsRevealedEvent(BaseModel):
     player: str
     cards: str
 
-# O tipo Token pode ser qualquer um desses três eventos
 Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent]
-
-# ==========================================
-# 2. O MOTOR DO TOKENIZADOR
-# ==========================================
 
 class GGPokerTokenizer:
     """
@@ -43,6 +38,7 @@ class GGPokerTokenizer:
         self.re_action = self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind)(?:.*\$([0-9\.]+))?")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
+        self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
 
     def parse_line(self, line: str) -> Optional[Token]:
         line = line.strip()
@@ -75,4 +71,7 @@ class GGPokerTokenizer:
         if match_shows:
             return CardsRevealedEvent(player=match_shows.group(1).strip(), cards=match_shows.group(2))
 
+        match_mucks = self.re_mucks.search(line)
+        if match_mucks:
+            return CardsRevealedEvent(player=match_mucks.group(1).strip(), cards=match_mucks.group(2))
         return None
