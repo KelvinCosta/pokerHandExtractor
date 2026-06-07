@@ -48,38 +48,59 @@ def main():
 
     # =========================================================================
     # QUERY 3: AUDITORIA DO PROTOCOLO (Sizing de 75% no River)
-    # Filtra mãos exatas onde Hero apostou por valor no River e o vilão pagou
+    # Exclusivo para Rush & Cash (RnC)
     # =========================================================================
-    print("\n🎯 RELATÓRIO DE EXTRAÇÃO NO RIVER (Hero BET -> Villain CALL):")
+    print("\n🎯 RELATÓRIO DE EXTRAÇÃO NO RIVER (Hero BET -> Villain CALL) - APENAS RUSH & CASH:")
     
     auditoria_river = (
         df_actions
-        .filter(pl.col("street") == "RIVER")
+        # 1. Segregação de Dados: Apenas Cash Game (RC) e na aba do River
+        .filter(
+            (pl.col("hand_id").str.starts_with("RC")) & 
+            (pl.col("street") == "RIVER")
+        )
         .group_by("hand_id")
         .agg(
+            # O pote final consolidado
             pl.col("current_pot").first().alias("pote_final"),
-            # Isola apenas a aposta do Hero na rua
+            
+            # A soma de todo o capital injectado na mesa apenas no River
+            pl.col("amount").filter(
+                pl.col("action_type").is_in(["BET", "CALL", "RAISE"])
+            ).sum().alias("investimento_total_river"),
+            
+            # O isolamento da sua aposta
             pl.col("amount").filter(
                 (pl.col("player") == "Hero") & 
                 (pl.col("action_type") == "BET")
             ).sum().alias("hero_bet_amount"),
-            # Isola e conta se houve pagamento de terceiros
+            
+            # O contador de pagamentos de terceiros
             pl.col("player").filter(
                 (pl.col("player") != "Hero") & 
                 (pl.col("action_type") == "CALL")
             ).count().alias("qtd_calls_recebidos")
         )
-        # Retorna estritamente as instâncias que satisfazem a regra do deploy
+        # 2. Mantém estritamente as instâncias de sucesso (Bet e Call)
         .filter(
             (pl.col("hero_bet_amount") > 0) & 
             (pl.col("qtd_calls_recebidos") > 0)
         )
-        .sort("pote_final", descending=True)
+        # 3. Feature Engineering: Cálculo dinâmico em memória
+        .with_columns(
+            (pl.col("pote_final") - pl.col("investimento_total_river")).alias("pote_anterior")
+        )
+        .with_columns(
+            ((pl.col("hero_bet_amount") / pl.col("pote_anterior")) * 100).round(1).alias("sizing_pct")
+        )
+        # 4. Ordenação Crítica: Traz as falhas de protocolo (menores percentagens) para o topo
+        .sort("sizing_pct", descending=False)
     )
     
-    print(f"Total de potes extraídos no River sob essas condições: {auditoria_river.height}")
-    print("\nTop 10 Maiores Potes Extraídos:")
-    print(auditoria_river.head(10))
+    print(f"Total de potes extraídos no River (Rush & Cash): {auditoria_river.height}")
+    print("\nDetalhamento dos Dimensionamentos Aplicados (Do Pior para o Melhor):")
+    # Mostra um ecrã limpo com o ID da mão para revisão manual posterior
+    print(auditoria_river.select(["hand_id", "pote_anterior", "hero_bet_amount", "sizing_pct"]).head(15))
 
 if __name__ == "__main__":
     main()
