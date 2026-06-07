@@ -163,52 +163,6 @@ df_mapeamento = (
 
 # Pesquisa e Tabela
 st.write("📝 **Edição Rápida (Dê um duplo clique na célula da coluna 'notas_vilao' para editar)**")
-pesquisa_vilao = st.text_input("🔍 Buscar Vilão Específico na Tabela:")
-
-if pesquisa_vilao:
-    df_mapeamento = df_mapeamento.filter(
-        pl.col("player").str.to_lowercase().str.contains(pesquisa_vilao.lower())
-    )
-
-edited_df = st.data_editor(
-    df_mapeamento.to_pandas(),
-    use_container_width=True,
-    height=400,
-    disabled=["player", "cartas_vilao", "board", "hand_id", "resultado"], 
-    key="data_editor_viloes"
-)
-
-if st.button("💾 Salvar Todas as Edições no Banco de Tags"):
-    # Carrega o estado atual do disco
-    tags_atuais = carregar_tags()
-    
-    # Isola apenas as linhas onde você escreveu alguma coisa
-    linhas_com_nota = edited_df.dropna(subset=['notas_vilao'])
-    
-    mudancas = 0
-    # Itera sobre o Pandas DataFrame resultante da edição
-    for _, row in linhas_com_nota.iterrows():
-        jogador = row['player']
-        nota = str(row['notas_vilao']).strip()
-        
-        # Só regista se for uma nota válida e diferente do que já estava no JSON
-        if nota != "" and tags_atuais.get(jogador) != nota:
-            tags_atuais[jogador] = nota
-            mudancas += 1
-            
-    # Persistência atómica no disco
-    if mudancas > 0:
-        with open(ARQUIVO_TAGS, "w", encoding="utf-8") as f:
-            json.dump(tags_atuais, f, indent=4, ensure_ascii=False)
-        st.success(f"✅ {mudancas} anotações atualizadas e sincronizadas!")
-        st.rerun() # Recarrega a página para espalhar a tag por todas as mãos daquele vilão
-    else:
-        st.info("Nenhuma alteração nova detectada.")
-
-# =====================================================================
-# CONTROLO DE ORDENAÇÃO EXPLÍCITO (Gestão de Estado no Backend)
-# =====================================================================
-st.write("🔀 **Controlo de Visualização**")
 col_sort1, col_sort2 = st.columns([2, 2])
 
 with col_sort1:
@@ -228,7 +182,6 @@ with col_sort2:
         horizontal=True
     )
 
-# Aplica a ordenação no motor Rust (Polars) antes de renderizar
 is_desc = ordem_direcao.startswith("Decrescente")
 df_mapeamento = df_mapeamento.sort(
     coluna_ordenacao, 
@@ -236,8 +189,75 @@ df_mapeamento = df_mapeamento.sort(
     nulls_last=True
 )
 
-# Renderiza a tabela já processada e estruturada
-st.dataframe(df_mapeamento, use_container_width=True, height=400)
+pesquisa_vilao = st.text_input("🔍 Buscar Vilão Específico na Tabela:")
+
+if pesquisa_vilao:
+    df_mapeamento = df_mapeamento.filter(
+        pl.col("player").str.to_lowercase().str.contains(pesquisa_vilao.lower())
+    )
+
+edited_df = st.data_editor(
+    df_mapeamento.to_pandas(),
+    use_container_width=True,
+    height=400,
+    disabled=["player", "cartas_vilao", "board", "hand_id", "resultado"], 
+    key="data_editor_viloes"
+)
+
+if st.button("💾 Salvar Todas as Edições no Banco de Tags"):
+    tags_atuais = carregar_tags()
+    linhas_com_nota = edited_df.dropna(subset=['notas_vilao'])
+    
+    mudancas = 0
+    for _, row in linhas_com_nota.iterrows():
+        jogador = row['player']
+        nota = str(row['notas_vilao']).strip()
+        
+        if nota != "" and tags_atuais.get(jogador) != nota:
+            tags_atuais[jogador] = nota
+            mudancas += 1
+            
+    if mudancas > 0:
+        with open(ARQUIVO_TAGS, "w", encoding="utf-8") as f:
+            json.dump(tags_atuais, f, indent=4, ensure_ascii=False)
+        st.success(f"✅ {mudancas} anotações atualizadas e sincronizadas!")
+        st.rerun() 
+    else:
+        st.info("Nenhuma alteração nova detectada.")
+
+# # =====================================================================
+# # CONTROLO DE ORDENAÇÃO EXPLÍCITO (Gestão de Estado no Backend)
+# # =====================================================================
+# st.write("🔀 **Controlo de Visualização**")
+# col_sort1, col_sort2 = st.columns([2, 2])
+
+# with col_sort1:
+#     # Extrai a lista de colunas disponíveis dinamicamente
+#     colunas_disponiveis = df_mapeamento.columns
+#     coluna_ordenacao = st.selectbox(
+#         "Ordenar tabela pela coluna:",
+#         options=colunas_disponiveis,
+#         # Define o 'player' como padrão
+#         index=colunas_disponiveis.index("player") if "player" in colunas_disponiveis else 0 
+#     )
+    
+# with col_sort2:
+#     ordem_direcao = st.radio(
+#         "Direção da ordenação:",
+#         options=["Crescente (A-Z / 0-9)", "Decrescente (Z-A / 9-0)"],
+#         horizontal=True
+#     )
+
+# # Aplica a ordenação no motor Rust (Polars) antes de renderizar
+# is_desc = ordem_direcao.startswith("Decrescente")
+# df_mapeamento = df_mapeamento.sort(
+#     coluna_ordenacao, 
+#     descending=is_desc,
+#     nulls_last=True
+# )
+
+# # Renderiza a tabela já processada e estruturada
+# st.dataframe(df_mapeamento, use_container_width=True, height=400)
 
 # =====================================================================
 # MÓDULO FINANCEIRO: ATMs vs NEMESIS (Rastreamento de Lucro por Vilão)
