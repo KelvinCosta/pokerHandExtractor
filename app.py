@@ -143,31 +143,67 @@ df_mapeamento = (
 # =====================================================================
 
 # Usamos st.form para evitar que a tela pisque a cada letra digitada
-with st.form("form_anotacao"):
-    st.write("✍️ **Adicionar ou Editar Perfil do Vilão**")
-    col_input1, col_input2, col_input3 = st.columns([2, 4, 1])
+# with st.form("form_anotacao"):
+#     st.write("✍️ **Adicionar ou Editar Perfil do Vilão**")
+#     col_input1, col_input2, col_input3 = st.columns([2, 4, 1])
     
-    with col_input1:
-        input_nome = st.text_input("Nome exato (ex: AlienPoker99):")
-    with col_input2:
-        input_tag = st.text_input("Anotação (ex: Fish - Paga tudo no River):")
-    with col_input3:
-        st.write("") # Espaçamento
-        st.write("") # Espaçamento
-        submit_tag = st.form_submit_button("💾 Salvar")
+#     with col_input1:
+#         input_nome = st.text_input("Nome exato (ex: AlienPoker99):")
+#     with col_input2:
+#         input_tag = st.text_input("Anotação (ex: Fish - Paga tudo no River):")
+#     with col_input3:
+#         st.write("") # Espaçamento
+#         st.write("") # Espaçamento
+#         submit_tag = st.form_submit_button("💾 Salvar")
         
-    if submit_tag and input_nome:
-        salvar_tag(input_nome, input_tag)
-        st.success(f"Tag de '{input_nome}' salva com sucesso!")
-        st.rerun() # Reinicia a aplicação para a tabela puxar os dados atualizados
+#     if submit_tag and input_nome:
+#         salvar_tag(input_nome, input_tag)
+#         st.success(f"Tag de '{input_nome}' salva com sucesso!")
+#         st.rerun() # Reinicia a aplicação para a tabela puxar os dados atualizados
 
 # Pesquisa e Tabela
+st.write("📝 **Edição Rápida (Dê um duplo clique na célula da coluna 'notas_vilao' para editar)**")
 pesquisa_vilao = st.text_input("🔍 Buscar Vilão Específico na Tabela:")
 
 if pesquisa_vilao:
     df_mapeamento = df_mapeamento.filter(
         pl.col("player").str.to_lowercase().str.contains(pesquisa_vilao.lower())
     )
+
+edited_df = st.data_editor(
+    df_mapeamento.to_pandas(),
+    use_container_width=True,
+    height=400,
+    disabled=["player", "cartas_vilao", "board", "hand_id", "resultado"], 
+    key="data_editor_viloes"
+)
+
+if st.button("💾 Salvar Todas as Edições no Banco de Tags"):
+    # Carrega o estado atual do disco
+    tags_atuais = carregar_tags()
+    
+    # Isola apenas as linhas onde você escreveu alguma coisa
+    linhas_com_nota = edited_df.dropna(subset=['notas_vilao'])
+    
+    mudancas = 0
+    # Itera sobre o Pandas DataFrame resultante da edição
+    for _, row in linhas_com_nota.iterrows():
+        jogador = row['player']
+        nota = str(row['notas_vilao']).strip()
+        
+        # Só regista se for uma nota válida e diferente do que já estava no JSON
+        if nota != "" and tags_atuais.get(jogador) != nota:
+            tags_atuais[jogador] = nota
+            mudancas += 1
+            
+    # Persistência atómica no disco
+    if mudancas > 0:
+        with open(ARQUIVO_TAGS, "w", encoding="utf-8") as f:
+            json.dump(tags_atuais, f, indent=4, ensure_ascii=False)
+        st.success(f"✅ {mudancas} anotações atualizadas e sincronizadas!")
+        st.rerun() # Recarrega a página para espalhar a tag por todas as mãos daquele vilão
+    else:
+        st.info("Nenhuma alteração nova detectada.")
 
 # =====================================================================
 # CONTROLO DE ORDENAÇÃO EXPLÍCITO (Gestão de Estado no Backend)
@@ -194,7 +230,79 @@ with col_sort2:
 
 # Aplica a ordenação no motor Rust (Polars) antes de renderizar
 is_desc = ordem_direcao.startswith("Decrescente")
-df_mapeamento = df_mapeamento.sort(coluna_ordenacao, descending=is_desc)
+df_mapeamento = df_mapeamento.sort(
+    coluna_ordenacao, 
+    descending=is_desc,
+    nulls_last=True
+)
 
 # Renderiza a tabela já processada e estruturada
 st.dataframe(df_mapeamento, use_container_width=True, height=400)
+
+# =====================================================================
+# MÓDULO FINANCEIRO: ATMs vs NEMESIS (Rastreamento de Lucro por Vilão)
+# =====================================================================
+st.divider()
+st.subheader("⚔️ Ranking de Rivalidade (ATMs vs Nemesis)")
+
+# 1. Calcula o Investimento Total do Hero por Mão
+df_hero_investido = (
+    df.filter(
+        (pl.col("player") == "Hero") & 
+        (pl.col("action_type").is_in(["SMALL BLIND", "BIG BLIND", "POST", "BET", "CALL", "RAISE"]))
+    )
+    .group_by("hand_id")
+    .agg(pl.col("amount").sum().alias("hero_colocou"))
+)
+
+# 2. Calcula o Retorno do Hero por Mão (Se não ganhou, é 0)
+df_hero_ganhou = (
+    df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
+    .group_by("hand_id")
+    .agg(pl.col("amount").sum().alias("hero_puxou"))
+)
+
+# 3. Consolida o PnL (Profit and Loss) do Hero por Mão
+df_hero_pnl = (
+    df.select("hand_id").unique()
+    .join(df_hero_investido, on="hand_id", how="left")
+    .join(df_hero_ganhou, on="hand_id", how="left")
+    .fill_null(0.0) # Proteção contra nulos onde o Hero não agiu
+    .with_columns(
+        (pl.col("hero_puxou") - pl.col("hero_colocou")).round(2).alias("lucro_liquido_hero")
+    )
+)
+
+# 4. Cruza o PnL com a dimensão de Tags (Avalia apenas os vilões que você já mapeou)
+if not df_tags.is_empty():
+    df_confrontos = (
+        df_viloes.join(df_tags, on="player", how="inner") # Inner Join: Ignora os ofuscados sem Tag
+        .join(df_hero_pnl, on="hand_id", how="inner")
+        .group_by(["player", "notas_vilao"])
+        .agg(
+            pl.col("lucro_liquido_hero").sum().round(2).alias("saldo_financeiro"),
+            pl.col("hand_id").count().alias("potes_disputados")
+        )
+        .with_columns(
+            pl.when(pl.col("saldo_financeiro") > 0).then(pl.lit("💰 ATM"))
+            .when(pl.col("saldo_financeiro") < 0).then(pl.lit("💀 Nemesis"))
+            .otherwise(pl.lit("⚖️ Break-even")).alias("classificacao")
+        )
+    )
+
+    # 5. Interface Dividida: Renderiza os dois extremos do espetro
+    col_atm, col_nemesis = st.columns(2)
+
+    with col_atm:
+        st.success("💰 Os seus ATMs (Lucro Máximo Extraído)")
+        df_atms = df_confrontos.filter(pl.col("saldo_financeiro") > 0).sort("saldo_financeiro", descending=True)
+        st.dataframe(df_atms.to_pandas(), use_container_width=True, hide_index=True)
+
+    with col_nemesis:
+        st.error("💀 As suas Nemesis (Vazamento Máximo)")
+        # Ordem ascendente para colocar as maiores perdas (números mais negativos) no topo
+        df_nems = df_confrontos.filter(pl.col("saldo_financeiro") < 0).sort("saldo_financeiro", descending=False)
+        st.dataframe(df_nems.to_pandas(), use_container_width=True, hide_index=True)
+        
+else:
+    st.info("O painel de rivalidade será ativado assim que gravar a primeira anotação num vilão.")
