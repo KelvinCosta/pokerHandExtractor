@@ -1,32 +1,44 @@
-from dataclasses import dataclass, field
-from typing import Tuple, Optional, Dict
+from dataclasses import dataclass, field, replace
+from typing import Tuple, Mapping
+from enum import Enum, auto
+
+class Street(Enum):
+    PRE_FLOP = auto()
+    FLOP = auto()
+    TURN = auto()
+    RIVER = auto()
+
+class ActionType(Enum):
+    POST = auto()
+    FOLD = auto()
+    CHECK = auto()
+    CALL = auto()
+    BET = auto()
+    RAISE = auto()
+    COLLECT = auto()
 
 @dataclass(frozen=True, slots=True)
 class Action:
     player: str
-    action_type: str
-    street: str  # PRE-FLOP, FLOP, TURN, RIVER
+    action_type: ActionType
+    street: Street 
     amount: float = 0.0
 
 @dataclass(frozen=True, slots=True)
 class HandContext:
     hand_id: str
-    current_pot: float = 0.0
     actions: Tuple[Action, ...] = field(default_factory=tuple)
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
-    # Mapeia Jogador -> Cartas (Ex: {"Hero": "AhKh", "3eeb7226": "Js8s"})
-    player_cards: Dict[str, str] = field(default_factory=dict)
+    player_cards: Mapping[str, str] = field(default_factory=dict)
+
+    @property
+    def current_pot(self) -> float:
+        return sum(action.amount for action in self.actions if action.action_type not in (ActionType.COLLECT, ActionType.FOLD))
 
     def add_action(self, action: Action) -> 'HandContext':
-        from dataclasses import replace
-        return replace(
-            self,
-            actions=self.actions + (action,),
-            current_pot=self.current_pot + action.amount
-        )
+        return replace(self, actions=self.actions + (action,))
     
     def set_player_cards(self, player: str, cards: str) -> 'HandContext':
-        from dataclasses import replace
-        new_cards = self.player_cards.copy()
+        new_cards = dict(self.player_cards)
         new_cards[player] = cards
         return replace(self, player_cards=new_cards)
