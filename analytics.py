@@ -2,49 +2,40 @@ import polars as pl
 from pathlib import Path
 
 def main():
-    # Caminho do nosso banco de dados da Camada Silver
-    # Ajuste o caminho se necessário com base no log do seu terminal
-    silver_file = Path("D:/ggpoker/Dados/silver/historico_consolidado.parquet")
+    # Remove limite de linhas no console para relatórios
+    pl.Config.set_tbl_rows(-1)
     
-    print("📥 Carregando o Data Lake (Silver Layer)...")
-    df_mãos = pl.read_parquet(silver_file)
-    print(f"✅ Mãos únicas na memória: {df_mãos.height}\n")
+    silver_path = "D:/ggpoker/Dados/silver/*.parquet"
     
-    # =========================================================================
-    # A MÁGICA: O EXPLODE E O UNNEST
-    # Transformando dados aninhados em formato tabular relacional instantaneamente
-    # =========================================================================
-    print("💥 Criando a visualização analítica (Camada Gold) via DataFrame.explode()...")
-    df_actions = (
-        df_mãos
-        # Se uma mão teve 10 ações na lista, o explode() cria 10 linhas repetindo o ID da mão
-        .explode("actions") 
-        # O unnest() pega as propriedades internas da Struct (player, action, amount) e vira colunas!
-        .unnest("actions")  
-    )
+    print("📥 Construindo Plano de Execução (Lazy Mode)...")
+    lazy_df = pl.scan_parquet(silver_path)
     
-    print("\n=== PREVIEW DA TABELA EXPLODIDA ===")
-    print(df_actions.head(5))
-    print(f"Total de ações individuais processadas: {df_actions.height}")
+    # 1. Fase Preguiçosa (Sem uso de RAM)
+    df_actions_lazy = lazy_df.explode("actions").unnest("actions")
+    
+    print("🛠️ Materializando os dados em memória (collect)...")
+    # 2. Fase de Materialização (Nomes de variáveis distintos impedem o UnboundLocalError)
+    df_actions = df_actions_lazy.collect()
+    
+    print(f"✅ Mãos únicas processadas: {df_actions.select('hand_id').n_unique()}")
+    print(f"✅ Ações individuais em memória: {df_actions.height}\n")
 
     # =========================================================================
     # QUERY 1: ANÁLISE DE POPULAÇÃO (MDA)
-    # Quais são os 5 jogadores mais agressivos do seu field? (Que mais deram Raise)
     # =========================================================================
-    print("\n🔥 TOP 5 JOGADORES MAIS AGRESSIVOS (Frequência Bruta de 'RAISES'):")
+    print("🔥 TOP 5 JOGADORES MAIS AGRESSIVOS (Frequência Bruta de 'RAISE'):")
     top_agressores = (
         df_actions
-        .filter(pl.col("action_type") == "RAISES") # Filtra apenas as ações de Raise
-        .group_by("player")                        # Agrupa pelo nome do jogador
-        .agg(pl.len().alias("total_raises"))       # Conta quantas vezes aconteceu
-        .sort("total_raises", descending=True)     # Ordena do maior pro menor
-        .head(5)                                   # Pega o Top 5
+        .filter(pl.col("action_type") == "RAISE") # Filtro normalizado
+        .group_by("player")
+        .agg(pl.len().alias("total_raises"))
+        .sort("total_raises", descending=True)
+        .head(5)
     )
     print(top_agressores)
 
     # =========================================================================
     # QUERY 2: ESTATÍSTICA MACRO DA NL2
-    # Qual é a distribuição total de ações em toda essa amostra?
     # =========================================================================
     print("\n📊 DISTRIBUIÇÃO GLOBAL DE AÇÕES DA POPULAÇÃO DA NL2:")
     distribuicao_acoes = (
@@ -54,6 +45,41 @@ def main():
         .sort("ocorrencias", descending=True)
     )
     print(distribuicao_acoes)
+
+    # =========================================================================
+    # QUERY 3: AUDITORIA DO PROTOCOLO (Sizing de 75% no River)
+    # Filtra mãos exatas onde Hero apostou por valor no River e o vilão pagou
+    # =========================================================================
+    print("\n🎯 RELATÓRIO DE EXTRAÇÃO NO RIVER (Hero BET -> Villain CALL):")
+    
+    auditoria_river = (
+        df_actions
+        .filter(pl.col("street") == "RIVER")
+        .group_by("hand_id")
+        .agg(
+            pl.col("current_pot").first().alias("pote_final"),
+            # Isola apenas a aposta do Hero na rua
+            pl.col("amount").filter(
+                (pl.col("player") == "Hero") & 
+                (pl.col("action_type") == "BET")
+            ).sum().alias("hero_bet_amount"),
+            # Isola e conta se houve pagamento de terceiros
+            pl.col("player").filter(
+                (pl.col("player") != "Hero") & 
+                (pl.col("action_type") == "CALL")
+            ).count().alias("qtd_calls_recebidos")
+        )
+        # Retorna estritamente as instâncias que satisfazem a regra do deploy
+        .filter(
+            (pl.col("hero_bet_amount") > 0) & 
+            (pl.col("qtd_calls_recebidos") > 0)
+        )
+        .sort("pote_final", descending=True)
+    )
+    
+    print(f"Total de potes extraídos no River sob essas condições: {auditoria_river.height}")
+    print("\nTop 10 Maiores Potes Extraídos:")
+    print(auditoria_river.head(10))
 
 if __name__ == "__main__":
     main()

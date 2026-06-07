@@ -1,26 +1,32 @@
 import polars as pl
 from pathlib import Path
+import os
 
 def process_hand_data(row):
     player = row.get("player")
     p_cards = row.get("player_cards")
     
-    # Se não tem cartas para esse jogador, retorna nulo para as duas features
-    if not isinstance(p_cards, dict) or not player:
+    # FIX 1: O esquema mudou. p_cards agora é uma LISTA de dicionários.
+    if not isinstance(p_cards, list) or not player:
         return {"combo": None, "hand_canonical": None}
         
-    raw_combo = p_cards.get(player)
+    raw_combo = None
+    # Itera sobre a lista para achar as cartas específicas do jogador que fez a ação
+    for item in p_cards:
+        if item and item.get("player") == player:
+            raw_combo = item.get("cards")
+            break
+            
     if not raw_combo:
         return {"combo": None, "hand_canonical": None}
         
-    # 1. Separa as cartas (Ex: "[Ac Ah]" -> ["Ac", "Ah"])
+    # 1. Separa as cartas (Ex: "Ac Ah" -> ["Ac", "Ah"])
     cards = raw_combo.replace("[", "").replace("]", "").strip().split()
     if len(cards) != 2:
         return {"combo": None, "hand_canonical": None}
         
     # 2. ORDENAÇÃO OFICIAL DE POKER
     ranks = "23456789TJQKA"
-    # O sinal de menos (-) garante que A (índice 12) venha antes de K (índice 11)
     cards.sort(key=lambda c: (-ranks.index(c[0]) if c[0] in ranks else 0, c[1]))
     
     combo_str = f"{cards[0]} {cards[1]}"
@@ -39,18 +45,25 @@ def process_hand_data(row):
     return {"combo": combo_str, "hand_canonical": canonical}
 
 def main():
-    # Para não cortar as linhas no terminal
     pl.Config.set_tbl_rows(-1)
     
-    silver_file = Path("D:/ggpoker/Dados/silver/historico_consolidado.parquet")
-    print("📥 Carregando Silver Layer...")
-    df_mãos = pl.read_parquet(silver_file)
+    # Define os caminhos
+    silver_path = "D:/ggpoker/Dados/silver/hands_part_*.parquet" # O asterisco (*) pega TODOS os lotes!
+    gold_dir = "D:/ggpoker/Dados/gold"
+    os.makedirs(gold_dir, exist_ok=True) # Garante que a pasta Gold existe
     
-    # Explode a lista de ações
-    df_actions = df_mãos.explode("actions").unnest("actions")
+    print("📥 Escaneando o Data Lake (Lazy Mode em todos os Parquets)...")
+    # pl.scan_parquet não carrega o arquivo na RAM, ele cria um plano de execução otimizado
+    lazy_df = pl.scan_parquet(silver_path)
+    
+    # Desdobra as ações de forma preguiçosa (ainda sem usar memória)
+    df_actions_lazy = lazy_df.explode("actions").unnest("actions")
 
-    print("🛠️ Processando cartas (Extração, Ordenação por Força e Canônica)...")
-    # NATIVE POLARS WAY: Uma única passagem mapeando para um Struct (Dicionário)
+    print("🛠️ Coletando os dados processados na RAM e mapeando cartas...")
+    # O .collect() é o gatilho final. O Polars agora lê os HDs e processa tudo de uma vez.
+    df_actions = df_actions_lazy.collect()
+    
+    # Aplica a função de mapeamento (requer DataFrame materializado)
     df_actions = df_actions.with_columns(
         pl.struct(["player", "player_cards"])
         .map_elements(process_hand_data, return_dtype=pl.Struct({"combo": pl.Utf8, "hand_canonical": pl.Utf8}))
@@ -65,7 +78,7 @@ def main():
         df_actions
         .filter(
             (pl.col("street") == "RIVER") & 
-            (pl.col("action_type") == "CALLS") &
+            (pl.col("action_type") == "CALL") & # FIX 2: Correção do Enum ("CALLS" -> "CALL")
             (pl.col("player") != "Hero") &
             (pl.col("hand_canonical").is_not_null())
         )
@@ -73,12 +86,12 @@ def main():
         .agg(pl.len().alias("count"))
         .sort("count", descending=True)
     )
-    # Mostra só um preview no terminal, para não travar a sua leitura
+    
     print(river_calls.head(10)) 
     
-    csv_path = "D:/ggpoker/Dados/gold/chamadas_river.csv"
-    river_calls.write_csv(csv_path)
-    print(f"\n💾 Relatório COMPLETO das chamadas no River exportado para: {csv_path}")
+    csv_path_river = os.path.join(gold_dir, "chamadas_river.csv")
+    river_calls.write_csv(csv_path_river)
+    print(f"\n💾 Relatório COMPLETO exportado para: {csv_path_river}")
 
     # ---------------------------------------------------------
     # QUERY 2: DETALHAMENTO DE UM COMBO ESPECÍFICO (Ex: AA)
@@ -89,7 +102,7 @@ def main():
         .filter(pl.col("hand_canonical") == "AA")
         .group_by("combo")
         .agg(pl.len().alias("vezes_visto"))
-        .sort("combo") # Organiza alfabeticamente a tabela de visualização
+        .sort("combo") 
     )
     print(aa_details)
 
@@ -105,7 +118,9 @@ def main():
         .sort("count", descending=True)
     )
     print(todas_as_maos.head(20))
-    csv_path = "D:/ggpoker/Dados/gold/todas_as_maos.csv"
-    todas_as_maos.write_csv(csv_path)   
+    
+    csv_path_todas = os.path.join(gold_dir, "todas_as_maos.csv")
+    todas_as_maos.write_csv(csv_path_todas)   
+
 if __name__ == "__main__":
     main()
