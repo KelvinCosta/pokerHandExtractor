@@ -1,19 +1,18 @@
 import streamlit as st
 import polars as pl
+import datetime
 import json
 import os
 
 ARQUIVO_TAGS = "tags_viloes.json"
 
 def carregar_tags():
-    """Lê o arquivo JSON. Se não existir, retorna um dicionário vazio."""
     if not os.path.exists(ARQUIVO_TAGS):
         return {}
     with open(ARQUIVO_TAGS, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def salvar_tag(jogador, anotacao):
-    """Atualiza o dicionário e sobrescreve o arquivo JSON de forma segura."""
     tags = carregar_tags()
     tags[jogador] = anotacao
     with open(ARQUIVO_TAGS, "w", encoding="utf-8") as f:
@@ -30,6 +29,35 @@ def load_data():
     return df_gold
 
 df = load_data()
+
+st.sidebar.header("🔍 Filtros de Análise")
+
+st.sidebar.write("🔍 Colunas Atuais no Data Lake:")
+st.sidebar.write(df.columns)
+
+nome_coluna_data = "timestamp" if "timestamp" in df.columns else "timesta" if "timesta" in df.columns else None
+
+if nome_coluna_data:
+    min_date = df.select(pl.col(nome_coluna_data).cast(pl.Date).min()).item()
+    max_date = df.select(pl.col(nome_coluna_data).cast(pl.Date).max()).item()
+
+    if min_date and max_date:
+        filtro_data = st.sidebar.date_input(
+            "Selecione o Período das Mãos:",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date
+        )
+
+        if isinstance(filtro_data, tuple) and len(filtro_data) == 2:
+            data_inicio, data_fim = filtro_data
+            
+            df = df.filter(
+                pl.col(nome_coluna_data).cast(pl.Date).is_between(data_inicio, data_fim)
+            )
+else:
+    st.sidebar.warning("⚠️ Coluna de data não encontrada no seu ficheiro Parquet. Verifique se o nome é 'date' ou 'timestamp'.")
+
 df_clean = df.with_columns(
     pl.col("player_cards").list.eval(
         pl.element().struct.field("cards")
@@ -63,7 +91,7 @@ df_cartas_viloes = (
     .drop_nulls(subset=["player_cards"])
     .unique(subset=["hand_id"])
     .explode("player_cards")
-    .unnest("player_cards") # Separa o dicionário em colunas 'player' e 'cards'
+    .unnest("player_cards") 
     .filter(pl.col("player") != "Hero")
     .select(["hand_id", "player", pl.col("cards").alias("cartas_vilao")])
 )
@@ -99,7 +127,7 @@ df_mapeamento = (
         pl.when(pl.col("vilao_ganhou") == True).then(pl.lit("✅ GANHOU"))
         .otherwise(pl.lit("❌ PERDEU")).alias("resultado")
     )
-    # Ordem cirúrgica das colunas para facilitar a leitura humana
+    
     .select(["player", "notas_vilao", "cartas_vilao", "board", "hand_id", "resultado"])
     .sort(["player", "hand_id"])
 )
@@ -187,7 +215,7 @@ df_hero_pnl = (
     df.select("hand_id").unique()
     .join(df_hero_investido, on="hand_id", how="left")
     .join(df_hero_ganhou, on="hand_id", how="left")
-    .fill_null(0.0) # Proteção contra nulos onde o Hero não agiu
+    .fill_null(0.0) 
     .with_columns(
         (pl.col("hero_puxou") - pl.col("hero_colocou")).round(2).alias("lucro_liquido_hero")
     )
@@ -256,7 +284,6 @@ vencedores_df = (
     )
 )
 
-# 4. A Query Matemática (Sizing e Filtros)
 auditoria_base = (
     df
     .filter(
@@ -275,7 +302,6 @@ auditoria_base = (
     .with_columns(((pl.col("hero_bet_amount") / pl.col("pote_anterior")) * 100).round(1).alias("sizing_pct"))
 )
 
-# 5. O JOIN MESTRE (Consolidação do Data Lake)
 auditoria_final = (
     auditoria_base
     .join(hero_cards_df, on="hand_id", how="left")
@@ -292,29 +318,23 @@ auditoria_final = (
 
 auditoria_ev = (
     auditoria_final
-    # A. Calcula qual deveria ter sido o valor ideal da aposta (75% do pote anterior)
     .with_columns(
         (pl.col("pote_anterior") * 0.75).round(2).alias("bet_ideal_75")
     )
-    # B. Calcula a diferença em dólares entre o que você apostou e o que deveria ter apostado
     .with_columns(
         (pl.col("bet_ideal_75") - pl.col("hero_bet_amount")).round(2).alias("diferenca_dolares")
     )
-    # C. Diagnóstico Lógico do Impacto no Caixa
     .with_columns(
-        # Cenário 1: Tinha a melhor mão, mas cobrou barato (Lucro evaporado)
+        
         pl.when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
         .then(pl.lit("💸 Deixou de ganhar: $") + pl.col("diferenca_dolares").cast(pl.Utf8))
         
-        # Cenário 2: Perdeu a mão, mas a preguiça de apostar forte salvou dinheiro
         .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") > 0))
         .then(pl.lit("🛡️ Sorte (Poupou): $") + pl.col("diferenca_dolares").cast(pl.Utf8))
         
-        # Cenário 3: Apostou MAIS que 75% e ganhou (Extração Máxima)
         .when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") < 0))
         .then(pl.lit("🔥 Extração Máxima (Overbet)"))
         
-        # Cenário 4: Apostou MAIS que 75% e perdeu (Desperdício)
         .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") < 0))
         .then(pl.lit("🩸 Desperdício: $") + (pl.col("diferenca_dolares") * -1).cast(pl.Utf8))
         
@@ -326,10 +346,6 @@ auditoria_ev = (
 
 st.dataframe(auditoria_ev, use_container_width=True, hide_index=True)
 
-# =====================================================================
-# CÁLCULO DE TOTAIS (Consolidação)
-# =====================================================================
-# Filtra e soma diretamente da sua auditoria_ev
 lucro_perdido = auditoria_ev.filter(
     (pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0)
 )["diferenca_dolares"].sum()
@@ -340,33 +356,10 @@ dinheiro_salvo = auditoria_ev.filter(
 
 balanco_real = lucro_perdido - dinheiro_salvo
 
-# =====================================================================
-# RENDERIZAÇÃO NA INTERFACE
-# =====================================================================
 st.divider()
 st.subheader("💰 Resumo do Caixa do Sprint Atual")
 st.caption("Aviso: Pressupõe stacks infinitos e que o vilão daria Call nos 75%.")
 
-# OPÇÃO 1: O formato de Tabela (O que você solicitou)
-# df_resumo_financeiro = pl.DataFrame({
-#     "Indicador": [
-#         "💸 Lucro PERDIDO (Sub-otimização)", 
-#         "🛡️ Dinheiro SALVO (Sorte)", 
-#         "📉 BALANÇO REAL DE VAZAMENTO"
-#     ],
-#     "Valor Acumulado": [
-#         f"${lucro_perdido:.2f}", 
-#         f"${dinheiro_salvo:.2f}", 
-#         f"${balanco_real:.2f}"
-#     ]
-# })
-
-# # st.table desenha uma tabela estática e limpa, ideal para resumos pequenos
-# st.table(df_resumo_financeiro.to_pandas())
-
-
-# OPÇÃO 2: O formato KPI (Padrão de Dashboards Executivos)
-# Se preferir um visual mais moderno, pode descomentar o bloco abaixo:
 col1, col2, col3 = st.columns(3)
 col1.metric("💸 Lucro Perdido", f"${lucro_perdido:.2f}")
 col2.metric("🛡️ Dinheiro Salvo", f"${dinheiro_salvo:.2f}")
