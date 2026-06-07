@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 
 class HandStartEvent(BaseModel):
     hand_id: str
+    timestamp: str = ""
 
 class StreetChangeEvent(BaseModel):
     street_name: str 

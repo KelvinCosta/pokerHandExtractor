@@ -35,7 +35,7 @@ st.sidebar.header("🔍 Filtros de Análise")
 st.sidebar.write("🔍 Colunas Atuais no Data Lake:")
 st.sidebar.write(df.columns)
 
-nome_coluna_data = "timestamp" if "timestamp" in df.columns else "timesta" if "timesta" in df.columns else None
+nome_coluna_data = "date" if "date" in df.columns else "timestamp" if "timestamp" in df.columns else None
 
 if nome_coluna_data:
     min_date = df.select(pl.col(nome_coluna_data).cast(pl.Date).min()).item()

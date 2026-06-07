@@ -27,6 +27,7 @@ class Action:
 @dataclass(frozen=True, slots=True)
 class HandContext:
     hand_id: str
+    timestamp: str
     actions: Tuple[Action, ...] = field(default_factory=tuple)
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
     player_cards: Mapping[str, str] = field(default_factory=dict)

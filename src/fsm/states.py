@@ -74,6 +74,7 @@ class PreFlopState(BaseStreetState):
 class InitState(State):
     def process(self, token: Token, context: Optional[HandContext]) -> Tuple[State, Optional[HandContext]]:
         if isinstance(token, HandStartEvent):
-            new_context = HandContext(hand_id=token.hand_id)
+            data_capturada = getattr(token, "timestamp", "")
+            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada)
             return PreFlopState(), new_context
         return self, context
