@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from typing import Iterator
 
-from src.parser.tokenizer import GGPokerTokenizer
+from src.parser.tokenizer import GGPokerTokenizer, HandStartEvent
 from src.fsm.states import InitState, TerminalState, State
 from src.domain.models import HandContext
 from src.etl.loader import HandLoader
@@ -19,17 +19,22 @@ def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iter
             token = tokenizer.parse_line(line)
             if not token:
                 continue
-
-            current_state, hand_context = current_state.process(token, hand_context)
-
             
-            if isinstance(current_state, TerminalState) and hand_context is not None:
-                yield hand_context
+            if isinstance(current_state, HandStartEvent) and hand_context is not None:
+                if len(hand_context.actions) > 0:
+                    yield hand_context
                 
                 current_state = initial_state
                 hand_context = None
 
-        
+            current_state, hand_context = current_state.process(token, hand_context)
+
+            if isinstance(current_state, TerminalState) and hand_context is not None:
+                if len(hand_context.actions) > 0:
+                    yield hand_context
+                current_state = initial_state
+                hand_context = None
+                
         if hand_context is not None and len(hand_context.actions) > 0:
             yield hand_context
 
