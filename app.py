@@ -227,22 +227,25 @@ else:
 hero_cards_df = (
     df
     .select(["hand_id", "player_cards"])
+    .drop_nulls(subset=["player_cards"])
+    .unique(subset=["hand_id"]) 
     .explode("player_cards")
     .unnest("player_cards")
     .filter(pl.col("player") == "Hero")
     .select(["hand_id", pl.col("cards").alias("hero_cards")])
 )
 
-# 2. Dimensão Board: Concatena a lista de cartas da mesa numa única string
 board_df = (
     df
-    .select([
-        "hand_id", 
+    .select(["hand_id", "board_cards"])
+    .drop_nulls(subset=["board_cards"])
+    .unique(subset=["hand_id"])
+    .with_columns(
         pl.col("board_cards").list.unique(maintain_order=True).list.join(" ").alias("board")
-    ])
+    )
+    .select(["hand_id", "board"])
 )
 
-# 3. Dimensão Resultado: Quem executou a ação "COLLECT" no final?
 vencedores_df = (
     df
     .filter(pl.col("action_type") == "COLLECT")
