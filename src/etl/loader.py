@@ -6,7 +6,6 @@ from src.domain.models import HandContext
 
 class HandLoader:
     def __init__(self, output_dir: str):
-        
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -16,11 +15,28 @@ class HandLoader:
         
         while True:
             batch = list(islice(hands_iterator, batch_size))
-            
             if not batch:
                 break
+                
+            dict_batch = []
+            for hand in batch:
+                dict_batch.append({
+                    "hand_id": hand.hand_id,
+                    "current_pot": hand.current_pot, 
+                    "actions": [
+                        {
+                            "player": a.player,
+                            "action_type": a.action_type.name if hasattr(a.action_type, "name") else str(a.action_type),
+                            "street": a.street.name if hasattr(a.street, "name") else str(a.street),
+                            "amount": a.amount
+                        }
+                        for a in hand.actions
+                    ],
+                    "board_cards": list(hand.board_cards),
+                    "player_cards": [{"player": p, "cards": c} for p, c in hand.player_cards.items()]
+                })
             
-            df = pl.DataFrame(batch)
+            df = pl.DataFrame(dict_batch)
             
             filename = f"hands_part_{batch_index:04d}.parquet"
             file_path = os.path.join(self.output_dir, filename)
