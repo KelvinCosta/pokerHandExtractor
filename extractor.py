@@ -60,8 +60,7 @@ def main():
     print("💾 Iniciando a carga no Polars (ETL - Camada Silver)...\n")
     loader = HandLoader(output_dir=str(silver_dir))
     
-    
-    loader.process_and_save(hand_stream_pipeline(), filename="historico_consolidado.parquet")
+    loader.process_and_save(hand_stream_pipeline())
     print(f"\n✅ ETL concluído com sucesso!")
 
 if __name__ == "__main__":
