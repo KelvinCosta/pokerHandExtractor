@@ -32,14 +32,18 @@ df = load_data()
 
 st.sidebar.header("🔍 Filtros de Análise")
 
-st.sidebar.write("🔍 Colunas Atuais no Data Lake:")
-st.sidebar.write(df.columns)
-
 nome_coluna_data = "date" if "date" in df.columns else "timestamp" if "timestamp" in df.columns else None
 
 if nome_coluna_data:
-    min_date = df.select(pl.col(nome_coluna_data).cast(pl.Date).min()).item()
-    max_date = df.select(pl.col(nome_coluna_data).cast(pl.Date).max()).item()
+    df = df.with_columns(
+        pl.col(nome_coluna_data)
+        .str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False) # Lê o padrão da GGPoker
+        .dt.date() 
+        .alias("data_limpa")
+    )
+
+    min_date = df.select(pl.col("data_limpa").drop_nulls().min()).item()
+    max_date = df.select(pl.col("data_limpa").drop_nulls().max()).item()
 
     if min_date and max_date:
         filtro_data = st.sidebar.date_input(
@@ -53,7 +57,7 @@ if nome_coluna_data:
             data_inicio, data_fim = filtro_data
             
             df = df.filter(
-                pl.col(nome_coluna_data).cast(pl.Date).is_between(data_inicio, data_fim)
+                pl.col("data_limpa").is_between(data_inicio, data_fim)
             )
 else:
     st.sidebar.warning("⚠️ Coluna de data não encontrada no seu ficheiro Parquet. Verifique se o nome é 'date' ou 'timestamp'.")
