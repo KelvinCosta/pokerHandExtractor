@@ -28,6 +28,7 @@ class GGPokerTokenizer:
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
         self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
+        self.re_collect = re.compile(r"^([^:]+?) collected \$?([0-9]+(?:\.[0-9]+)?) from (?:main )?pot")
 
     def parse_line(self, line: str) -> Optional[Token]:
         line = line.strip()
@@ -73,4 +74,10 @@ class GGPokerTokenizer:
         if match_mucks:
             return CardsRevealedEvent(player=match_mucks.group(1).strip(), cards=match_mucks.group(2))
         
+        match_collect = self.re_collect.search(line)
+        if match_collect:
+            player = match_collect.group(1).strip()
+            amount = float(match_collect.group(2))
+            return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
+
         return None
