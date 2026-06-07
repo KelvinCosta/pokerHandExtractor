@@ -2,10 +2,6 @@ import polars as pl
 from pathlib import Path
 
 def process_hand_data(row):
-    """
-    Faz tudo de uma vez: puxa a carta do dicionário, ordena com a regra oficial 
-    do Poker (Maior carta > Naipe) e já cospe o Combo e a Canônica!
-    """
     player = row.get("player")
     p_cards = row.get("player_cards")
     
