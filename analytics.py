@@ -156,11 +156,11 @@ def main():
         )
     )
 
-    print("\n📊 TABELA COM IMPACTO FINANCEIRO (EV DELTA):")
-    print(
-        auditoria_ev
-        .select(["hand_id", "resultado", "sizing_pct", "bet_ideal_75", "hero_bet_amount", "impacto_no_caixa"])
-    )
+    # print("\n📊 TABELA COM IMPACTO FINANCEIRO (EV DELTA):")
+    # print(
+    #     auditoria_ev
+    #     .select(["hand_id", "resultado", "sizing_pct", "bet_ideal_75", "hero_bet_amount", "impacto_no_caixa"])
+    # )
 
     # 7. Resumo Global de Vazamento (A dor no bolso consolidada)
     lucro_perdido = auditoria_ev.filter(
