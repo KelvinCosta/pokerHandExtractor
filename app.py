@@ -348,21 +348,21 @@ st.subheader("💰 Resumo do Caixa do Sprint Atual")
 st.caption("Aviso: Pressupõe stacks infinitos e que o vilão daria Call nos 75%.")
 
 # OPÇÃO 1: O formato de Tabela (O que você solicitou)
-df_resumo_financeiro = pl.DataFrame({
-    "Indicador": [
-        "💸 Lucro PERDIDO (Sub-otimização)", 
-        "🛡️ Dinheiro SALVO (Sorte)", 
-        "📉 BALANÇO REAL DE VAZAMENTO"
-    ],
-    "Valor Acumulado": [
-        f"${lucro_perdido:.2f}", 
-        f"${dinheiro_salvo:.2f}", 
-        f"${balanco_real:.2f}"
-    ]
-})
+# df_resumo_financeiro = pl.DataFrame({
+#     "Indicador": [
+#         "💸 Lucro PERDIDO (Sub-otimização)", 
+#         "🛡️ Dinheiro SALVO (Sorte)", 
+#         "📉 BALANÇO REAL DE VAZAMENTO"
+#     ],
+#     "Valor Acumulado": [
+#         f"${lucro_perdido:.2f}", 
+#         f"${dinheiro_salvo:.2f}", 
+#         f"${balanco_real:.2f}"
+#     ]
+# })
 
-# st.table desenha uma tabela estática e limpa, ideal para resumos pequenos
-st.table(df_resumo_financeiro.to_pandas())
+# # st.table desenha uma tabela estática e limpa, ideal para resumos pequenos
+# st.table(df_resumo_financeiro.to_pandas())
 
 
 # OPÇÃO 2: O formato KPI (Padrão de Dashboards Executivos)
