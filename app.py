@@ -169,4 +169,32 @@ if pesquisa_vilao:
         pl.col("player").str.to_lowercase().str.contains(pesquisa_vilao.lower())
     )
 
+# =====================================================================
+# CONTROLO DE ORDENAÇÃO EXPLÍCITO (Gestão de Estado no Backend)
+# =====================================================================
+st.write("🔀 **Controlo de Visualização**")
+col_sort1, col_sort2 = st.columns([2, 2])
+
+with col_sort1:
+    # Extrai a lista de colunas disponíveis dinamicamente
+    colunas_disponiveis = df_mapeamento.columns
+    coluna_ordenacao = st.selectbox(
+        "Ordenar tabela pela coluna:",
+        options=colunas_disponiveis,
+        # Define o 'player' como padrão
+        index=colunas_disponiveis.index("player") if "player" in colunas_disponiveis else 0 
+    )
+    
+with col_sort2:
+    ordem_direcao = st.radio(
+        "Direção da ordenação:",
+        options=["Crescente (A-Z / 0-9)", "Decrescente (Z-A / 9-0)"],
+        horizontal=True
+    )
+
+# Aplica a ordenação no motor Rust (Polars) antes de renderizar
+is_desc = ordem_direcao.startswith("Decrescente")
+df_mapeamento = df_mapeamento.sort(coluna_ordenacao, descending=is_desc)
+
+# Renderiza a tabela já processada e estruturada
 st.dataframe(df_mapeamento, use_container_width=True, height=400)
