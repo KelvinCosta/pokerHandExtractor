@@ -445,7 +445,7 @@ if total_cbets > 0:
                 (pl.col("amount") / pl.col("current_pot"))*100
             ).round(2).alias("sizing_flop_pct")
         )
-        .select(["hand_id", "hero_cards", "board", "amount", "current_pot", "sizing_flop_pct"])
+        .select(["hand_id", "hero_cards", "board"])
     )
     
     st.dataframe(df_cbet_range.to_pandas(), use_container_width=True, hide_index=True)
