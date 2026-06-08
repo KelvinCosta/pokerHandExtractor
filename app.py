@@ -415,39 +415,36 @@ col_cb3.metric("Frequência de C-Bet", f"{cbet_pct:.1f}%")
 
 if total_cbets > 0:
     st.write("🕵️ **O que você está a C-Betar? (Raio-X do Range)**")
+
+    df_pot_flop = (
+        df.filter(pl.col("street") == "PRE_FLOP")
+        .group_by("hand_id")
+        .agg(pl.col("amount").sum().alias("pote_real_flop"))
+    )
     
+    df_hero_flop_bet = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP") & (pl.col("action_type") == "BET"))
+        .select(["hand_id", "amount"])
+    )
+
     df_cbet_range = (
         df_cbet_executada.select("hand_id")
         .unique()
         .join(hero_cards_df, on="hand_id", how="left")
         .join(board_df, on="hand_id", how="left")
-        .join(
-            df.filter(
-                (pl.col("player") == "Hero") & 
-                (pl.col("street") == "FLOP") & 
-                (pl.col("action_type") == "BET")
-                )
-            .select(["hand_id", "amount", "current_pot"]),
-            on="hand_id", how="left"
-        )
+        .join(df_hero_flop_bet, on="hand_id", how="left")
+        .join(df_pot_flop, on="hand_id", how="left")
         .with_columns(
-            (
-                (pl.col("amount"))
-            ).round(2).alias("amount")
+            ((pl.col("amount") / pl.col("pote_real_flop")) * 100).round(1).alias("sizing_flop_pct")
         )
-        .with_columns(
-            (
-                (pl.col("current_pot"))
-            ).round(2).alias("current_pot")
-        )
-        .with_columns(
-            (
-                (pl.col("amount") / pl.col("current_pot"))*100
-            ).round(2).alias("sizing_flop_pct")
-        )
-        .select(["hand_id", "hero_cards", "board"])
-    )
-    
+        .select([
+            "hand_id", 
+            "hero_cards", 
+            "board", 
+            pl.col("pote_real_flop").alias("pote_no_flop"), 
+            pl.col("amount").alias("hero_bet"), 
+            "sizing_flop_pct"
+        ]).sort("sizing_flop_pct", descending=True))
     st.dataframe(df_cbet_range.to_pandas(), use_container_width=True, hide_index=True)
 else:
     st.info("Nenhuma C-Bet registada no período selecionado.")
