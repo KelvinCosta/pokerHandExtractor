@@ -57,7 +57,8 @@ if nome_coluna_data:
             data_inicio, data_fim = filtro_data
             
             df = df.filter(
-                pl.col("data_limpa").is_between(data_inicio, data_fim)
+                pl.col("data_limpa").is_between(data_inicio, data_fim) &
+                pl.col("hand_id").str.starts_with("RC")
             )
 else:
     st.sidebar.warning("⚠️ Coluna de data não encontrada no seu ficheiro Parquet. Verifique se o nome é 'date' ou 'timestamp'.")
@@ -368,3 +369,85 @@ col1, col2, col3 = st.columns(3)
 col1.metric("💸 Lucro Perdido", f"${lucro_perdido:.2f}")
 col2.metric("🛡️ Dinheiro Salvo", f"${dinheiro_salvo:.2f}")
 col3.metric("📉 Balanço de Vazamento", f"${balanco_real:.2f}", delta="- Vazamento", delta_color="inverse")
+
+# =====================================================================
+# TELEMETRIA DE C-BET (Continuation Bet Baseline)
+# =====================================================================
+st.divider()
+st.subheader("🎯 Auditoria de Agressão: Continuation Bet (Flop)")
+
+df_pfr_hero = (
+    df.filter(
+        (pl.col("player") == "Hero") & 
+        (pl.col("street") == "PRE_FLOP") & 
+        (pl.col("action_type") == "RAISE")
+        )
+    .select("hand_id").unique()
+)
+
+df_flop_action_hero = (
+    df.filter(
+        (pl.col("player") == "Hero") & 
+        (pl.col("street") == "FLOP")
+        )
+    .select("hand_id").unique()
+)
+
+df_cbet_oportunidades = df_pfr_hero.join(df_flop_action_hero, on="hand_id", how="inner")
+total_oportunidades = df_cbet_oportunidades.height
+
+df_cbet_executada = (
+    df.filter(
+        (pl.col("player") == "Hero") & 
+        (pl.col("street") == "FLOP") & 
+        (pl.col("action_type") == "BET")
+    )
+    .join(df_cbet_oportunidades, on="hand_id", how="inner") 
+)
+total_cbets = df_cbet_executada.height
+
+cbet_pct = ((total_cbets / total_oportunidades) * 100) if total_oportunidades > 0 else 0.0
+
+col_cb1, col_cb2, col_cb3 = st.columns(3)
+col_cb1.metric("Oportunidades de C-Bet", total_oportunidades)
+col_cb2.metric("C-Bets Executadas", total_cbets)
+col_cb3.metric("Frequência de C-Bet", f"{cbet_pct:.1f}%")
+
+if total_cbets > 0:
+    st.write("🕵️ **O que você está a C-Betar? (Raio-X do Range)**")
+    
+    df_cbet_range = (
+        df_cbet_executada.select("hand_id")
+        .unique()
+        .join(hero_cards_df, on="hand_id", how="left")
+        .join(board_df, on="hand_id", how="left")
+        .join(
+            df.filter(
+                (pl.col("player") == "Hero") & 
+                (pl.col("street") == "FLOP") & 
+                (pl.col("action_type") == "BET")
+                )
+            .select(["hand_id", "amount", "current_pot"]),
+            on="hand_id", how="left"
+        )
+        .with_columns(
+            (
+                (pl.col("amount"))
+            ).round(2).alias("amount")
+        )
+        .with_columns(
+            (
+                (pl.col("current_pot"))
+            ).round(2).alias("current_pot")
+        )
+        .with_columns(
+            (
+                (pl.col("amount") / pl.col("current_pot"))*100
+            ).round(2).alias("sizing_flop_pct")
+        )
+        .select(["hand_id", "hero_cards", "board", "amount", "current_pot", "sizing_flop_pct"])
+    )
+    
+    st.dataframe(df_cbet_range.to_pandas(), use_container_width=True, hide_index=True)
+else:
+    st.info("Nenhuma C-Bet registada no período selecionado.")
