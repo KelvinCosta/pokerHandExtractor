@@ -23,7 +23,7 @@ Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEv
 
 class GGPokerTokenizer:
     def __init__(self):
-        self.re_hand_start = re.compile(r"^Poker Hand #([a-zA-Z0-9]+):.* - (\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
+        self.re_hand_start = re.compile(r"^Poker Hand #(RC[0-9]+):.* - (\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
         self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(?:.*?(?:to )?\$?([0-9]+(?:\.[0-9]+)?))?")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
