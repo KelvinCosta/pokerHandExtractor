@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Streamlit",
+            "name": "App",
             "type": "debugpy",
             "request": "launch",
             "module": "streamlit",
@@ -16,6 +16,13 @@
             ],
             "cwd": "${workspaceFolder}",
             "justMyCode": true
+        },
+        {
+            "name": "Extractor",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/extractor.py",
+            "console": "integratedTerminal"
         }
     ]
 }

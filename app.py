@@ -1,10 +1,14 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 import streamlit as st
 import polars as pl
-import datetime
 import json
-import os
 
-ARQUIVO_TAGS = "tags_viloes.json"
+load_dotenv()
+
+ARQUIVO_TAGS = Path(os.getenv("ARQUIVO_TAGS"))
+DATALAKE_SILVER = Path(os.getenv("DATALAKE_SILVER"))
 
 def carregar_tags():
     if not os.path.exists(ARQUIVO_TAGS):
@@ -24,7 +28,7 @@ st.title("📊 Poker Telemetry Dashboard (RnC NL2)")
 
 @st.cache_data
 def load_data():
-    df = pl.scan_parquet("D:/ggpoker/Dados/silver/*.parquet").collect()
+    df = pl.scan_parquet(DATALAKE_SILVER / "*.parquet").collect()
     df_gold = df.explode("actions").unnest("actions")
     return df_gold
 

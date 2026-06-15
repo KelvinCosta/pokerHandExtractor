@@ -19,7 +19,6 @@ class TerminalState(State):
 
 class BaseStreetState(State):
     street: Street
-
     def process(self, token: Token, context: HandContext) -> Tuple[State, HandContext]:
         if isinstance(token, RawActionEvent):
             action_enum = _map_action_type(token.action_type)
