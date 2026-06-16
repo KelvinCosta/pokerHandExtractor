@@ -11,7 +11,13 @@ class HandLoader:
 
     def process_and_save(self, hands_iterator: Iterator[HandContext], batch_size: int = 10000) -> int:
         total_processed = 0
-        batch_index = 1
+        
+        existing_files = [f for f in os.listdir(self.output_dir) if f.startswith("hands_part_") and f.endswith(".parquet")]
+        if existing_files:
+            last_index = max([int(f.split("_")[2].split(".")[0]) for f in existing_files])
+            batch_index = last_index + 1
+        else:
+            batch_index = 1
         
         while True:
             batch = list(islice(hands_iterator, batch_size))
