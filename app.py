@@ -375,10 +375,10 @@ col2.metric("🛡️ Dinheiro Salvo", f"${dinheiro_salvo:.2f}")
 col3.metric("📉 Balanço de Vazamento", f"${balanco_real:.2f}", delta="- Vazamento", delta_color="inverse")
 
 # =====================================================================
-# TELEMETRIA DE C-BET (Continuation Bet Baseline)
+# TELEMETRIA DE C-BET E TEXTURAS DO FLOP
 # =====================================================================
 st.divider()
-st.subheader("🎯 Auditoria de Agressão: Continuation Bet (Flop)")
+st.subheader("🎯 Auditoria de Agressão e Texturas: Continuation Bet (Flop)")
 
 df_pfr_hero = (
     df.filter(
@@ -431,6 +431,16 @@ if total_cbets > 0:
         .select(["hand_id", "amount"])
     )
 
+    if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
+        df_texturas = (
+            df.select(["hand_id", "flop_suit_type", "flop_pair_type"])
+            .drop_nulls(subset=["flop_suit_type", "flop_pair_type"])
+            .unique(subset=["hand_id"])
+        )
+    else:
+        df_texturas = pl.DataFrame({"hand_id": [], "flop_suit_type": [], "flop_pair_type": []}, schema={"hand_id": pl.Utf8, "flop_suit_type": pl.Utf8, "flop_pair_type": pl.Utf8})
+        st.warning("As colunas 'flop_suit_type' e 'flop_pair_type' não foram encontradas. Reprocesse o Datalake usando o loader.")
+
     df_cbet_range = (
         df_cbet_executada.select("hand_id")
         .unique()
@@ -438,6 +448,7 @@ if total_cbets > 0:
         .join(board_df, on="hand_id", how="left")
         .join(df_hero_flop_bet, on="hand_id", how="left")
         .join(df_pot_flop, on="hand_id", how="left")
+        .join(df_texturas, on="hand_id", how="left")
         .with_columns(
             ((pl.col("amount") / pl.col("pote_real_flop")) * 100).round(1).alias("sizing_flop_pct")
         )
@@ -445,71 +456,62 @@ if total_cbets > 0:
             "hand_id", 
             "hero_cards", 
             "board", 
+            "flop_suit_type",
+            "flop_pair_type",
             pl.col("pote_real_flop").alias("pote_no_flop"), 
             pl.col("amount").alias("hero_bet"), 
             "sizing_flop_pct"
         ]).sort("sizing_flop_pct", descending=True))
-    st.dataframe(df_cbet_range.to_pandas(), use_container_width=True, hide_index=True)
-else:
-    st.info("Nenhuma C-Bet registada no período selecionado.")
 
-# =====================================================================
-# TEXTURAS DO FLOP
-# =====================================================================
-st.divider()
-st.subheader("🃏 Texturas do Flop (Mapeamento de Boards)")
-
-if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
-    df_texturas = (
-        df.select(["hand_id", "flop_suit_type", "flop_pair_type"])
-        .drop_nulls(subset=["flop_suit_type", "flop_pair_type"])
-        .unique(subset=["hand_id"])
-    )
-    
-    df_texturas_exibicao = (
-        df_texturas
-        .join(board_df, on="hand_id", how="left")
-        .select(["hand_id", "board", "flop_suit_type", "flop_pair_type"])
-    )
-    
     col_t1, col_t2 = st.columns(2)
-    
     with col_t1:
-        st.write("📊 **Distribuição por Naipes**")
-        dist_suit = df_texturas.group_by("flop_suit_type").agg(pl.len()).sort("len", descending=True)
+        st.write("📊 **C-Bets por Textura de Naipe**")
+        dist_suit = df_cbet_range.group_by("flop_suit_type").agg(pl.len()).drop_nulls().sort("len", descending=True)
         st.bar_chart(dist_suit.to_pandas(), x="flop_suit_type", y="len")
         
     with col_t2:
-        st.write("📊 **Distribuição por Pares**")
-        dist_pair = df_texturas.group_by("flop_pair_type").agg(pl.len()).sort("len", descending=True)
+        st.write("📊 **C-Bets por Textura de Pares**")
+        dist_pair = df_cbet_range.group_by("flop_pair_type").agg(pl.len()).drop_nulls().sort("len", descending=True)
         st.bar_chart(dist_pair.to_pandas(), x="flop_pair_type", y="len")
-        
-    st.write("📋 **Lista de Texturas Mapeadas por Mão**")
-    
+
+    st.write("📋 **Lista de Mãos e Texturas**")
+
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        opcoes_naipe = sorted(df_texturas_exibicao["flop_suit_type"].drop_nulls().unique().to_list())
+        opcoes_naipe = sorted(df_cbet_range["flop_suit_type"].drop_nulls().unique().to_list())
         filtro_naipe = st.multiselect(
             "Filtrar por Naipe:", 
             options=opcoes_naipe, 
             default=opcoes_naipe,
-            key="filtro_naipe_flop"
+            key="filtro_naipe_cbet"
         )
         
     with col_f2:
-        opcoes_par = sorted(df_texturas_exibicao["flop_pair_type"].drop_nulls().unique().to_list())
+        opcoes_par = sorted(df_cbet_range["flop_pair_type"].drop_nulls().unique().to_list())
         filtro_par = st.multiselect(
             "Filtrar por Pares:", 
             options=opcoes_par, 
             default=opcoes_par,
-            key="filtro_par_flop"
+            key="filtro_par_cbet"
         )
-        
-    df_texturas_filtrado = df_texturas_exibicao.filter(
+
+    todas_colunas = df_cbet_range.columns
+    colunas_selecionadas = st.multiselect(
+        "⚙️ Selecione as colunas para visualizar na tabela:",
+        options=todas_colunas,
+        default=todas_colunas,
+        key="colunas_cbet"
+    )
+
+    df_cbet_filtrado = df_cbet_range.filter(
         pl.col("flop_suit_type").is_in(filtro_naipe) & 
         pl.col("flop_pair_type").is_in(filtro_par)
     )
 
-    st.dataframe(df_texturas_filtrado.to_pandas(), use_container_width=True, hide_index=True)
+    if colunas_selecionadas:
+        st.dataframe(df_cbet_filtrado.select(colunas_selecionadas).to_pandas(), use_container_width=True, hide_index=True)
+    else:
+        st.warning("Selecione pelo menos uma coluna para visualizar a tabela.")
+
 else:
-    st.info("As colunas 'flop_suit_type' e 'flop_pair_type' não foram encontradas. Reprocesse o Datalake usando o loader.")
+    st.info("Nenhuma C-Bet registada no período selecionado.")
