@@ -39,17 +39,19 @@ class HandLoader:
             
             df = pl.DataFrame(dict_batch)
             
-            flop_suits_count = pl.concat_list([
-                pl.col("board_cards").list.get(0).str.slice(1, 1),
-                pl.col("board_cards").list.get(1).str.slice(1, 1),
-                pl.col("board_cards").list.get(2).str.slice(1, 1)
-            ]).list.unique().list.len()
+            flop_suits_count = (
+                pl.col("board_cards").list.slice(0, 3)
+                .list.eval(pl.element().str.slice(1, 1))
+                .list.unique()
+                .list.len()
+            )
 
-            flop_values_count = pl.concat_list([
-                pl.col("board_cards").list.get(0).str.slice(0, 1),
-                pl.col("board_cards").list.get(1).str.slice(0, 1),
-                pl.col("board_cards").list.get(2).str.slice(0, 1)
-            ]).list.unique().list.len()
+            flop_values_count = (
+                pl.col("board_cards").list.slice(0, 3)
+                .list.eval(pl.element().str.slice(0, 1))
+                .list.unique()
+                .list.len()
+            )
 
             df = df.with_columns(
                 pl.when(pl.col("board_cards").list.len() >= 3)
