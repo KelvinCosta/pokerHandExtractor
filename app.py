@@ -488,12 +488,22 @@ if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
     
     col_f1, col_f2 = st.columns(2)
     with col_f1:
-        opcoes_naipe = df_texturas_exibicao["flop_suit_type"].drop_nulls().unique().to_list()
-        filtro_naipe = st.multiselect("Filtrar por Naipe:", options=opcoes_naipe, default=opcoes_naipe)
+        opcoes_naipe = sorted(df_texturas_exibicao["flop_suit_type"].drop_nulls().unique().to_list())
+        filtro_naipe = st.multiselect(
+            "Filtrar por Naipe:", 
+            options=opcoes_naipe, 
+            default=opcoes_naipe,
+            key="filtro_naipe_flop"
+        )
         
     with col_f2:
-        opcoes_par = df_texturas_exibicao["flop_pair_type"].drop_nulls().unique().to_list()
-        filtro_par = st.multiselect("Filtrar por Pares:", options=opcoes_par, default=opcoes_par)
+        opcoes_par = sorted(df_texturas_exibicao["flop_pair_type"].drop_nulls().unique().to_list())
+        filtro_par = st.multiselect(
+            "Filtrar por Pares:", 
+            options=opcoes_par, 
+            default=opcoes_par,
+            key="filtro_par_flop"
+        )
         
     df_texturas_filtrado = df_texturas_exibicao.filter(
         pl.col("flop_suit_type").is_in(filtro_naipe) & 
