@@ -452,3 +452,54 @@ if total_cbets > 0:
     st.dataframe(df_cbet_range.to_pandas(), use_container_width=True, hide_index=True)
 else:
     st.info("Nenhuma C-Bet registada no período selecionado.")
+
+# =====================================================================
+# TEXTURAS DO FLOP
+# =====================================================================
+st.divider()
+st.subheader("🃏 Texturas do Flop (Mapeamento de Boards)")
+
+if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
+    df_texturas = (
+        df.select(["hand_id", "flop_suit_type", "flop_pair_type"])
+        .drop_nulls(subset=["flop_suit_type", "flop_pair_type"])
+        .unique(subset=["hand_id"])
+    )
+    
+    df_texturas_exibicao = (
+        df_texturas
+        .join(board_df, on="hand_id", how="left")
+        .select(["hand_id", "board", "flop_suit_type", "flop_pair_type"])
+    )
+    
+    col_t1, col_t2 = st.columns(2)
+    
+    with col_t1:
+        st.write("📊 **Distribuição por Naipes**")
+        dist_suit = df_texturas.group_by("flop_suit_type").agg(pl.len()).sort("len", descending=True)
+        st.bar_chart(dist_suit.to_pandas(), x="flop_suit_type", y="len")
+        
+    with col_t2:
+        st.write("📊 **Distribuição por Pares**")
+        dist_pair = df_texturas.group_by("flop_pair_type").agg(pl.len()).sort("len", descending=True)
+        st.bar_chart(dist_pair.to_pandas(), x="flop_pair_type", y="len")
+        
+    st.write("📋 **Lista de Texturas Mapeadas por Mão**")
+    
+    col_f1, col_f2 = st.columns(2)
+    with col_f1:
+        opcoes_naipe = df_texturas_exibicao["flop_suit_type"].drop_nulls().unique().to_list()
+        filtro_naipe = st.multiselect("Filtrar por Naipe:", options=opcoes_naipe, default=opcoes_naipe)
+        
+    with col_f2:
+        opcoes_par = df_texturas_exibicao["flop_pair_type"].drop_nulls().unique().to_list()
+        filtro_par = st.multiselect("Filtrar por Pares:", options=opcoes_par, default=opcoes_par)
+        
+    df_texturas_filtrado = df_texturas_exibicao.filter(
+        pl.col("flop_suit_type").is_in(filtro_naipe) & 
+        pl.col("flop_pair_type").is_in(filtro_par)
+    )
+
+    st.dataframe(df_texturas_filtrado.to_pandas(), use_container_width=True, hide_index=True)
+else:
+    st.info("As colunas 'flop_suit_type' e 'flop_pair_type' não foram encontradas. Reprocesse o Datalake usando o loader.")

@@ -39,6 +39,40 @@ class HandLoader:
             
             df = pl.DataFrame(dict_batch)
             
+            flop_suits_count = pl.concat_list([
+                pl.col("board_cards").list.get(0).str.slice(1, 1),
+                pl.col("board_cards").list.get(1).str.slice(1, 1),
+                pl.col("board_cards").list.get(2).str.slice(1, 1)
+            ]).list.unique().list.len()
+
+            flop_values_count = pl.concat_list([
+                pl.col("board_cards").list.get(0).str.slice(0, 1),
+                pl.col("board_cards").list.get(1).str.slice(0, 1),
+                pl.col("board_cards").list.get(2).str.slice(0, 1)
+            ]).list.unique().list.len()
+
+            df = df.with_columns(
+                pl.when(pl.col("board_cards").list.len() >= 3)
+                .then(
+                    pl.when(flop_suits_count == 1).then(pl.lit("Monotone"))
+                    .when(flop_suits_count == 2).then(pl.lit("Two-Tone"))
+                    .when(flop_suits_count == 3).then(pl.lit("Rainbow"))
+                    .otherwise(None)
+                )
+                .otherwise(None)
+                .alias("flop_suit_type"),
+
+                pl.when(pl.col("board_cards").list.len() >= 3)
+                .then(
+                    pl.when(flop_values_count == 3).then(pl.lit("Unpaired"))
+                    .when(flop_values_count == 2).then(pl.lit("Paired"))
+                    .when(flop_values_count == 1).then(pl.lit("Trips"))
+                    .otherwise(None)
+                )
+                .otherwise(None)
+                .alias("flop_pair_type")
+            )
+            
             filename = f"hands_part_{batch_index:04d}.parquet"
             file_path = os.path.join(self.output_dir, filename)
             
