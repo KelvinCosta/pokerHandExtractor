@@ -503,10 +503,11 @@ if total_cbets > 0:
         key="colunas_cbet"
     )
 
-    df_cbet_filtrado = df_cbet_range.filter(
-        pl.col("flop_suit_type").is_in(filtro_naipe) & 
-        pl.col("flop_pair_type").is_in(filtro_par)
-    )
+    df_cbet_filtrado = df_cbet_range
+    if filtro_naipe:
+        df_cbet_filtrado = df_cbet_filtrado.filter(pl.col("flop_suit_type").is_in(filtro_naipe))
+    if filtro_par:
+        df_cbet_filtrado = df_cbet_filtrado.filter(pl.col("flop_pair_type").is_in(filtro_par))
 
     if colunas_selecionadas:
         st.dataframe(df_cbet_filtrado.select(colunas_selecionadas).to_pandas(), use_container_width=True, hide_index=True)
