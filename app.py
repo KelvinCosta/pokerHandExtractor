@@ -18,12 +18,8 @@ df, nome_coluna_data = get_base_dataframe()
 # Aplica os filtros da Sidebar
 df_clean = render_sidebar(df, nome_coluna_data)
 
-# Funções de caching para as dimensões pesadas
-# Usamos cache_data e ignoramos o hash do polars se for muito pesado, mas o polars_hash é rápido.
-@st.cache_data(show_spinner=False)
-def get_hero_cards(df_pandas):
-    # Recebe pandas para o hash do streamlit ser nativo e converte pra polars rápido
-    df_p = pl.from_pandas(df_pandas)
+# Funções de carregamento preguiçoso para as dimensões pesadas
+def get_hero_cards(df_p):
     return (
         df_p
         .select(["hand_id", "player_cards"])
@@ -35,9 +31,7 @@ def get_hero_cards(df_pandas):
         .select(["hand_id", pl.col("cards").alias("hero_cards")])
     )
 
-@st.cache_data(show_spinner=False)
-def get_board(df_pandas):
-    df_p = pl.from_pandas(df_pandas)
+def get_board(df_p):
     return (
         df_p
         .select(["hand_id", "board_cards"])
@@ -49,9 +43,7 @@ def get_board(df_pandas):
         .select(["hand_id", "board"])
     )
 
-@st.cache_data(show_spinner=False)
-def get_viloes_cached(df_pandas):
-    df_p = pl.from_pandas(df_pandas)
+def get_viloes_cached(df_p):
     return get_df_viloes(df_p)
 
 from src.dashboard.config import carregar_tags
@@ -71,29 +63,25 @@ def page_overview():
     render_overview(df_clean)
 
 def page_villains():
-    df_p = df_clean.to_pandas()
-    df_viloes = get_viloes_cached(df_p)
-    board_df = get_board(df_p)
+    df_viloes = get_viloes_cached(df_clean)
+    board_df = get_board(df_clean)
     _ = render_villains(df_clean, df_viloes, board_df)
 
 def page_rivalry():
     df_tags = get_df_tags()
-    df_p = df_clean.to_pandas()
-    df_viloes = get_viloes_cached(df_p)
+    df_viloes = get_viloes_cached(df_clean)
     render_rivalry(df_clean, df_viloes, df_tags)
 
 def page_river():
     st.divider()
     st.subheader("River Sizing EV Delta")
-    df_p = df_clean.to_pandas()
-    hero_cards_df = get_hero_cards(df_p)
-    board_df = get_board(df_p)
+    hero_cards_df = get_hero_cards(df_clean)
+    board_df = get_board(df_clean)
     render_river_audit(df_clean, hero_cards_df, board_df)
 
 def page_cbet():
-    df_p = df_clean.to_pandas()
-    hero_cards_df = get_hero_cards(df_p)
-    board_df = get_board(df_p)
+    hero_cards_df = get_hero_cards(df_clean)
+    board_df = get_board(df_clean)
     render_cbet_audit(df_clean, hero_cards_df, board_df)
 
 # Cria o menu de navegação lateral para as outras abas

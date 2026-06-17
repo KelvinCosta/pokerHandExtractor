@@ -33,9 +33,10 @@ class TerminalState(State):
                 action = Action(
                     player=token.player, 
                     action_type=action_enum, 
-                amount=token.amount,
-                street=context.actions[-1].street if context.actions else Street.RIVER,
-                is_all_in=token.is_all_in
+                    amount=token.amount,
+                    street=context.actions[-1].street if context.actions else Street.RIVER,
+                    is_all_in=token.is_all_in,
+                    invested_amount=token.amount
                 )
                 new_context = context.add_action(action)
                 return self, new_context
@@ -47,12 +48,21 @@ class BaseStreetState(State):
     def process(self, token: Token, context: HandContext) -> Tuple[State, HandContext]:
         if isinstance(token, RawActionEvent):
             action_enum = _map_action_type(token.action_type)
+            
+            # Calcula a quantia exata (incremental) gasta
+            if action_enum == ActionType.RAISE:
+                previous_invested = sum(a.invested_amount for a in context.actions if a.player == token.player and a.street == self.street)
+                invested_amount = token.amount - previous_invested
+            else:
+                invested_amount = token.amount
+
             action = Action(
                 player=token.player, 
                 action_type=action_enum, 
                 amount=token.amount,
                 street=self.street,
-                is_all_in=token.is_all_in
+                is_all_in=token.is_all_in,
+                invested_amount=round(invested_amount, 2)
             )
             new_context = context.add_action(action)
             

@@ -91,8 +91,8 @@ def main():
         .group_by("hand_id")
         .agg(
             pl.col("current_pot").first().alias("pote_final"),
-            pl.col("amount").filter(pl.col("action_type").is_in(["BET", "CALL", "RAISE"])).sum().alias("investimento_total_river"),
-            pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).sum().alias("hero_bet_amount"),
+            pl.col("invested_amount").filter(pl.col("action_type").is_in(["BET", "CALL", "RAISE"])).sum().alias("investimento_total_river"),
+            pl.col("invested_amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).sum().alias("hero_bet_amount"),
             pl.col("is_all_in").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).any().alias("hero_all_in_river"),
             pl.col("player").filter((pl.col("player") != "Hero") & (pl.col("action_type") == "CALL")).count().alias("qtd_calls_recebidos")
         )

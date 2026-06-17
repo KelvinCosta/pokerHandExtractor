@@ -28,7 +28,7 @@ def render_health(df):
         df_cash
         .filter((pl.col("player") == "Hero") & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"])))
         .group_by("hand_id")
-        .agg(pl.col("amount").sum().alias("investido"))
+        .agg(pl.col("invested_amount").sum().alias("investido"))
     )
 
     # Retorno (Coleta) do Hero por mão

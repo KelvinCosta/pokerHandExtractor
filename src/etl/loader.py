@@ -43,7 +43,8 @@ class HandLoader:
                             "action_type": a.action_type.name if hasattr(a.action_type, "name") else str(a.action_type),
                             "street": a.street.name if hasattr(a.street, "name") else str(a.street),
                             "amount": a.amount,
-                            "is_all_in": a.is_all_in
+                            "is_all_in": a.is_all_in,
+                            "invested_amount": a.invested_amount
                         }
                         for a in hand.actions
                     ],
