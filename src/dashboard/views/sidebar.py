@@ -50,8 +50,31 @@ def render_sidebar(df, nome_coluna_data):
                 st.sidebar.info(f"💰 Pote Final: ${tpot:.2f} | 💸 Rake: ${rake:.2f}")
                 st.sidebar.info(f"🎰 Jackpot: ${jackpot:.2f} | 🎱 Bingo: ${bingo:.2f}")
                 
+            # Descobrir a posição na mesa baseada na ordem de ação Pré-Flop
+            # A ordem de ação preflop sempre termina no BB. Quem age antes é o SB, antes é BTN, CO, MP, UTG.
+            preflop_actions = df.filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") != "POST"))
+            
+            if preflop_actions.height > 0:
+                # Pegar jogadores na ordem exata da primeira ação
+                jogadores_ordem = preflop_actions.unique(subset=["player"], maintain_order=True)["player"].to_list()
+                
+                pos_names = ["BB", "SB", "BTN", "CO", "MP", "UTG", "EP1", "EP2", "EP3"]
+                pos_map = {}
+                for i, jogador in enumerate(reversed(jogadores_ordem)):
+                    if i < len(pos_names):
+                        pos_map[jogador] = pos_names[i]
+                    else:
+                        pos_map[jogador] = "UNK"
+                
+                # Injeta a posição no df
+                df = df.with_columns(
+                    pl.col("player").replace_strict(pos_map, default="UNK").alias("position")
+                )
+            else:
+                df = df.with_columns(pl.lit("UNK").alias("position"))
+
             # Seleciona as colunas relevantes das ações já extraídas do df explodido
-            acoes_df = df.select(["street", "player", "action_type", "amount"])
+            acoes_df = df.select(["street", "position", "player", "action_type", "amount"])
             st.sidebar.dataframe(acoes_df.to_pandas(), hide_index=True, use_container_width=True)
         else:
             st.sidebar.warning("Mão não encontrada no período selecionado.")
