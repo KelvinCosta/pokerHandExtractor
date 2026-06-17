@@ -93,6 +93,7 @@ def main():
             pl.col("current_pot").first().alias("pote_final"),
             pl.col("amount").filter(pl.col("action_type").is_in(["BET", "CALL", "RAISE"])).sum().alias("investimento_total_river"),
             pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).sum().alias("hero_bet_amount"),
+            pl.col("is_all_in").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).any().alias("hero_all_in_river"),
             pl.col("player").filter((pl.col("player") != "Hero") & (pl.col("action_type") == "CALL")).count().alias("qtd_calls_recebidos")
         )
         .filter((pl.col("hero_bet_amount") > 0) & (pl.col("qtd_calls_recebidos") > 0))
@@ -110,7 +111,7 @@ def main():
             pl.when(pl.col("hero_ganhou") == True).then(pl.lit("✅ GANHOU")).otherwise(pl.lit("❌ PERDEU")).alias("resultado")
         )
         .select([
-            "hand_id", "pote_anterior", "hero_bet_amount", "sizing_pct", "hero_cards", "board", "resultado"
+            "hand_id", "pote_anterior", "hero_bet_amount", "sizing_pct", "hero_all_in_river", "hero_cards", "board", "resultado"
         ])
         .sort("sizing_pct", descending=False)
     )
@@ -119,7 +120,7 @@ def main():
     print(auditoria_final.head(20))
 
     # =========================================================================
-    # 6. MÓDULO FINANCEIRO: CÁLCULO DE EXPECTED VALUE (EV DELTA)
+    # 6. MÓDULO FINANCEIRO: CÁLCULO DE EXPECTED EV (EV DELTA)
     # Projeta o cenário onde Hero aposta os 75% rigorosamente.
     # =========================================================================
     
@@ -135,8 +136,11 @@ def main():
         )
         # C. Diagnóstico Lógico do Impacto no Caixa
         .with_columns(
+            pl.when(pl.col("hero_all_in_river"))
+            .then(pl.lit("⚖️ All-In (Máximo Possível)"))
+
             # Cenário 1: Tinha a melhor mão, mas cobrou barato (Lucro evaporado)
-            pl.when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
+            .when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
             .then(pl.lit("💸 Deixou de ganhar"))
             
             # Cenário 2: Perdeu a mão, mas a preguiça de apostar forte salvou dinheiro

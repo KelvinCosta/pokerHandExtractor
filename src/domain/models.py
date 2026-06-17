@@ -23,6 +23,7 @@ class Action:
     action_type: ActionType
     street: Street 
     amount: float = 0.0
+    is_all_in: bool = False
 
 @dataclass(frozen=True, slots=True)
 class HandContext:

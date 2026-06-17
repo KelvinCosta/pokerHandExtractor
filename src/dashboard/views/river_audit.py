@@ -23,6 +23,7 @@ def render_river_audit(df, hero_cards_df, board_df):
             pl.col("current_pot").first().alias("pote_final"),
             pl.col("amount").filter(pl.col("action_type").is_in(["BET", "CALL", "RAISE"])).sum().alias("investimento_total_river"),
             pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).sum().alias("hero_bet_amount"),
+            pl.col("is_all_in").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "BET")).any().alias("hero_all_in_river"),
             pl.col("player").filter((pl.col("player") != "Hero") & (pl.col("action_type") == "CALL")).count().alias("qtd_calls_recebidos")
         )
         .filter((pl.col("hero_bet_amount") > 0) & (pl.col("qtd_calls_recebidos") > 0))
@@ -39,7 +40,7 @@ def render_river_audit(df, hero_cards_df, board_df):
             pl.when(pl.col("hero_ganhou") == True).then(pl.lit("✅ GANHOU")).otherwise(pl.lit("❌ PERDEU")).alias("resultado")
         )
         .select([
-            "hand_id", "pote_anterior", "hero_bet_amount", "sizing_pct", "hero_cards", "board", "resultado"
+            "hand_id", "pote_anterior", "hero_bet_amount", "sizing_pct", "hero_all_in_river", "hero_cards", "board", "resultado"
         ])
         .sort("sizing_pct", descending=False)
     )
@@ -54,7 +55,10 @@ def render_river_audit(df, hero_cards_df, board_df):
         )
         .with_columns(
             
-            pl.when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
+            pl.when(pl.col("hero_all_in_river"))
+            .then(pl.lit("⚖️ All-In (Máximo Possível)"))
+
+            .when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
             .then(pl.lit("💸 Deixou de ganhar"))
             
             .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") > 0))

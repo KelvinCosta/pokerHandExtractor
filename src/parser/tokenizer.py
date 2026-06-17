@@ -14,6 +14,7 @@ class RawActionEvent(BaseModel):
     player: str
     action_type: str
     amount: float = Field(default=0.0, ge=0.0)
+    is_all_in: bool = False
 
 class CardsRevealedEvent(BaseModel):
     player: str
@@ -76,8 +77,10 @@ class GGPokerTokenizer:
                     first_match = re.search(r"\$?([0-9]+(?:\.[0-9]+)?)", remainder)
                     if first_match:
                         amount = float(first_match.group(1))
+                        
+            is_all_in = "and is all-in" in remainder.lower()
 
-            return RawActionEvent(player=player, action_type=action, amount=amount)
+            return RawActionEvent(player=player, action_type=action, amount=amount, is_all_in=is_all_in)
             
         match_dealt = self.re_dealt.search(line)
         if match_dealt:

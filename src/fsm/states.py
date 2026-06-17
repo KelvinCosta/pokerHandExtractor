@@ -33,8 +33,9 @@ class TerminalState(State):
                 action = Action(
                     player=token.player, 
                     action_type=action_enum, 
-                    amount=token.amount,
-                    street=context.actions[-1].street if context.actions else Street.RIVER
+                amount=token.amount,
+                street=context.actions[-1].street if context.actions else Street.RIVER,
+                is_all_in=token.is_all_in
                 )
                 new_context = context.add_action(action)
                 return self, new_context
@@ -50,7 +51,8 @@ class BaseStreetState(State):
                 player=token.player, 
                 action_type=action_enum, 
                 amount=token.amount,
-                street=self.street
+                street=self.street,
+                is_all_in=token.is_all_in
             )
             new_context = context.add_action(action)
             
