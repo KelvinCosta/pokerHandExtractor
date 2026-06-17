@@ -89,11 +89,17 @@ from src.dashboard.views.preflop import render_preflop
 def page_preflop():
     render_preflop(df_clean)
 
+from src.dashboard.views.postflop import render_postflop
+
+def page_postflop():
+    render_postflop(df_clean)
+
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
         st.Page(page_health, title="Saúde Geral", icon="❤️"),
         st.Page(page_preflop, title="Motor Pré-Flop", icon="🔥"),
+        st.Page(page_postflop, title="Agressão Pós-Flop", icon="⚔️"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
