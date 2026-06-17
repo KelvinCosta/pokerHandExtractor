@@ -15,36 +15,16 @@ def render_health(df):
         st.warning("Nenhuma mão de Cash Game (Rush & Cash) encontrada no período.")
         return
 
-    # Descobre o BB (Big Blind) de cada mão pegando o maior POST no pré-flop
-    bb_df = (
-        df_cash
-        .filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST"))
-        .group_by("hand_id")
-        .agg(pl.col("amount").max().alias("bb_size"))
-    )
-
-    # Investimento do Hero por mão
-    investimento_df = (
-        df_cash
-        .filter((pl.col("player") == "Hero") & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"])))
-        .group_by("hand_id")
-        .agg(pl.col("invested_amount").sum().alias("investido"))
-    )
-
-    # Retorno (Coleta) do Hero por mão
-    retorno_df = (
-        df_cash
-        .filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
-        .group_by("hand_id")
-        .agg(pl.col("amount").sum().alias("coletado"))
-    )
-
-    # Junta tudo para calcular o Net Profit por mão
+    # Descobre o BB da mão e calcula finanças do Hero (Tudo em um único groupby ultra-rápido)
     lucro_por_mao = (
-        pl.DataFrame({"hand_id": df_cash["hand_id"].unique()})
-        .join(investimento_df, on="hand_id", how="left").fill_null(0.0)
-        .join(retorno_df, on="hand_id", how="left").fill_null(0.0)
-        .join(bb_df, on="hand_id", how="left").fill_null(0.02) # fallback para NL2
+        df_cash
+        .group_by("hand_id")
+        .agg(
+            pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
+            pl.col("invested_amount").filter((pl.col("player") == "Hero") & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"]))).sum().fill_null(0.0).alias("investido"),
+            pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT")).sum().fill_null(0.0).alias("coletado"),
+            pl.col("date").first().alias("timestamp")
+        )
         .with_columns(
             (pl.col("coletado") - pl.col("investido")).alias("net_profit")
         )
@@ -81,16 +61,8 @@ def render_health(df):
     
     st.subheader("📈 Evolução do Bankroll")
     
-    # Prepara dados acumulados para o gráfico
-    tempo_df = (
-        df_cash
-        .group_by("hand_id")
-        .agg(pl.col("date").first().alias("timestamp"))
-    )
-
     grafico_df = (
         lucro_por_mao
-        .join(tempo_df, on="hand_id", how="inner")
         .sort("timestamp")
         .with_columns(
             pl.col("net_profit").cum_sum().alias("Net Profit Cumulativo ($)")

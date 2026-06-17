@@ -100,6 +100,13 @@ class GGPokerTokenizer:
             amount = float(match_collect.group(2))
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
 
+        # Trata as apostas não chamadas que são devolvidas (são um COLLECT técnico)
+        match_uncalled = re.search(r"^Uncalled bet \(\$?([0-9]+(?:\.[0-9]+)?)\) returned to ([^:]+)", line)
+        if match_uncalled:
+            amount = float(match_uncalled.group(1))
+            player = match_uncalled.group(2).strip()
+            return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
+
         if line.startswith("Total pot $"):
             match_summary = re.search(r"Total pot \$([0-9.]+)", line)
             if match_summary:
