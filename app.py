@@ -42,15 +42,44 @@ board_df = (
 
 df_viloes = get_df_viloes(df_clean)
 
-# Renderiza os Módulos Lineares
+from src.dashboard.config import carregar_tags
+
+# Renderiza o Overview (Sempre visível no topo, conforme solicitado)
 render_overview(df_clean)
 
-df_tags = render_villains(df_clean, df_viloes, board_df)
+# Função para fornecer o df_tags para as páginas que precisam dele
+def get_df_tags():
+    dicionario_tags = carregar_tags()
+    if dicionario_tags:
+        return pl.DataFrame({"player": list(dicionario_tags.keys()), "notas_vilao": list(dicionario_tags.values())})
+    return pl.DataFrame({"player": [], "notas_vilao": []}, schema={"player": pl.Utf8, "notas_vilao": pl.Utf8})
 
-render_rivalry(df_clean, df_viloes, df_tags)
+# Define as páginas
+def page_villains():
+    # O retorno é descartado pois a navegação gerencia o estado das páginas
+    _ = render_villains(df_clean, df_viloes, board_df)
 
-st.divider()
-st.subheader("River Sizing EV Delta")
-render_river_audit(df_clean, hero_cards_df, board_df)
+def page_rivalry():
+    df_tags = get_df_tags()
+    render_rivalry(df_clean, df_viloes, df_tags)
 
-render_cbet_audit(df_clean, hero_cards_df, board_df)
+def page_river():
+    st.divider()
+    st.subheader("River Sizing EV Delta")
+    render_river_audit(df_clean, hero_cards_df, board_df)
+
+def page_cbet():
+    render_cbet_audit(df_clean, hero_cards_df, board_df)
+
+# Cria o menu de navegação lateral para as outras abas
+pg = st.navigation({
+    "Painéis Detalhados": [
+        st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
+        st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
+        st.Page(page_river, title="Auditoria de River", icon="🌊"),
+        st.Page(page_cbet, title="C-Bet e Texturas", icon="🎯"),
+    ]
+})
+
+# Executa a página selecionada abaixo do Overview
+pg.run()
