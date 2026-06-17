@@ -26,6 +26,20 @@ def render_sidebar(df, nome_coluna_data):
     else:
         st.sidebar.warning("⚠️ Coluna de data não encontrada no seu ficheiro Parquet. Verifique se o nome é 'date' ou 'timestamp'.")
         
+    st.sidebar.divider()
+    pesquisa_hand_id = st.sidebar.text_input("🔍 Buscar por Hand ID:")
+    
+    if pesquisa_hand_id:
+        df = df.filter(pl.col("hand_id").str.contains(pesquisa_hand_id))
+        
+        if df.height > 0:
+            st.sidebar.markdown("### 📝 Ações da Mão")
+            # Seleciona as colunas relevantes das ações já extraídas do df explodido
+            acoes_df = df.select(["street", "player", "action_type", "amount"])
+            st.sidebar.dataframe(acoes_df.to_pandas(), hide_index=True, use_container_width=True)
+        else:
+            st.sidebar.warning("Mão não encontrada no período selecionado.")
+        
     df_clean = df.with_columns(
         pl.col("player_cards").list.eval(
             pl.element().struct.field("cards")
