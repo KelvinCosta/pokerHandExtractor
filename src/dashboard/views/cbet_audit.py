@@ -3,7 +3,7 @@ import polars as pl
 
 def render_cbet_audit(df, hero_cards_df, board_df):
     st.divider()
-    st.subheader("🎯 Auditoria de Agressão e Texturas: Continuation Bet (Flop)")
+    st.subheader("🎯 Raio-X de Vazamentos: Auditoria de C-Bet e Texturas (Flop)")
 
     df_pfr_hero = (
         df.filter(
@@ -99,7 +99,15 @@ def render_cbet_audit(df, hero_cards_df, board_df):
             dist_pair = df_cbet_range.group_by("flop_pair_type").agg(pl.len()).drop_nulls().sort("len", descending=True)
             st.bar_chart(dist_pair.to_pandas(), x="flop_pair_type", y="len")
 
-        st.write("📋 **Lista de Mãos e Texturas**")
+        st.divider()
+        st.write("📊 **Distribuição de Sizing por Textura (Scatter Plot)**")
+        st.write("Sizings altos (>60%) em boards Monotone são geralmente alertas vermelhos de 'Value Owning'.")
+        # Prepara o df para scatter: apenas colunas necessárias para ficar leve
+        scatter_df = df_cbet_range.drop_nulls(subset=["flop_suit_type", "sizing_flop_pct"]).select(["flop_suit_type", "sizing_flop_pct"]).to_pandas()
+        st.scatter_chart(scatter_df, x="flop_suit_type", y="sizing_flop_pct", color="#ff4b4b")
+
+        st.divider()
+        st.write("📋 **Lista de Mãos e Filtros Manuais**")
 
         col_f1, col_f2 = st.columns(2)
         with col_f1:
@@ -138,6 +146,52 @@ def render_cbet_audit(df, hero_cards_df, board_df):
             st.dataframe(df_cbet_filtrado.select(colunas_selecionadas).to_pandas(), use_container_width=True, hide_index=True)
         else:
             st.warning("Selecione pelo menos uma coluna para visualizar a tabela.")
+
+        st.divider()
+        st.subheader("🩸 Value Owning Tracker")
+        st.write("Identifica mãos onde você apostou alto no Flop (>60%), recebeu ação (Call/Raise) e **perdeu no Showdown** com o seu valor.")
+        
+        # 1. Herói recebeu Ação no Flop? (Alguém deu Call/Raise depois dele)
+        flop_calls_raises = (
+            df.filter((pl.col("street") == "FLOP") & (pl.col("player") != "Hero") & (pl.col("action_type").is_in(["CALL", "RAISE"])))
+            .select("hand_id").unique()
+            .with_columns(pl.lit(True).alias("recebeu_acao"))
+        )
+        
+        # 2. Herói Perdeu no Showdown?
+        vencedores_df = (
+            df.filter(pl.col("action_type") == "COLLECT")
+            .group_by("hand_id")
+            .agg(pl.col("player").alias("lista_vencedores"))
+            .with_columns(pl.col("lista_vencedores").list.contains("Hero").fill_null(False).alias("hero_ganhou"))
+        )
+        
+        showdown_hands = (
+            df.select(["hand_id", "player_cards"]).unique()
+            .filter(pl.col("player_cards").list.len() > 1)
+            .select("hand_id")
+            .with_columns(pl.lit(True).alias("foi_showdown"))
+        )
+
+        # 3. Cruzando tudo: Value Owning puro
+        df_value_owning = (
+            df_cbet_range
+            .filter(pl.col("sizing_flop_pct") > 60.0) # Apostou alto
+            .join(flop_calls_raises, on="hand_id", how="inner") # Recebeu ação
+            .join(showdown_hands, on="hand_id", how="inner") # Foi pro Showdown
+            .join(vencedores_df, on="hand_id", how="inner")
+            .filter(pl.col("hero_ganhou") == False) # E Perdeu!
+            .select(["hand_id", "hero_cards", "board", "flop_suit_type", "sizing_flop_pct", "pote_no_flop", "hero_bet"])
+            .sort("sizing_flop_pct", descending=True)
+        )
+
+        st.metric("Ocorrências de Value Owning (Flop)", df_value_owning.height, help="C-Bets caras no Flop que tomaram ação e perderam no SD.")
+
+        if df_value_owning.height > 0:
+            st.dataframe(df_value_owning.to_pandas(), use_container_width=True, hide_index=True)
+            st.caption("🔍 Dica: Olhe as colunas 'hero_cards' e 'board'. Se você tinha apenas Um Par (Top Pair ou pior) nesses boards inflamados, você foi 'Value Owned' (Pagou/Apostou a própria cova).")
+        else:
+            st.success("Excelente! Nenhum vazamento de Value Owning detectado com C-Bets altas no Flop.")
 
     else:
         st.info("Nenhuma C-Bet registada no período selecionado.")
