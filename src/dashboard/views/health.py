@@ -63,14 +63,17 @@ def render_health(df):
     
     grafico_df = (
         lucro_por_mao
-        .sort("timestamp")
+        .with_columns(pl.col("timestamp").str.slice(0, 10).alias("dia"))
+        .group_by("dia")
+        .agg(pl.col("net_profit").sum().alias("net_profit_diario"))
+        .sort("dia")
         .with_columns(
-            pl.col("net_profit").cum_sum().alias("Net Profit Cumulativo ($)")
+            pl.col("net_profit_diario").cum_sum().alias("Net Profit Cumulativo ($)")
         )
     )
     
     # Streamlit line chart
     if grafico_df.height > 0:
-        pd_grafico = grafico_df.select(["timestamp", "Net Profit Cumulativo ($)"]).to_pandas()
-        pd_grafico.set_index("timestamp", inplace=True)
+        pd_grafico = grafico_df.select(["dia", "Net Profit Cumulativo ($)"]).to_pandas()
+        pd_grafico.set_index("dia", inplace=True)
         st.line_chart(pd_grafico)
