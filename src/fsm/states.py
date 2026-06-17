@@ -26,6 +26,19 @@ class TerminalState(State):
                 tax=token.tax
             )
             return self, new_context
+
+        if isinstance(token, RawActionEvent) and context is not None:
+            action_enum = _map_action_type(token.action_type)
+            if action_enum == ActionType.COLLECT:
+                action = Action(
+                    player=token.player, 
+                    action_type=action_enum, 
+                    amount=token.amount,
+                    street=context.actions[-1].street if context.actions else Street.RIVER
+                )
+                new_context = context.add_action(action)
+                return self, new_context
+
         return self, context
 
 class BaseStreetState(State):
