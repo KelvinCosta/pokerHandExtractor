@@ -5,6 +5,10 @@ from .config import DATALAKE_SILVER
 @st.cache_data
 def load_data():
     df = pl.scan_parquet(DATALAKE_SILVER / "*.parquet").collect()
+    
+    # Previne dados duplicados caso o usuário não delete os parquets antigos ao re-extrair
+    df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
+    
     df_gold = df.explode("actions").unnest("actions")
     return df_gold
 
