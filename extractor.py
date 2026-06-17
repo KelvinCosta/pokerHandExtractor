@@ -3,6 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from typing import Iterator
 import json
+from dataclasses import replace
 
 from src.parser.tokenizer import GGPokerTokenizer, HandStartEvent
 from src.fsm.states import InitState, TerminalState, State
@@ -23,7 +24,7 @@ def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iter
             
             if isinstance(current_state, HandStartEvent) and hand_context is not None:
                 if len(hand_context.actions) > 0:
-                    yield hand_context
+                    yield replace(hand_context, source_file=filepath.name)
                 
                 current_state = initial_state
                 hand_context = None
@@ -32,12 +33,12 @@ def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iter
 
             if isinstance(current_state, TerminalState) and hand_context is not None:
                 if len(hand_context.actions) > 0:
-                    yield hand_context
+                    yield replace(hand_context, source_file=filepath.name)
                 current_state = initial_state
                 hand_context = None
                 
         if hand_context is not None and len(hand_context.actions) > 0:
-            yield hand_context
+            yield replace(hand_context, source_file=filepath.name)
 
 load_dotenv()
 def main():

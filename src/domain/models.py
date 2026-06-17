@@ -31,6 +31,7 @@ class HandContext:
     actions: Tuple[Action, ...] = field(default_factory=tuple)
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
     player_cards: Mapping[str, str] = field(default_factory=dict)
+    source_file: str = ""
 
     @property
     def current_pot(self) -> float:

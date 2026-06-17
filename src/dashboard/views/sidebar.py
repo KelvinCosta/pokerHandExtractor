@@ -34,6 +34,11 @@ def render_sidebar(df, nome_coluna_data):
         
         if df.height > 0:
             st.sidebar.markdown("### 📝 Ações da Mão")
+            
+            if "source_file" in df.columns:
+                arquivo_origem = df.select("source_file").head(1).item()
+                st.sidebar.caption(f"📂 Origem: `{arquivo_origem}`")
+                
             # Seleciona as colunas relevantes das ações já extraídas do df explodido
             acoes_df = df.select(["street", "player", "action_type", "amount"])
             st.sidebar.dataframe(acoes_df.to_pandas(), hide_index=True, use_container_width=True)

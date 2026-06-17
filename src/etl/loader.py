@@ -29,6 +29,7 @@ class HandLoader:
                 dict_batch.append({
                     "hand_id": hand.hand_id,
                     "date": hand.timestamp,
+                    "source_file": hand.source_file,
                     "current_pot": hand.current_pot, 
                     "actions": [
                         {
