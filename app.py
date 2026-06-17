@@ -7,6 +7,7 @@ from src.dashboard.views.villains import render_villains, get_df_viloes
 from src.dashboard.views.rivalry import render_rivalry
 from src.dashboard.views.river_audit import render_river_audit
 from src.dashboard.views.cbet_audit import render_cbet_audit
+from src.dashboard.views.health import render_health
 
 st.set_page_config(layout="wide")
 st.title("📊 Poker Telemetry Dashboard (RnC NL2)")
@@ -52,6 +53,9 @@ def get_df_tags():
     return pl.DataFrame({"player": [], "notas_vilao": []}, schema={"player": pl.Utf8, "notas_vilao": pl.Utf8})
 
 # Define as páginas
+def page_health():
+    render_health(df_clean)
+
 def page_overview():
     render_overview(df_clean)
 
@@ -74,6 +78,7 @@ def page_cbet():
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
+        st.Page(page_health, title="Saúde Geral", icon="❤️"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
