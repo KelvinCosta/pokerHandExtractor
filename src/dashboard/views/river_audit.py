@@ -55,24 +55,51 @@ def render_river_audit(df, hero_cards_df, board_df):
         .with_columns(
             
             pl.when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
-            .then(pl.lit("💸 Deixou de ganhar: $") + pl.col("diferenca_dolares").cast(pl.Utf8))
+            .then(pl.lit("💸 Deixou de ganhar"))
             
             .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") > 0))
-            .then(pl.lit("🛡️ Sorte (Poupou): $") + pl.col("diferenca_dolares").cast(pl.Utf8))
+            .then(pl.lit("🛡️ Sorte (Poupou)"))
             
             .when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") < 0))
             .then(pl.lit("🔥 Extração Máxima (Overbet)"))
             
             .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") < 0))
-            .then(pl.lit("🩸 Desperdício: $") + (pl.col("diferenca_dolares") * -1).cast(pl.Utf8))
+            .then(pl.lit("🩸 Desperdício"))
             
             .otherwise(pl.lit("⚖️ Na Medida"))
             .alias("impacto_no_caixa")
         )
     )
 
+    col_filtros1, col_filtros2 = st.columns(2)
+    with col_filtros1:
+        opcoes_resultado = sorted(auditoria_ev["resultado"].unique().to_list())
+        filtro_resultado = st.multiselect(
+            "Filtro: Resultado da Mão", 
+            options=opcoes_resultado, 
+            default=opcoes_resultado
+        )
 
-    st.dataframe(auditoria_ev, use_container_width=True, hide_index=True)
+    with col_filtros2:
+        opcoes_impacto = sorted(auditoria_ev["impacto_no_caixa"].unique().to_list())
+        filtro_impacto = st.multiselect(
+            "Filtro: Impacto no Caixa", 
+            options=opcoes_impacto, 
+            default=opcoes_impacto
+        )
+
+    if filtro_resultado:
+        auditoria_ev = auditoria_ev.filter(pl.col("resultado").is_in(filtro_resultado))
+    else:
+        # Se esvaziar, mostrar tudo para não quebrar a UX
+        pass
+
+    if filtro_impacto:
+        auditoria_ev = auditoria_ev.filter(pl.col("impacto_no_caixa").is_in(filtro_impacto))
+    else:
+        pass
+
+    st.dataframe(auditoria_ev.to_pandas(), use_container_width=True, hide_index=True)
 
     lucro_perdido = auditoria_ev.filter(
         (pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0)

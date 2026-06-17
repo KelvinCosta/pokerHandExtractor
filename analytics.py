@@ -137,11 +137,11 @@ def main():
         .with_columns(
             # Cenário 1: Tinha a melhor mão, mas cobrou barato (Lucro evaporado)
             pl.when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0))
-            .then(pl.lit("💸 Deixou de ganhar: $") + pl.col("diferenca_dolares").cast(pl.Utf8))
+            .then(pl.lit("💸 Deixou de ganhar"))
             
             # Cenário 2: Perdeu a mão, mas a preguiça de apostar forte salvou dinheiro
             .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") > 0))
-            .then(pl.lit("🛡️ Sorte (Poupou): $") + pl.col("diferenca_dolares").cast(pl.Utf8))
+            .then(pl.lit("🛡️ Sorte (Poupou)"))
             
             # Cenário 3: Apostou MAIS que 75% e ganhou (Extração Máxima)
             .when((pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") < 0))
@@ -149,7 +149,7 @@ def main():
             
             # Cenário 4: Apostou MAIS que 75% e perdeu (Desperdício)
             .when((pl.col("resultado") == "❌ PERDEU") & (pl.col("diferenca_dolares") < 0))
-            .then(pl.lit("🩸 Desperdício: $") + (pl.col("diferenca_dolares") * -1).cast(pl.Utf8))
+            .then(pl.lit("🩸 Desperdício"))
             
             .otherwise(pl.lit("⚖️ Na Medida"))
             .alias("impacto_no_caixa")
