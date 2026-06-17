@@ -32,6 +32,12 @@ class HandContext:
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
     player_cards: Mapping[str, str] = field(default_factory=dict)
     source_file: str = ""
+    total_pot: float = 0.0
+    rake: float = 0.0
+    jackpot: float = 0.0
+    bingo: float = 0.0
+    fortune: float = 0.0
+    tax: float = 0.0
 
     @property
     def current_pot(self) -> float:

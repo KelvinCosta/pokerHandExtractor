@@ -38,6 +38,17 @@ def render_sidebar(df, nome_coluna_data):
             if "source_file" in df.columns:
                 arquivo_origem = df.select("source_file").head(1).item()
                 st.sidebar.caption(f"📂 Origem: `{arquivo_origem}`")
+
+            if "total_pot_final" in df.columns:
+                # Pega a primeira linha da mão para extrair o resumo
+                resumo = df.head(1)
+                tpot = resumo.select("total_pot_final").item()
+                rake = resumo.select("rake").item()
+                jackpot = resumo.select("jackpot").item()
+                bingo = resumo.select("bingo").item()
+                
+                st.sidebar.info(f"💰 Pote Final: ${tpot:.2f} | 💸 Rake: ${rake:.2f}")
+                st.sidebar.info(f"🎰 Jackpot: ${jackpot:.2f} | 🎱 Bingo: ${bingo:.2f}")
                 
             # Seleciona as colunas relevantes das ações já extraídas do df explodido
             acoes_df = df.select(["street", "player", "action_type", "amount"])

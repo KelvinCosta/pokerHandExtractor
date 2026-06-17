@@ -1,7 +1,7 @@
 from typing import Tuple, Optional
 from dataclasses import replace
 from src.domain.models import HandContext, Action, Street, ActionType
-from src.parser.tokenizer import Token, HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent
+from src.parser.tokenizer import Token, HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent
 
 def _map_action_type(raw_action: str) -> ActionType:
     try:
@@ -15,6 +15,17 @@ class State:
 
 class TerminalState(State):
     def process(self, token: Token, context: Optional[HandContext]) -> Tuple['State', Optional[HandContext]]:
+        if isinstance(token, PotSummaryEvent) and context is not None:
+            new_context = replace(
+                context, 
+                total_pot=token.total_pot, 
+                rake=token.rake, 
+                jackpot=token.jackpot, 
+                bingo=token.bingo, 
+                fortune=token.fortune, 
+                tax=token.tax
+            )
+            return self, new_context
         return self, context
 
 class BaseStreetState(State):

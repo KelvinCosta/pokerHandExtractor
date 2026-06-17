@@ -22,7 +22,7 @@ def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iter
             if not token:
                 continue
             
-            if isinstance(current_state, HandStartEvent) and hand_context is not None:
+            if isinstance(token, HandStartEvent) and hand_context is not None:
                 if len(hand_context.actions) > 0:
                     yield replace(hand_context, source_file=filepath.name)
                 
@@ -30,12 +30,6 @@ def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iter
                 hand_context = None
 
             current_state, hand_context = current_state.process(token, hand_context)
-
-            if isinstance(current_state, TerminalState) and hand_context is not None:
-                if len(hand_context.actions) > 0:
-                    yield replace(hand_context, source_file=filepath.name)
-                current_state = initial_state
-                hand_context = None
                 
         if hand_context is not None and len(hand_context.actions) > 0:
             yield replace(hand_context, source_file=filepath.name)

@@ -31,6 +31,12 @@ class HandLoader:
                     "date": hand.timestamp,
                     "source_file": hand.source_file,
                     "current_pot": hand.current_pot, 
+                    "total_pot_final": hand.total_pot,
+                    "rake": hand.rake,
+                    "jackpot": hand.jackpot,
+                    "bingo": hand.bingo,
+                    "fortune": hand.fortune,
+                    "tax": hand.tax,
                     "actions": [
                         {
                             "player": a.player,

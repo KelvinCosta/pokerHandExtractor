@@ -19,7 +19,15 @@ class CardsRevealedEvent(BaseModel):
     player: str
     cards: str
 
-Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent]
+class PotSummaryEvent(BaseModel):
+    total_pot: float = 0.0
+    rake: float = 0.0
+    jackpot: float = 0.0
+    bingo: float = 0.0
+    fortune: float = 0.0
+    tax: float = 0.0
+
+Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent]
 
 class GGPokerTokenizer:
     def __init__(self):
@@ -88,5 +96,16 @@ class GGPokerTokenizer:
             player = match_collect.group(1).strip()
             amount = float(match_collect.group(2))
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
+
+        if line.startswith("Total pot $"):
+            match_summary = re.search(r"Total pot \$([0-9.]+)", line)
+            if match_summary:
+                total_pot = float(match_summary.group(1))
+                rake = float(re.search(r"Rake \$([0-9.]+)", line).group(1)) if "Rake $" in line else 0.0
+                jackpot = float(re.search(r"Jackpot \$([0-9.]+)", line).group(1)) if "Jackpot $" in line else 0.0
+                bingo = float(re.search(r"Bingo \$([0-9.]+)", line).group(1)) if "Bingo $" in line else 0.0
+                fortune = float(re.search(r"Fortune \$([0-9.]+)", line).group(1)) if "Fortune $" in line else 0.0
+                tax = float(re.search(r"Tax \$([0-9.]+)", line).group(1)) if "Tax $" in line else 0.0
+                return PotSummaryEvent(total_pot=total_pot, rake=rake, jackpot=jackpot, bingo=bingo, fortune=fortune, tax=tax)
 
         return None
