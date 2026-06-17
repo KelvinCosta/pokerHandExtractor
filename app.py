@@ -44,9 +44,6 @@ df_viloes = get_df_viloes(df_clean)
 
 from src.dashboard.config import carregar_tags
 
-# Renderiza o Overview (Sempre visível no topo, conforme solicitado)
-render_overview(df_clean)
-
 # Função para fornecer o df_tags para as páginas que precisam dele
 def get_df_tags():
     dicionario_tags = carregar_tags()
@@ -55,6 +52,9 @@ def get_df_tags():
     return pl.DataFrame({"player": [], "notas_vilao": []}, schema={"player": pl.Utf8, "notas_vilao": pl.Utf8})
 
 # Define as páginas
+def page_overview():
+    render_overview(df_clean)
+
 def page_villains():
     # O retorno é descartado pois a navegação gerencia o estado das páginas
     _ = render_villains(df_clean, df_viloes, board_df)
@@ -74,6 +74,7 @@ def page_cbet():
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
+        st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
         st.Page(page_river, title="Auditoria de River", icon="🌊"),
