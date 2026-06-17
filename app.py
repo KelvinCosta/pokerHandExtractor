@@ -84,10 +84,16 @@ def page_cbet():
     board_df = get_board(df_clean)
     render_cbet_audit(df_clean, hero_cards_df, board_df)
 
+from src.dashboard.views.preflop import render_preflop
+
+def page_preflop():
+    render_preflop(df_clean)
+
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
         st.Page(page_health, title="Saúde Geral", icon="❤️"),
+        st.Page(page_preflop, title="Motor Pré-Flop", icon="🔥"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
