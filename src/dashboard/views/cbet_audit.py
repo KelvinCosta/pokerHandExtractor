@@ -1,5 +1,6 @@
 import streamlit as st
 import polars as pl
+from src.dashboard.config import carregar_notas_maos, salvar_nota_mao
 
 def render_cbet_audit(df, hero_cards_df, board_df):
     st.divider()
@@ -188,8 +189,49 @@ def render_cbet_audit(df, hero_cards_df, board_df):
         st.metric("Ocorrências de Value Owning (Flop)", df_value_owning.height, help="C-Bets caras no Flop que tomaram ação e perderam no SD.")
 
         if df_value_owning.height > 0:
-            st.dataframe(df_value_owning.to_pandas(), use_container_width=True, hide_index=True)
-            st.caption("🔍 Dica: Olhe as colunas 'hero_cards' e 'board'. Se você tinha apenas Um Par (Top Pair ou pior) nesses boards inflamados, você foi 'Value Owned' (Pagou/Apostou a própria cova).")
+            st.write("📝 **Marque a sua avaliação** e anote as conclusões sobre as mãos listadas.")
+            
+            # Carregar notas existentes
+            notas_maos = carregar_notas_maos()
+            
+            # Converter para Pandas para adicionar as colunas de estudo
+            df_pd = df_value_owning.to_pandas()
+            df_pd["Avaliação"] = df_pd["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("flag", "❔ Pendente"))
+            df_pd["Anotações"] = df_pd["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("nota", ""))
+
+            edited_df = st.data_editor(
+                df_pd,
+                column_config={
+                    "hand_id": st.column_config.TextColumn("Hand ID", disabled=True),
+                    "hero_cards": st.column_config.TextColumn("Suas Cartas", disabled=True),
+                    "board": st.column_config.TextColumn("Board", disabled=True),
+                    "flop_suit_type": st.column_config.TextColumn("Textura", disabled=True),
+                    "sizing_flop_pct": st.column_config.NumberColumn("Sizing %", format="%.1f%%", disabled=True),
+                    "pote_no_flop": st.column_config.NumberColumn("Pote", format="$%.2f", disabled=True),
+                    "hero_bet": st.column_config.NumberColumn("Aposta", format="$%.2f", disabled=True),
+                    "Avaliação": st.column_config.SelectboxColumn(
+                        "Avaliação",
+                        help="Classifique a sua jogada.",
+                        options=["❔ Pendente", "✅ Acerto (Cooler)", "❌ Erro (Value Owned)"],
+                        required=True
+                    ),
+                    "Anotações": st.column_config.TextColumn("Anotações", help="Escreva o porquê do erro ou acerto.")
+                },
+                hide_index=True,
+                use_container_width=True
+            )
+
+            # Salvar edições
+            for i, row in edited_df.iterrows():
+                h_id = row["hand_id"]
+                nova_nota = row["Anotações"]
+                nova_flag = row["Avaliação"]
+                old_data = notas_maos.get(h_id, {"nota": "", "flag": "❔ Pendente"})
+                
+                if nova_nota != old_data["nota"] or nova_flag != old_data["flag"]:
+                    salvar_nota_mao(h_id, nova_nota, nova_flag)
+
+            st.caption("🔍 Dica: Se você tinha apenas Um Par (Top Pair ou pior) nestes boards inflamados, você foi 'Value Owned' (Pagou a própria cova).")
         else:
             st.success("Excelente! Nenhum vazamento de Value Owning detectado com C-Bets altas no Flop.")
 
