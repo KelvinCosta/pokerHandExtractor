@@ -25,7 +25,7 @@ class GGPokerTokenizer:
     def __init__(self):
         self.re_hand_start = re.compile(r"^Poker Hand #(RC[0-9]+):.* - (\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
-        self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(?:.*?(?:to )?\$?([0-9]+(?:\.[0-9]+)?))?")
+        self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(.*)")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
         self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
@@ -58,8 +58,16 @@ class GGPokerTokenizer:
                 if action.endswith("S") and action not in ["POSTS"]:
                     action = action[:-1]
             
-            amount_str = match_action.group(3)
-            amount = float(amount_str) if amount_str else 0.0
+            remainder = match_action.group(3)
+            amount = 0.0
+            if remainder:
+                to_match = re.search(r"to \$?([0-9]+(?:\.[0-9]+)?)", remainder)
+                if to_match:
+                    amount = float(to_match.group(1))
+                else:
+                    first_match = re.search(r"\$?([0-9]+(?:\.[0-9]+)?)", remainder)
+                    if first_match:
+                        amount = float(first_match.group(1))
 
             return RawActionEvent(player=player, action_type=action, amount=amount)
             
