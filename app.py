@@ -73,6 +73,13 @@ from src.dashboard.views.population import render_population_range
 def page_population():
     render_population_range(df_clean)
 
+from src.dashboard.views.big_pots import render_big_pots
+
+def page_big_pots():
+    hero_cards_df = get_hero_cards(df_clean)
+    board_df = get_board(df_clean)
+    render_big_pots(df_clean, hero_cards_df, board_df)
+
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
@@ -80,6 +87,7 @@ pg = st.navigation({
         st.Page(page_preflop, title="Motor Pré-Flop", icon="🔥"),
         st.Page(page_postflop, title="Agressão Pós-Flop", icon="⚔️"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
+        st.Page(page_big_pots, title="Auditoria de Potes Grandes", icon="🔥"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
         st.Page(page_population, title="População e Ranges (MDA)", icon="👥"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),

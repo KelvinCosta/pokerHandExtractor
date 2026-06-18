@@ -180,10 +180,10 @@ def render_postflop(df):
         st.metric("💰 W$SD (Won $ at Showdown)", f"{wssd_pct:.1f}%", help=f"Venceu {wssd_success_count} vezes nas {wsd_money_opp} vezes que foi ao Showdown.")
 
     st.markdown("### 💵 Linhas Financeiras")
-    filtro_potes_grandes = st.checkbox("🔥 Isolar Potes Gigantes (Pote Final > 40 BBs)", help="Analisa a linha azul e vermelha apenas nas mãos onde o pote inflou consideravelmente.")
+    filtro_potes_grandes = st.checkbox("🔥 Isolar Potes Gigantes (Pote Final ≥ 40 BBs)", help="Analisa a linha azul e vermelha apenas nas mãos onde o pote inflou consideravelmente.")
     
     if filtro_potes_grandes:
-        df_hero_pnl_filtrado = df_hero_pnl.filter(pl.col("pot_in_bb") > 40.0)
+        df_hero_pnl_filtrado = df_hero_pnl.filter(pl.col("pot_in_bb") >= 40.0)
     else:
         df_hero_pnl_filtrado = df_hero_pnl
 
