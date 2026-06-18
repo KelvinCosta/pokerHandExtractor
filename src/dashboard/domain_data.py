@@ -1,29 +1,20 @@
 import polars as pl
 
 def get_hero_cards(df_p):
-    """Extrai as cartas do Hero da coluna struct explodida, mantendo unicidade por mão."""
+    """Extrai as cartas do Hero da coluna pré-calculada, mantendo unicidade por mão."""
     return (
         df_p
-        .select(["hand_id", "player_cards"])
-        .drop_nulls(subset=["player_cards"])
+        .select(["hand_id", "hero_cards"])
+        .drop_nulls(subset=["hero_cards"])
         .unique(subset=["hand_id"]) 
-        .explode("player_cards")
-        .unnest("player_cards")
-        .filter(pl.col("player") == "Hero")
-        .select(["hand_id", pl.col("cards").alias("hero_cards")])
     )
 
 def get_board(df_p):
-    """Agrega as cartas comunitárias do board numa string única por mão."""
+    """Retorna o board pré-calculado em string única por mão."""
     return (
         df_p
-        .select(["hand_id", "board_cards"])
-        .drop_nulls(subset=["board_cards"])
+        .select(["hand_id", pl.col("board_str").alias("board")])
         .unique(subset=["hand_id"])
-        .with_columns(
-            pl.col("board_cards").list.unique(maintain_order=True).list.join(" ").alias("board")
-        )
-        .select(["hand_id", "board"])
     )
 
 def get_viloes_cached(df_p):
@@ -38,12 +29,9 @@ def get_viloes_cached(df_p):
     )
 
 def get_vencedores_df(df_p):
-    """Retorna uma lista de vencedores por mão e a flag booleana se o Hero ganhou a mão."""
+    """Retorna a lista de vencedores e a flag se o Hero ganhou, já pré-calculadas na base."""
     return (
-        df_p.filter(pl.col("action_type") == "COLLECT")
-        .group_by("hand_id")
-        .agg(pl.col("player").unique().alias("lista_vencedores"))
-        .with_columns(
-            pl.col("lista_vencedores").list.contains("Hero").fill_null(False).alias("hero_ganhou")
-        )
+        df_p
+        .select(["hand_id", "lista_vencedores", "hero_ganhou"])
+        .unique(subset=["hand_id"])
     )

@@ -2,7 +2,7 @@ import os
 import polars as pl
 from typing import Iterator
 from itertools import islice
-from src.domain.models import HandContext
+from src.domain.models import HandContext, ActionType
 
 class HandLoader:
     def __init__(self, output_dir: str):
@@ -49,7 +49,11 @@ class HandLoader:
                         for a in hand.actions
                     ],
                     "board_cards": list(hand.board_cards),
-                    "player_cards": [{"player": p, "cards": c} for p, c in hand.player_cards.items()]
+                    "board_str": " ".join(hand.board_cards),
+                    "player_cards": [{"player": p, "cards": c} for p, c in hand.player_cards.items()],
+                    "hero_cards": hand.player_cards.get("Hero", ""),
+                    "lista_vencedores": [a.player for a in hand.actions if a.action_type == ActionType.COLLECT],
+                    "hero_ganhou": any(a.player == "Hero" and a.action_type == ActionType.COLLECT for a in hand.actions)
                 })
             
             df = pl.DataFrame(dict_batch)
