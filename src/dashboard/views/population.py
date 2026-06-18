@@ -33,6 +33,7 @@ def render_population_range(df):
         
         todas_as_maos = (
             df_known_cards
+            .unique(subset=["hand_id", "player", "hand_canonical"])
             .group_by("hand_canonical")
             .agg(pl.len().alias("vezes_visto"))
             .sort("vezes_visto", descending=True)
@@ -94,6 +95,7 @@ def render_population_range(df):
             combo_details = (
                 df_known_cards
                 .filter(pl.col("hand_canonical") == combo_alvo)
+                .unique(subset=["hand_id", "player", "combo"])
                 .group_by("combo")
                 .agg(pl.len().alias("vezes_visto"))
                 .sort("vezes_visto", descending=True)
