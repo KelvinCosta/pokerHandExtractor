@@ -150,8 +150,19 @@ def render_postflop(df):
         )
     )
 
-    sd_winnings = df_hero_pnl.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
-    nsd_winnings = df_hero_pnl.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
+    # Cálculo do tamanho do pote em BBs
+    df_pot_sizes = (
+        df.group_by("hand_id")
+        .agg(
+            pl.col("total_pot_final").first().alias("pot_size_usd"),
+            pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size")
+        )
+        .with_columns(
+            (pl.col("pot_size_usd") / pl.col("bb_size")).alias("pot_in_bb")
+        )
+    )
+
+    df_hero_pnl = df_hero_pnl.join(df_pot_sizes, on="hand_id", how="left")
 
     # ==========================================
     # RENDERIZAÇÃO
@@ -169,6 +180,15 @@ def render_postflop(df):
         st.metric("💰 W$SD (Won $ at Showdown)", f"{wssd_pct:.1f}%", help=f"Venceu {wssd_success_count} vezes nas {wsd_money_opp} vezes que foi ao Showdown.")
 
     st.markdown("### 💵 Linhas Financeiras")
+    filtro_potes_grandes = st.checkbox("🔥 Isolar Potes Gigantes (Pote Final > 40 BBs)", help="Analisa a linha azul e vermelha apenas nas mãos onde o pote inflou consideravelmente.")
+    
+    if filtro_potes_grandes:
+        df_hero_pnl_filtrado = df_hero_pnl.filter(pl.col("pot_in_bb") > 40.0)
+    else:
+        df_hero_pnl_filtrado = df_hero_pnl
+
+    sd_winnings = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
+    nsd_winnings = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
     col_sd, col_nsd = st.columns(2)
     with col_sd:
         st.info(f"**🔵 SD Winnings (Linha Azul)**\n\n### ${sd_winnings:.2f}")
