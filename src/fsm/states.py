@@ -66,9 +66,6 @@ class BaseStreetState(State):
             )
             new_context = context.add_action(action)
             
-            if action_enum == ActionType.COLLECT:
-                return TerminalState(), new_context
-                
             return self, new_context
 
         elif isinstance(token, CardsRevealedEvent):
@@ -76,6 +73,18 @@ class BaseStreetState(State):
 
         elif isinstance(token, HandStartEvent):
             return InitState().process(token, None)
+
+        elif isinstance(token, PotSummaryEvent):
+            new_context = replace(
+                context, 
+                total_pot=token.total_pot, 
+                rake=token.rake, 
+                jackpot=token.jackpot, 
+                bingo=token.bingo, 
+                fortune=token.fortune, 
+                tax=token.tax
+            )
+            return TerminalState(), new_context
 
         return self, context
 
