@@ -18,7 +18,7 @@ df, nome_coluna_data = get_base_dataframe()
 # Aplica os filtros da Sidebar
 df_clean = render_sidebar(df, nome_coluna_data)
 
-from src.dashboard.domain_data import get_hero_cards, get_board, get_viloes_cached
+from src.dashboard.domain_data import get_hero_cards, get_board, get_viloes_cached, get_villains_cards_shown
 
 from src.dashboard.config import carregar_tags
 
@@ -74,7 +74,6 @@ def page_population():
     render_population_range(df_clean)
 
 from src.dashboard.views.big_pots import render_big_pots
-from src.dashboard.domain_data import get_villains_cards_shown
 
 def page_big_pots():
     hero_cards_df = get_hero_cards(df_clean)
