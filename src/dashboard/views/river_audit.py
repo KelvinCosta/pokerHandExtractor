@@ -1,5 +1,6 @@
 import streamlit as st
 import polars as pl
+from src.dashboard.config import carregar_notas_maos, salvar_nota_mao
 
 def render_river_audit(df, hero_cards_df, board_df):
     vencedores_df = (
@@ -103,7 +104,47 @@ def render_river_audit(df, hero_cards_df, board_df):
     else:
         pass
 
-    st.dataframe(auditoria_ev.to_pandas(), use_container_width=True, hide_index=True)
+    notas_maos = carregar_notas_maos()
+    
+    df_pd_ev = auditoria_ev.to_pandas()
+    df_pd_ev["Avaliação"] = df_pd_ev["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("flag", "❔ Pendente"))
+    df_pd_ev["Anotações"] = df_pd_ev["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("nota", ""))
+
+    edited_df_ev = st.data_editor(
+        df_pd_ev,
+        column_config={
+            "hand_id": st.column_config.TextColumn("Hand ID", disabled=True),
+            "pote_anterior": st.column_config.NumberColumn("Pote", format="$%.2f", disabled=True),
+            "hero_bet_amount": st.column_config.NumberColumn("Aposta", format="$%.2f", disabled=True),
+            "sizing_pct": st.column_config.NumberColumn("Sizing %", format="%.1f%%", disabled=True),
+            "hero_all_in_river": st.column_config.CheckboxColumn("All In", disabled=True),
+            "hero_cards": st.column_config.TextColumn("Cartas", disabled=True),
+            "board": st.column_config.TextColumn("Board", disabled=True),
+            "resultado": st.column_config.TextColumn("Resultado", disabled=True),
+            "bet_ideal_75": st.column_config.NumberColumn("Bet Ideal 75%", format="$%.2f", disabled=True),
+            "diferenca_dolares": st.column_config.NumberColumn("Diferença", format="$%.2f", disabled=True),
+            "impacto_no_caixa": st.column_config.TextColumn("Impacto", disabled=True),
+            "Avaliação": st.column_config.SelectboxColumn(
+                "Avaliação",
+                options=["❔ Pendente", "✅ Acerto (Cooler)", "❌ Erro (Value Owned)"],
+                required=True
+            ),
+            "Anotações": st.column_config.TextColumn("Anotações")
+        },
+        hide_index=True,
+        use_container_width=True,
+        key="editor_river_ev"
+    )
+
+    for i, row in edited_df_ev.iterrows():
+        h_id = row["hand_id"]
+        nova_nota = row["Anotações"]
+        nova_flag = row["Avaliação"]
+        old_data = notas_maos.get(h_id, {"nota": "", "flag": "❔ Pendente"})
+        
+        if nova_nota != old_data["nota"] or nova_flag != old_data["flag"]:
+            salvar_nota_mao(h_id, nova_nota, nova_flag)
+            notas_maos[h_id] = {"nota": nova_nota, "flag": nova_flag} # Update para próxima tabela
 
     lucro_perdido = auditoria_ev.filter(
         (pl.col("resultado") == "✅ GANHOU") & (pl.col("diferenca_dolares") > 0)
@@ -151,7 +192,40 @@ def render_river_audit(df, hero_cards_df, board_df):
             .sort("valor_do_call", descending=True)
         )
 
-        st.dataframe(auditoria_calls.to_pandas(), use_container_width=True, hide_index=True)
+        st.write("📝 **Avalie seus Calls:** Marque se o Call foi correto ou um erro de avaliação.")
+        
+        df_pd_calls = auditoria_calls.to_pandas()
+        df_pd_calls["Avaliação"] = df_pd_calls["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("flag", "❔ Pendente"))
+        df_pd_calls["Anotações"] = df_pd_calls["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("nota", ""))
+
+        edited_df_calls = st.data_editor(
+            df_pd_calls,
+            column_config={
+                "hand_id": st.column_config.TextColumn("Hand ID", disabled=True),
+                "valor_do_call": st.column_config.NumberColumn("Valor do Call", format="$%.2f", disabled=True),
+                "hero_cards": st.column_config.TextColumn("Cartas", disabled=True),
+                "board": st.column_config.TextColumn("Board", disabled=True),
+                "resultado": st.column_config.TextColumn("Resultado", disabled=True),
+                "Avaliação": st.column_config.SelectboxColumn(
+                    "Avaliação",
+                    options=["❔ Pendente", "✅ Acerto (Cooler)", "❌ Erro (Value Owned)"],
+                    required=True
+                ),
+                "Anotações": st.column_config.TextColumn("Anotações")
+            },
+            hide_index=True,
+            use_container_width=True,
+            key="editor_river_calls"
+        )
+
+        for i, row in edited_df_calls.iterrows():
+            h_id = row["hand_id"]
+            nova_nota = row["Anotações"]
+            nova_flag = row["Avaliação"]
+            old_data = notas_maos.get(h_id, {"nota": "", "flag": "❔ Pendente"})
+            
+            if nova_nota != old_data["nota"] or nova_flag != old_data["flag"]:
+                salvar_nota_mao(h_id, nova_nota, nova_flag)
 
         calls_ganhos = auditoria_calls.filter(pl.col("resultado") == "✅ GANHOU (Hero Call)").height
         calls_perdidos = auditoria_calls.filter(pl.col("resultado") == "❌ PERDEU (Crying Call)").height
