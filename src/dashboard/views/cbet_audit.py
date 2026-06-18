@@ -1,5 +1,8 @@
 import streamlit as st
 import polars as pl
+import json
+from src.dashboard.domain_data import get_vencedores_df
+from src.dashboard.components import render_hand_notes_editor
 from src.dashboard.config import carregar_notas_maos, salvar_nota_mao
 
 def render_cbet_audit(df, hero_cards_df, board_df):
@@ -160,12 +163,7 @@ def render_cbet_audit(df, hero_cards_df, board_df):
         )
         
         # 2. Herói Perdeu no Showdown?
-        vencedores_df = (
-            df.filter(pl.col("action_type") == "COLLECT")
-            .group_by("hand_id")
-            .agg(pl.col("player").alias("lista_vencedores"))
-            .with_columns(pl.col("lista_vencedores").list.contains("Hero").fill_null(False).alias("hero_ganhou"))
-        )
+        vencedores_df = get_vencedores_df(df)
         
         showdown_hands = (
             df.select(["hand_id", "player_cards"]).unique()
@@ -191,45 +189,17 @@ def render_cbet_audit(df, hero_cards_df, board_df):
         if df_value_owning.height > 0:
             st.write("📝 **Marque a sua avaliação** e anote as conclusões sobre as mãos listadas.")
             
-            # Carregar notas existentes
-            notas_maos = carregar_notas_maos()
-            
-            # Converter para Pandas para adicionar as colunas de estudo
-            df_pd = df_value_owning.to_pandas()
-            df_pd["Avaliação"] = df_pd["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("flag", "❔ Pendente"))
-            df_pd["Anotações"] = df_pd["hand_id"].apply(lambda x: notas_maos.get(x, {}).get("nota", ""))
+            custom_config = {
+                "hand_id": st.column_config.TextColumn("Hand ID", disabled=True),
+                "hero_cards": st.column_config.TextColumn("Suas Cartas", disabled=True),
+                "board": st.column_config.TextColumn("Board", disabled=True),
+                "flop_suit_type": st.column_config.TextColumn("Textura", disabled=True),
+                "sizing_flop_pct": st.column_config.NumberColumn("Sizing %", format="%.1f%%", disabled=True),
+                "pote_no_flop": st.column_config.NumberColumn("Pote", format="$%.2f", disabled=True),
+                "hero_bet": st.column_config.NumberColumn("Aposta", format="$%.2f", disabled=True)
+            }
 
-            edited_df = st.data_editor(
-                df_pd,
-                column_config={
-                    "hand_id": st.column_config.TextColumn("Hand ID", disabled=True),
-                    "hero_cards": st.column_config.TextColumn("Suas Cartas", disabled=True),
-                    "board": st.column_config.TextColumn("Board", disabled=True),
-                    "flop_suit_type": st.column_config.TextColumn("Textura", disabled=True),
-                    "sizing_flop_pct": st.column_config.NumberColumn("Sizing %", format="%.1f%%", disabled=True),
-                    "pote_no_flop": st.column_config.NumberColumn("Pote", format="$%.2f", disabled=True),
-                    "hero_bet": st.column_config.NumberColumn("Aposta", format="$%.2f", disabled=True),
-                    "Avaliação": st.column_config.SelectboxColumn(
-                        "Avaliação",
-                        help="Classifique a sua jogada.",
-                        options=["❔ Pendente", "✅ Acerto (Cooler)", "❌ Erro (Value Owned)"],
-                        required=True
-                    ),
-                    "Anotações": st.column_config.TextColumn("Anotações", help="Escreva o porquê do erro ou acerto.")
-                },
-                hide_index=True,
-                use_container_width=True
-            )
-
-            # Salvar edições
-            for i, row in edited_df.iterrows():
-                h_id = row["hand_id"]
-                nova_nota = row["Anotações"]
-                nova_flag = row["Avaliação"]
-                old_data = notas_maos.get(h_id, {"nota": "", "flag": "❔ Pendente"})
-                
-                if nova_nota != old_data["nota"] or nova_flag != old_data["flag"]:
-                    salvar_nota_mao(h_id, nova_nota, nova_flag)
+            render_hand_notes_editor(df_value_owning, "editor_cbet_value_owning", custom_config)
 
             st.caption("🔍 Dica: Se você tinha apenas Um Par (Top Pair ou pior) nestes boards inflamados, você foi 'Value Owned' (Pagou a própria cova).")
         else:

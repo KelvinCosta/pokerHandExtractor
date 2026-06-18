@@ -1,6 +1,7 @@
 import streamlit as st
 import polars as pl
 from ..config import carregar_tags, salvar_tag, ARQUIVO_TAGS
+from src.dashboard.domain_data import get_vencedores_df
 import json
 
 def get_df_viloes(df):
@@ -38,11 +39,7 @@ def render_villains(df, df_viloes, df_board):
             cols[i].metric(display_name, f"{row['total_raises']} Raises", help=f"ID: {jogador}")
         st.divider()
 
-    df_vencedores = (
-        df.filter(pl.col("action_type") == "COLLECT")
-        .group_by("hand_id")
-        .agg(pl.col("player").unique().alias("lista_vencedores"))
-    )
+    df_vencedores = get_vencedores_df(df)
 
     df_cartas_viloes = (
         df.select(["hand_id", "player_cards"])

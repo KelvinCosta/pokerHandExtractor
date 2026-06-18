@@ -18,33 +18,7 @@ df, nome_coluna_data = get_base_dataframe()
 # Aplica os filtros da Sidebar
 df_clean = render_sidebar(df, nome_coluna_data)
 
-# Funções de carregamento preguiçoso para as dimensões pesadas
-def get_hero_cards(df_p):
-    return (
-        df_p
-        .select(["hand_id", "player_cards"])
-        .drop_nulls(subset=["player_cards"])
-        .unique(subset=["hand_id"]) 
-        .explode("player_cards")
-        .unnest("player_cards")
-        .filter(pl.col("player") == "Hero")
-        .select(["hand_id", pl.col("cards").alias("hero_cards")])
-    )
-
-def get_board(df_p):
-    return (
-        df_p
-        .select(["hand_id", "board_cards"])
-        .drop_nulls(subset=["board_cards"])
-        .unique(subset=["hand_id"])
-        .with_columns(
-            pl.col("board_cards").list.unique(maintain_order=True).list.join(" ").alias("board")
-        )
-        .select(["hand_id", "board"])
-    )
-
-def get_viloes_cached(df_p):
-    return get_df_viloes(df_p)
+from src.dashboard.domain_data import get_hero_cards, get_board, get_viloes_cached
 
 from src.dashboard.config import carregar_tags
 
