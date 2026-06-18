@@ -10,11 +10,20 @@ def get_hero_cards(df_p):
     )
 
 def get_board(df_p):
-    """Retorna o board pré-calculado em string única por mão."""
+    """Retorna o board pré-calculado em string única por mão, removendo duplicações residuais das streets."""
     return (
         df_p
-        .select(["hand_id", pl.col("board_str").alias("board")])
+        .select(["hand_id", "board_str"])
+        .drop_nulls(subset=["board_str"])
         .unique(subset=["hand_id"])
+        .with_columns(
+            pl.col("board_str")
+            .str.split(" ")
+            .list.unique(maintain_order=True)
+            .list.join(" ")
+            .alias("board")
+        )
+        .select(["hand_id", "board"])
     )
 
 def get_viloes_cached(df_p):
