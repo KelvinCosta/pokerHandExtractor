@@ -157,27 +157,37 @@ def render_postflop(df):
     # RENDERIZAÇÃO
     # ==========================================
     
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    st.markdown("### 📊 Frequências e Agressividade")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("🎯 C-Bet Flop", f"{cbet_pct:.1f}%", help=f"Fez C-Bet {cbet_success_count} vezes de {cbet_opp_count} oportunidades.")
+    with col2:
+        st.metric("🛡️ Fold to C-Bet", f"{fold_cbet_pct:.1f}%", help=f"Foldou {fold_cbet_success_count} vezes de {fold_cbet_opp_count} oportunidades.")
+    with col3:
+        st.metric("👁️ WSD (Went to Showdown)", f"{wsd_pct:.1f}%", help=f"Chegou no Showdown em {wsd_success_count} mãos de {wsd_opp_count} flops vistos.")
+    with col4:
+        st.metric("💰 W$SD (Won $ at Showdown)", f"{wssd_pct:.1f}%", help=f"Venceu {wssd_success_count} vezes nas {wsd_money_opp} vezes que foi ao Showdown.")
 
-    col1.metric("🎯 C-Bet Flop", f"{cbet_pct:.1f}%", help=f"Fez C-Bet {cbet_success_count} vezes de {cbet_opp_count} oportunidades.")
-    col2.metric("🛡️ Fold to C-Bet", f"{fold_cbet_pct:.1f}%", help=f"Foldou {fold_cbet_success_count} vezes de {fold_cbet_opp_count} oportunidades.")
-    col3.metric("👁️ WSD", f"{wsd_pct:.1f}%", help=f"Chegou no Showdown em {wsd_success_count} mãos de {wsd_opp_count} flops vistos.")
-    col4.metric("💰 W$SD", f"{wssd_pct:.1f}%", help=f"Venceu {wssd_success_count} vezes nas {wsd_money_opp} vezes que foi ao Showdown.")
-    col5.metric("🔵 SD Winnings", f"${sd_winnings:.2f}", help="Total de lucro (ou prejuízo) nas mãos que chegaram ao Showdown.")
-    col6.metric("🔴 Non-SD Winnings", f"${nsd_winnings:.2f}", help="Total de lucro (ou prejuízo) nas mãos em que todos foldaram (Linha Vermelha).")
+    st.markdown("### 💵 Linhas Financeiras")
+    col_sd, col_nsd = st.columns(2)
+    with col_sd:
+        st.info(f"**🔵 SD Winnings (Linha Azul)**\n\n### ${sd_winnings:.2f}")
+    with col_nsd:
+        st.error(f"**🔴 Non-SD Winnings (Linha Vermelha)**\n\n### ${nsd_winnings:.2f}")
 
     st.divider()
 
-    st.subheader("Diagnóstico do Pós-Flop")
+    st.subheader("🩺 Diagnóstico do Pós-Flop")
     
-    diag_cbet = "Agressividade ideal." if 50 <= cbet_pct <= 70 else ("Muito passivo (Deixa os oponentes realizarem equidade de graça)." if cbet_pct < 50 else "Agressivo demais (Pode ser explorado por check-raises).")
-    st.write(f"- **C-Bet Flop ({cbet_pct:.1f}%):** O padrão vencedor em Cash Games 6-max gira em torno de 50% a 70%. **Diagnóstico:** {diag_cbet}")
+    with st.expander("Ver Análise de Texto Completa", expanded=True):
+        diag_cbet = "Agressividade ideal." if 50 <= cbet_pct <= 70 else ("Muito passivo (Deixa os oponentes realizarem equidade de graça)." if cbet_pct < 50 else "Agressivo demais (Pode ser explorado por check-raises).")
+        st.write(f"- **C-Bet Flop ({cbet_pct:.1f}%):** O padrão vencedor em Cash Games 6-max gira em torno de 50% a 70%. **Diagnóstico:** {diag_cbet}")
 
-    diag_fcbet = "Frequência sólida." if 40 <= fold_cbet_pct <= 50 else ("Você está pagando demais (Calling Station)." if fold_cbet_pct < 40 else "Foldando muito fácil (Overfolding).")
-    st.write(f"- **Fold to C-Bet ({fold_cbet_pct:.1f}%):** Um jogador balanceado folda entre 40% e 50% das vezes. **Diagnóstico:** {diag_fcbet}")
+        diag_fcbet = "Frequência sólida." if 40 <= fold_cbet_pct <= 50 else ("Você está pagando demais (Calling Station)." if fold_cbet_pct < 40 else "Foldando muito fácil (Overfolding).")
+        st.write(f"- **Fold to C-Bet ({fold_cbet_pct:.1f}%):** Um jogador balanceado folda entre 40% e 50% das vezes. **Diagnóstico:** {diag_fcbet}")
 
-    diag_wsd = "Seleção de mãos excelente." if 25 <= wsd_pct <= 32 else ("Chegando muito ao Showdown com mãos fracas." if wsd_pct > 32 else "Blefando muito ou foldando demais antes do River.")
-    st.write(f"- **WSD ({wsd_pct:.1f}%):** Mede quão 'teimoso' você é após o Flop. O ideal (PokerTracker) é 25% a 32%. **Diagnóstico:** {diag_wsd}")
+        diag_wsd = "Seleção de mãos excelente." if 25 <= wsd_pct <= 32 else ("Chegando muito ao Showdown com mãos fracas." if wsd_pct > 32 else "Blefando muito ou foldando demais antes do River.")
+        st.write(f"- **WSD ({wsd_pct:.1f}%):** Mede quão 'teimoso' você é após o Flop. O ideal (PokerTracker) é 25% a 32%. **Diagnóstico:** {diag_wsd}")
 
-    diag_wssd = "Monstro dos Showdowns!" if wssd_pct >= 50 else "Perdendo dinheiro nos potes grandes. Reavalie seus calls no River."
-    st.write(f"- **W$SD ({wssd_pct:.1f}%):** Se este valor estiver abaixo de 50%, significa que você está indo para o Showdown perdendo. O ideal é 50% ou mais. **Diagnóstico:** {diag_wssd}")
+        diag_wssd = "Monstro dos Showdowns!" if wssd_pct >= 50 else "Perdendo dinheiro nos potes grandes. Reavalie seus calls no River."
+        st.write(f"- **W$SD ({wssd_pct:.1f}%):** Se este valor estiver abaixo de 50%, significa que você está indo para o Showdown perdendo. O ideal é 50% ou mais. **Diagnóstico:** {diag_wssd}")
