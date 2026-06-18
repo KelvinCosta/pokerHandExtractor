@@ -127,16 +127,16 @@ def render_postflop(df):
     df_hero_investido = (
         df.filter(
             (pl.col("player") == "Hero") & 
-            (pl.col("action_type").is_in(["SMALL BLIND", "BIG BLIND", "POST", "BET", "CALL", "RAISE"]))
+            (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"]))
         )
         .group_by("hand_id")
-        .agg(pl.col("amount").sum().alias("hero_colocou"))
+        .agg(pl.col("invested_amount").sum().fill_null(0.0).alias("hero_colocou"))
     )
 
     df_hero_ganhou = (
         df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
         .group_by("hand_id")
-        .agg(pl.col("amount").sum().alias("hero_puxou"))
+        .agg(pl.col("amount").sum().fill_null(0.0).alias("hero_puxou"))
     )
 
     df_hero_pnl = (
