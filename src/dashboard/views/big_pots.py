@@ -117,14 +117,22 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
     st.subheader("🚨 Auditoria de Prejuízos Máximos")
     st.write("Mãos gigantes ordenadas do maior prejuízo para o menor. Analise os combos e o board.")
 
-    # Cruzando com Hero Cards, Board e Cartas dos Vilões
+    # Obtém os vencedores e filtra o Hero
+    from src.dashboard.domain_data import get_vencedores_df
+    df_vencedores = get_vencedores_df(df).with_columns(
+        pl.col("lista_vencedores").list.eval(pl.element().filter(pl.element() != "Hero")).list.join(", ").alias("winning_villain")
+    ).select(["hand_id", "winning_villain"])
+
+    # Cruzando com Hero Cards, Board, Vencedores e Cartas dos Vilões
     tabela_auditoria = (
         df_pnl
         .join(df_hero_cards, on="hand_id", how="left")
         .join(df_board, on="hand_id", how="left")
+        .join(df_vencedores, on="hand_id", how="left")
         .join(df_villains_cards, on="hand_id", how="left")
         .select([
             "hand_id",
+            "winning_villain",
             "hero_cards",
             "villains_cards",
             "board",
@@ -141,6 +149,7 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
         hide_index=True,
         column_config={
             "hand_id": "ID da Mão",
+            "winning_villain": "Vilão Vencedor",
             "hero_cards": "Cartas do Herói",
             "villains_cards": "Cartas dos Vilões",
             "board": "Board (Cartas Comunitárias)",
@@ -149,3 +158,9 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
             "pot_in_bb": st.column_config.NumberColumn("Tamanho Pote (BB)", format="%.1f BB")
         }
     )
+
+    from src.dashboard.domain_data import get_known_cards_df
+    from src.dashboard.views.components.villain_explorer import render_villain_explorer
+    
+    df_known_cards = get_known_cards_df(df)
+    render_villain_explorer(df, df_known_cards)

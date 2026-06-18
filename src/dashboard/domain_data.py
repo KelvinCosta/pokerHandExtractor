@@ -1,4 +1,5 @@
 import polars as pl
+import streamlit as st
 
 def get_hero_cards(df_p):
     """Extrai as cartas do Hero da coluna pré-calculada, mantendo unicidade por mão."""
@@ -132,4 +133,18 @@ def get_player_positions_df(df_p):
         .explode(["players_order", "position"])
         .rename({"players_order": "player"})
         .select(["hand_id", "player", "position"])
+    )
+
+@st.cache_data
+def get_known_cards_df(df_p):
+    """Gera um DataFrame com as cartas canônicas conhecidas dos vilões no showdown."""
+    return (
+        df_p.filter((pl.col("player") != "Hero") & (pl.col("player_cards").is_not_null()))
+        .with_columns(
+            pl.struct(["player_cards", "player"])
+            .map_elements(lambda x: process_hand_data(x["player_cards"], x["player"]), return_dtype=pl.Struct({"combo": pl.Utf8, "hand_canonical": pl.Utf8}))
+            .alias("cards_info")
+        )
+        .unnest("cards_info")
+        .filter(pl.col("hand_canonical").is_not_null())
     )
