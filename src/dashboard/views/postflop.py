@@ -122,16 +122,49 @@ def render_postflop(df):
 
     wssd_pct = (wssd_success_count / wsd_money_opp * 100) if wsd_money_opp > 0 else 0.0
 
+    # -------------------------------------------------------------
+    # 6. SD & Non-SD Winnings
+    df_hero_investido = (
+        df.filter(
+            (pl.col("player") == "Hero") & 
+            (pl.col("action_type").is_in(["SMALL BLIND", "BIG BLIND", "POST", "BET", "CALL", "RAISE"]))
+        )
+        .group_by("hand_id")
+        .agg(pl.col("amount").sum().alias("hero_colocou"))
+    )
+
+    df_hero_ganhou = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
+        .group_by("hand_id")
+        .agg(pl.col("amount").sum().alias("hero_puxou"))
+    )
+
+    df_hero_pnl = (
+        df.filter(pl.col("player") == "Hero")
+        .select("hand_id").unique()
+        .join(df_hero_investido, on="hand_id", how="left")
+        .join(df_hero_ganhou, on="hand_id", how="left")
+        .fill_null(0.0)
+        .with_columns(
+            (pl.col("hero_puxou") - pl.col("hero_colocou")).alias("net_profit")
+        )
+    )
+
+    sd_winnings = df_hero_pnl.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
+    nsd_winnings = df_hero_pnl.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
+
     # ==========================================
     # RENDERIZAÇÃO
     # ==========================================
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     col1.metric("🎯 C-Bet Flop", f"{cbet_pct:.1f}%", help=f"Fez C-Bet {cbet_success_count} vezes de {cbet_opp_count} oportunidades.")
     col2.metric("🛡️ Fold to C-Bet", f"{fold_cbet_pct:.1f}%", help=f"Foldou {fold_cbet_success_count} vezes de {fold_cbet_opp_count} oportunidades.")
     col3.metric("👁️ WSD", f"{wsd_pct:.1f}%", help=f"Chegou no Showdown em {wsd_success_count} mãos de {wsd_opp_count} flops vistos.")
     col4.metric("💰 W$SD", f"{wssd_pct:.1f}%", help=f"Venceu {wssd_success_count} vezes nas {wsd_money_opp} vezes que foi ao Showdown.")
+    col5.metric("🔵 SD Winnings", f"${sd_winnings:.2f}", help="Total de lucro (ou prejuízo) nas mãos que chegaram ao Showdown.")
+    col6.metric("🔴 Non-SD Winnings", f"${nsd_winnings:.2f}", help="Total de lucro (ou prejuízo) nas mãos em que todos foldaram (Linha Vermelha).")
 
     st.divider()
 
