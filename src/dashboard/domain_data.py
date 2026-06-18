@@ -100,6 +100,7 @@ def get_villains_cards_shown(df_p):
                       pl.col("player_cards").struct.field("player"), 
                       pl.col("player_cards").struct.field("cards")).alias("villain_show")
         )
+        .group_by("hand_id")
         .agg(pl.col("villain_show").str.join(" | ").alias("villains_cards"))
     )
 
