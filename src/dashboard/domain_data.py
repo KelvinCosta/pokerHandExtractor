@@ -100,6 +100,35 @@ def get_villains_cards_shown(df_p):
                       pl.col("player_cards").struct.field("player"), 
                       pl.col("player_cards").struct.field("cards")).alias("villain_show")
         )
-        .group_by("hand_id")
         .agg(pl.col("villain_show").str.join(" | ").alias("villains_cards"))
+    )
+
+def get_player_positions_df(df_p):
+    """Mapeia a posição de cada jogador na mão baseado na ordem de ação pré-flop."""
+    # Extrai a ordem de ação no preflop (SB e BB postam primeiro)
+    ordem_df = (
+        df_p
+        .filter(pl.col("street") == "PRE_FLOP")
+        .select(["hand_id", "player"])
+        .unique(subset=["hand_id", "player"], maintain_order=True)
+        .group_by("hand_id", maintain_order=True)
+        .agg(pl.col("player").alias("players_order"))
+    )
+    
+    def map_positions(players):
+        n = len(players)
+        if n == 2: return ["SB", "BB"]
+        elif n == 3: return ["SB", "BB", "BTN"]
+        elif n == 4: return ["SB", "BB", "CO", "BTN"]
+        elif n == 5: return ["SB", "BB", "UTG", "CO", "BTN"]
+        elif n == 6: return ["SB", "BB", "UTG", "MP", "CO", "BTN"]
+        else: return ["UNK"] * n
+        
+    return (
+        ordem_df.with_columns(
+            pl.col("players_order").map_elements(map_positions, return_dtype=pl.List(pl.Utf8)).alias("position")
+        )
+        .explode(["players_order", "position"])
+        .rename({"players_order": "player"})
+        .select(["hand_id", "player", "position"])
     )
