@@ -35,3 +35,43 @@ def get_vencedores_df(df_p):
         .select(["hand_id", "lista_vencedores", "hero_ganhou"])
         .unique(subset=["hand_id"])
     )
+
+def process_hand_data(player_cards_list, player):
+    """
+    Transforma uma lista de dicionários de cartas no formato canônico da mão (ex: 'AKs', 'AA').
+    Adaptado do script de analytics.
+    """
+    if not isinstance(player_cards_list, list) or not player:
+        return {"combo": None, "hand_canonical": None}
+        
+    raw_combo = None
+    for item in player_cards_list:
+        if item and item.get("player") == player:
+            raw_combo = item.get("cards")
+            break
+            
+    if not raw_combo:
+        return {"combo": None, "hand_canonical": None}
+        
+    cards = raw_combo.replace("[", "").replace("]", "").strip().split()
+    if len(cards) != 2:
+        return {"combo": None, "hand_canonical": None}
+        
+    # ORDENAÇÃO OFICIAL DE POKER
+    ranks = "23456789TJQKA"
+    cards.sort(key=lambda c: (-ranks.index(c[0]) if c[0] in ranks else 0, c[1]))
+    
+    combo_str = f"{cards[0]} {cards[1]}"
+    
+    # GERAÇÃO DA CANÔNICA
+    v1, s1 = cards[0][0], cards[0][1]
+    v2, s2 = cards[1][0], cards[1][1]
+    
+    if v1 == v2:
+        canonical = f"{v1}{v2}"  # Par (Ex: AA)
+    elif s1 == s2:
+        canonical = f"{v1}{v2}s" # Suited (Ex: AKs)
+    else:
+        canonical = f"{v1}{v2}o" # Offsuit (Ex: AKo)
+        
+    return {"combo": combo_str, "hand_canonical": canonical}

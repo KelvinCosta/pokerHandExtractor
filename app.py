@@ -68,6 +68,11 @@ from src.dashboard.views.postflop import render_postflop
 def page_postflop():
     render_postflop(df_clean)
 
+from src.dashboard.views.population import render_population_range
+
+def page_population():
+    render_population_range(df_clean)
+
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
@@ -76,6 +81,7 @@ pg = st.navigation({
         st.Page(page_postflop, title="Agressão Pós-Flop", icon="⚔️"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
         st.Page(page_villains, title="Mapeamento de Vilões", icon="🕵️‍♂️"),
+        st.Page(page_population, title="População e Ranges (MDA)", icon="👥"),
         st.Page(page_rivalry, title="Ranking de Rivalidade", icon="⚔️"),
         st.Page(page_river, title="Auditoria de River", icon="🌊"),
         st.Page(page_cbet, title="C-Bet e Texturas", icon="🎯"),
