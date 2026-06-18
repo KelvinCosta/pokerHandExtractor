@@ -84,3 +84,22 @@ def process_hand_data(player_cards_list, player):
         canonical = f"{v1}{v2}o" # Offsuit (Ex: AKo)
         
     return {"combo": combo_str, "hand_canonical": canonical}
+
+def get_villains_cards_shown(df_p):
+    """Extrai as cartas reveladas pelos vilões no showdown e junta numa string única por mão."""
+    return (
+        df_p
+        .select(["hand_id", "player_cards"])
+        .drop_nulls("player_cards")
+        .unique("hand_id")
+        .explode("player_cards")
+        .drop_nulls("player_cards")
+        .filter(pl.col("player_cards").struct.field("player") != "Hero")
+        .with_columns(
+            pl.format("{}: {}", 
+                      pl.col("player_cards").struct.field("player"), 
+                      pl.col("player_cards").struct.field("cards")).alias("villain_show")
+        )
+        .group_by("hand_id")
+        .agg(pl.col("villain_show").str.join(" | ").alias("villains_cards"))
+    )

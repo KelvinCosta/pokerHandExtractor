@@ -74,11 +74,13 @@ def page_population():
     render_population_range(df_clean)
 
 from src.dashboard.views.big_pots import render_big_pots
+from src.dashboard.domain_data import get_villains_cards_shown
 
 def page_big_pots():
     hero_cards_df = get_hero_cards(df_clean)
     board_df = get_board(df_clean)
-    render_big_pots(df_clean, hero_cards_df, board_df)
+    villains_cards_df = get_villains_cards_shown(df_clean)
+    render_big_pots(df_clean, hero_cards_df, board_df, villains_cards_df)
 
 # Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({

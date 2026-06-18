@@ -1,7 +1,7 @@
 import streamlit as st
 import polars as pl
 
-def render_big_pots(df, df_hero_cards, df_board):
+def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
     st.title("🔥 Auditoria de Potes Grandes")
     st.write("Dissecação do Lucro (Linhas Azul e Vermelha) exclusivamente em potes inflados (≥ 40 BBs).")
 
@@ -117,14 +117,16 @@ def render_big_pots(df, df_hero_cards, df_board):
     st.subheader("🚨 Auditoria de Prejuízos Máximos")
     st.write("Mãos gigantes ordenadas do maior prejuízo para o menor. Analise os combos e o board.")
 
-    # Cruzando com Hero Cards e Board
+    # Cruzando com Hero Cards, Board e Cartas dos Vilões
     tabela_auditoria = (
         df_pnl
         .join(df_hero_cards, on="hand_id", how="left")
         .join(df_board, on="hand_id", how="left")
+        .join(df_villains_cards, on="hand_id", how="left")
         .select([
             "hand_id",
             "hero_cards",
+            "villains_cards",
             "board",
             "went_to_showdown",
             "net_profit",
@@ -140,6 +142,7 @@ def render_big_pots(df, df_hero_cards, df_board):
         column_config={
             "hand_id": "ID da Mão",
             "hero_cards": "Cartas do Herói",
+            "villains_cards": "Cartas dos Vilões",
             "board": "Board (Cartas Comunitárias)",
             "went_to_showdown": "Showdown?",
             "net_profit": st.column_config.NumberColumn("Net Profit ($)", format="$%.2f"),
