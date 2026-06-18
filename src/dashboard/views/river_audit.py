@@ -123,3 +123,40 @@ def render_river_audit(df, hero_cards_df, board_df):
     col1.metric("💸 Lucro Perdido", f"${lucro_perdido:.2f}")
     col2.metric("🛡️ Dinheiro Salvo", f"${dinheiro_salvo:.2f}")
     col3.metric("📉 Balanço de Vazamento", f"${balanco_real:.2f}", delta="- Vazamento", delta_color="inverse")
+
+    st.divider()
+    st.subheader("🛡️ Auditoria de Calls (River)")
+    st.write("Análise de todas as mãos onde você decidiu dar **CALL** na última carta (River).")
+
+    df_hero_calls_river = (
+        df.filter(
+            (pl.col("player") == "Hero") & 
+            (pl.col("street") == "RIVER") & 
+            (pl.col("action_type") == "CALL")
+        )
+        .select(["hand_id", "amount"])
+        .rename({"amount": "valor_do_call"})
+    )
+
+    if df_hero_calls_river.height > 0:
+        auditoria_calls = (
+            df_hero_calls_river
+            .join(hero_cards_df, on="hand_id", how="left")
+            .join(board_df, on="hand_id", how="left")
+            .join(vencedores_df, on="hand_id", how="left")
+            .with_columns(
+                pl.when(pl.col("hero_ganhou") == True).then(pl.lit("✅ GANHOU (Hero Call)")).otherwise(pl.lit("❌ PERDEU (Crying Call)")).alias("resultado")
+            )
+            .select(["hand_id", "valor_do_call", "hero_cards", "board", "resultado"])
+            .sort("valor_do_call", descending=True)
+        )
+
+        st.dataframe(auditoria_calls.to_pandas(), use_container_width=True, hide_index=True)
+
+        calls_ganhos = auditoria_calls.filter(pl.col("resultado") == "✅ GANHOU (Hero Call)").height
+        calls_perdidos = auditoria_calls.filter(pl.col("resultado") == "❌ PERDEU (Crying Call)").height
+        winrate_calls = (calls_ganhos / auditoria_calls.height) * 100
+
+        st.caption(f"Você venceu {calls_ganhos} vezes e perdeu {calls_perdidos} vezes ao dar Call no River. (Taxa de acerto: {winrate_calls:.1f}%)")
+    else:
+        st.info("Nenhum Call no River registrado no período selecionado.")
