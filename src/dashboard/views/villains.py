@@ -17,6 +17,27 @@ def render_villains(df, df_viloes, df_board):
     st.divider()
     st.subheader("🕵️‍♂️ Mapeamento de Vilões e Anotações (Tags)")
 
+    top_agressores = (
+        df
+        .filter((pl.col("player") != "Hero") & (pl.col("action_type") == "RAISE"))
+        .group_by("player")
+        .agg(pl.len().alias("total_raises"))
+        .sort("total_raises", descending=True)
+        .head(5)
+    )
+
+    dicionario_tags = carregar_tags()
+
+    if top_agressores.height > 0:
+        st.write("🔥 **Top 5 Jogadores Mais Agressivos (Radar de Maníacos)**")
+        cols = st.columns(5)
+        for i, row in enumerate(top_agressores.to_dicts()):
+            jogador = row["player"]
+            nota = dicionario_tags.get(jogador, "").strip()
+            display_name = nota if nota else jogador
+            cols[i].metric(display_name, f"{row['total_raises']} Raises", help=f"ID: {jogador}")
+        st.divider()
+
     df_vencedores = (
         df.filter(pl.col("action_type") == "COLLECT")
         .group_by("hand_id")
@@ -33,7 +54,7 @@ def render_villains(df, df_viloes, df_board):
         .select(["hand_id", "player", pl.col("cards").alias("cartas_vilao")])
     )
 
-    dicionario_tags = carregar_tags()
+    # dicionario_tags já carregado no topo
 
     if dicionario_tags:
         df_tags = pl.DataFrame(
