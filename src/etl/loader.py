@@ -58,6 +58,9 @@ class HandLoader:
             
             df = pl.DataFrame(dict_batch)
             
+            # Cast explícito para garantir que listas vazias não sejam inferidas como List(Null)
+            df = df.with_columns(pl.col("board_cards").cast(pl.List(pl.String)))
+
             flop_suits_count = (
                 pl.col("board_cards").list.slice(0, 3)
                 .list.eval(pl.element().str.slice(1, 1))
@@ -78,9 +81,9 @@ class HandLoader:
                     pl.when(flop_suits_count == 1).then(pl.lit("Monotone"))
                     .when(flop_suits_count == 2).then(pl.lit("Two-Tone"))
                     .when(flop_suits_count == 3).then(pl.lit("Rainbow"))
-                    .otherwise(None)
+                    .otherwise(pl.lit(None, dtype=pl.String))
                 )
-                .otherwise(None)
+                .otherwise(pl.lit(None, dtype=pl.String))
                 .alias("flop_suit_type"),
 
                 pl.when(pl.col("board_cards").list.len() >= 3)
@@ -88,9 +91,9 @@ class HandLoader:
                     pl.when(flop_values_count == 3).then(pl.lit("Unpaired"))
                     .when(flop_values_count == 2).then(pl.lit("Paired"))
                     .when(flop_values_count == 1).then(pl.lit("Trips"))
-                    .otherwise(None)
+                    .otherwise(pl.lit(None, dtype=pl.String))
                 )
-                .otherwise(None)
+                .otherwise(pl.lit(None, dtype=pl.String))
                 .alias("flop_pair_type")
             )
             
