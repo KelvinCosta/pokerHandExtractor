@@ -70,55 +70,70 @@ def test_process_stream_yields_at_end(tokenizer, initial_state):
     assert hand.actions[0].action_type == ActionType.RAISE
     assert hand.actions[0].amount == 0.04
 
-@patch("extractor.HandLoader")
-@patch("extractor.Path.exists")
-@patch("extractor.Path.glob")
-def test_main_no_files(mock_glob, mock_exists, mock_loader, capsys):
+def test_main_no_files(tmp_path, capsys):
     """Testa fluxo do main quando não há arquivos .txt na pasta Bronze."""
-    mock_exists.return_value = False
-    mock_glob.return_value = []
+    bronze = tmp_path / "bronze"
+    silver = tmp_path / "silver"
     
-    with patch("extractor.os.getenv", return_value="dummy_path"):
+    def mock_getenv(key):
+        if key == "DATALAKE_BRONZE": return str(bronze)
+        if key == "DATALAKE_SILVER": return str(silver)
+        return ""
+        
+    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+         patch("extractor.HandLoader") as mock_loader:
         main()
         
     captured = capsys.readouterr()
     assert "Nenhum arquivo .txt encontrado" in captured.out
     mock_loader.assert_not_called()
 
-@patch("extractor.HandLoader")
-@patch("extractor.Path.exists")
-@patch("extractor.Path.glob")
-def test_main_no_new_files(mock_glob, mock_exists, mock_loader, capsys):
+def test_main_no_new_files(tmp_path, capsys):
     """Testa fluxo do main quando não há ARQUIVOS NOVOS na pasta Bronze."""
-    mock_exists.return_value = True
-    mock_glob.return_value = [Path("file1.txt")]
+    bronze = tmp_path / "bronze"
+    silver = tmp_path / "silver"
+    bronze.mkdir()
+    silver.mkdir()
     
-    with patch("builtins.open", mock_open(read_data=json.dumps(["file1.txt"]))), \
-         patch("extractor.os.getenv", return_value="dummy_path"):
+    (bronze / "file1.txt").write_text("dummy", encoding="utf-8")
+    (silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
+    
+    def mock_getenv(key):
+        if key == "DATALAKE_BRONZE": return str(bronze)
+        if key == "DATALAKE_SILVER": return str(silver)
+        return ""
+        
+    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+         patch("extractor.HandLoader") as mock_loader:
         main()
         
     captured = capsys.readouterr()
     assert "Nenhum arquivo novo para extrair" in captured.out
     mock_loader.assert_not_called()
 
-@patch("extractor.HandLoader")
-@patch("extractor.Path.exists")
-@patch("extractor.Path.glob")
-def test_main_with_new_files(mock_glob, mock_exists, mock_loader, capsys):
+def test_main_with_new_files(tmp_path, capsys):
     """Testa fluxo do main processando um novo arquivo."""
-    mock_exists.return_value = True
-    mock_glob.return_value = [Path("file1.txt"), Path("new_file.txt")]
+    bronze = tmp_path / "bronze"
+    silver = tmp_path / "silver"
+    bronze.mkdir()
+    silver.mkdir()
     
-    # Simula log já processado contém file1.txt
-    mock_file = mock_open(read_data=json.dumps(["file1.txt"]))
+    (bronze / "file1.txt").write_text("dummy", encoding="utf-8")
+    (bronze / "new_file.txt").write_text("dummy log", encoding="utf-8")
+    (silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
     
-    mock_loader_instance = MagicMock()
-    mock_loader.return_value = mock_loader_instance
-    mock_loader_instance.process_and_save.return_value = 1
-    
-    with patch("builtins.open", mock_file), \
-         patch("extractor.os.getenv", return_value="dummy_path"), \
-         patch("extractor.process_stream", return_value=iter([])) as mock_process:
+    def mock_getenv(key):
+        if key == "DATALAKE_BRONZE": return str(bronze)
+        if key == "DATALAKE_SILVER": return str(silver)
+        return ""
+        
+    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+         patch("extractor.process_stream", return_value=iter([])) as mock_process, \
+         patch("extractor.HandLoader") as mock_loader:
+         
+        mock_loader_instance = MagicMock()
+        mock_loader.return_value = mock_loader_instance
+        mock_loader_instance.process_and_save.return_value = 1
         
         main()
         
@@ -126,8 +141,10 @@ def test_main_with_new_files(mock_glob, mock_exists, mock_loader, capsys):
     assert "Iniciando Processamento Stream (1 novos arquivos encontrados)" in captured.out
     assert "ETL incremental concluído com sucesso!" in captured.out
     
-    mock_loader.assert_called_once()
+    mock_loader.assert_called_once_with(output_dir=str(silver))
     mock_loader_instance.process_and_save.assert_called_once()
     
     # Verifica se salvou o log final
-    mock_file().write.assert_called()
+    assert (silver / "processed_files.json").exists()
+    saved = json.loads((silver / "processed_files.json").read_text(encoding="utf-8"))
+    assert set(saved) == {"file1.txt", "new_file.txt"}
