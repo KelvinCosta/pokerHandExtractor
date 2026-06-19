@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from typing import Iterator
+from typing import Iterator, Iterable
 import json
 from dataclasses import replace
 
@@ -10,29 +10,28 @@ from src.fsm.states import InitState, TerminalState, State
 from src.domain.models import HandContext
 from src.etl.loader import HandLoader
 
-def process_file_stream(filepath: Path, tokenizer, initial_state: State) -> Iterator[HandContext]:
+def process_stream(stream: Iterable[str], source_name: str, tokenizer, initial_state: State) -> Iterator[HandContext]:
     current_state = initial_state
     hand_context = None
     
-    print(f" -> Lendo stream de: {filepath.name}...")
+    print(f" -> Processando stream: {source_name}...")
     
-    with open(filepath, 'r', encoding='utf-8') as file:
-        for line in file:
-            token = tokenizer.parse_line(line)
-            if not token:
-                continue
+    for line in stream:
+        token = tokenizer.parse_line(line)
+        if not token:
+            continue
+        
+        if isinstance(token, HandStartEvent) and hand_context is not None:
+            if len(hand_context.actions) > 0:
+                yield replace(hand_context, source_file=source_name)
             
-            if isinstance(token, HandStartEvent) and hand_context is not None:
-                if len(hand_context.actions) > 0:
-                    yield replace(hand_context, source_file=filepath.name)
-                
-                current_state = initial_state
-                hand_context = None
+            current_state = initial_state
+            hand_context = None
 
-            current_state, hand_context = current_state.process(token, hand_context)
-                
-        if hand_context is not None and len(hand_context.actions) > 0:
-            yield replace(hand_context, source_file=filepath.name)
+        current_state, hand_context = current_state.process(token, hand_context)
+            
+    if hand_context is not None and len(hand_context.actions) > 0:
+        yield replace(hand_context, source_file=source_name)
 
 load_dotenv()
 def main():
@@ -68,7 +67,8 @@ def main():
     
     def hand_stream_pipeline() -> Iterator[HandContext]:
         for file_path in new_txt_files:
-            yield from process_file_stream(file_path, tokenizer, initial_state)
+            with open(file_path, 'r', encoding='utf-8') as f:
+                yield from process_stream(f, file_path.name, tokenizer, initial_state)
 
     print("💾 Iniciando a carga no Polars (ETL - Camada Silver)...\n")
     loader = HandLoader(output_dir=str(silver_dir))
