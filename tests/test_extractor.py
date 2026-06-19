@@ -3,6 +3,11 @@ from unittest.mock import MagicMock, mock_open, patch
 from pathlib import Path
 from dataclasses import replace
 import json
+import sys
+import os
+
+# Adiciona a raiz do projeto ao path do Python
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from extractor import process_file_stream, main
 from src.parser.tokenizer import HandStartEvent, RawActionEvent
