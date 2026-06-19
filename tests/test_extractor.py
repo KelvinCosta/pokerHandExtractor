@@ -9,111 +9,66 @@ import os
 # Adiciona a raiz do projeto ao path do Python
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from extractor import process_file_stream, main
-from src.parser.tokenizer import HandStartEvent, RawActionEvent
-from src.domain.models import HandContext, Action, ActionType, Street
+from extractor import process_stream, main
+from src.parser.tokenizer import GGPokerTokenizer
+from src.domain.models import ActionType
+from src.fsm.states import InitState
 
 @pytest.fixture
-def mock_tokenizer():
-    return MagicMock()
+def tokenizer():
+    return GGPokerTokenizer()
 
 @pytest.fixture
-def mock_initial_state():
-    return MagicMock()
+def initial_state():
+    return InitState()
 
-def test_process_file_stream_no_actions(mock_tokenizer, mock_initial_state):
+def test_process_stream_no_actions(tokenizer, initial_state):
     """Testa se o stream não retorna nada quando não há tokens válidos."""
-    filepath = Path("test_log.txt")
-    mock_file_content = "Line 1\nLine 2"
-    
-    # Mock para não retornar tokens
-    mock_tokenizer.parse_line.return_value = None
-    
-    with patch("builtins.open", mock_open(read_data=mock_file_content)):
-        results = list(process_file_stream(filepath, mock_tokenizer, mock_initial_state))
-        
-    assert len(results) == 0
-    assert mock_tokenizer.parse_line.call_count == 2
-
-def test_process_file_stream_with_actions(mock_tokenizer, mock_initial_state):
-    """Testa se o HandContext é yieldado (retornado) quando uma nova mão inicia."""
-    filepath = Path("test_log.txt")
-    mock_file_content = "HandStart\nAction1\nHandStart"
-    
-    token_start1 = HandStartEvent(hand_id="1", timestamp="2026")
-    token_action = RawActionEvent(player="P1", action_type="CALL", amount=10.0)
-    token_start2 = HandStartEvent(hand_id="2", timestamp="2026")
-    
-    mock_tokenizer.parse_line.side_effect = [token_start1, token_action, token_start2]
-    
-    state1 = MagicMock()
-    state2 = MagicMock()
-    
-    ctx1 = HandContext(hand_id="1", timestamp="2026")
-    # Ação pre-flop
-    action = Action(player="P1", action_type=ActionType.CALL, street=Street.PRE_FLOP, amount=10.0)
-    ctx2 = ctx1.add_action(action)
-    
-    # Simulando o loop process()
-    # 1. token_start1
-    # 2. token_action
-    # 3. token_start2 -> O contexto anterior tem que ser yieldado aqui
-    mock_initial_state.process.side_effect = [
-        (state1, ctx1), 
-        (state2, ctx2),
-        (state1, HandContext(hand_id="2", timestamp="2026"))
+    stream = [
+        "Uma linha qualquer sem sentido\n",
+        "Outra linha invalida de log\n"
     ]
     
-    # Correção: precisamos garantir que o state1 retorne o proximo contexto
-    # Vamos redefinir o mock baseado em um wrapper simplificado
-    def mock_process(token, ctx):
-        if isinstance(token, HandStartEvent):
-            return state1, HandContext(hand_id=token.hand_id, timestamp="2026")
-        elif isinstance(token, RawActionEvent):
-            return state1, ctx.add_action(action)
-        return state1, ctx
+    # Passa diretamente a lista de strings
+    results = list(process_stream(stream, "test_log.txt", tokenizer, initial_state))
         
-    mock_initial_state.process.side_effect = mock_process
-    state1.process.side_effect = mock_process
+    assert len(results) == 0
 
-    with patch("builtins.open", mock_open(read_data=mock_file_content)):
-        results = list(process_file_stream(filepath, mock_tokenizer, mock_initial_state))
+def test_process_stream_with_actions(tokenizer, initial_state):
+    """Testa se o HandContext é yieldado (retornado) quando uma nova mão inicia."""
+    stream = [
+        "Poker Hand #RC1: Hold'em No Limit ($0.01/$0.02) - 2026/06/19 10:00:00\n",
+        "Hero: calls $0.02\n",
+        "Poker Hand #RC2: Hold'em No Limit ($0.01/$0.02) - 2026/06/19 10:01:00\n"
+    ]
+    
+    results = list(process_stream(stream, "test_log.txt", tokenizer, initial_state))
         
     assert len(results) == 1
-    assert results[0].hand_id == "1"
-    assert results[0].source_file == "test_log.txt"
-    assert len(results[0].actions) == 1
+    hand = results[0]
+    assert hand.hand_id == "RC1"
+    assert hand.source_file == "test_log.txt"
+    assert len(hand.actions) == 1
+    assert hand.actions[0].player == "Hero"
+    assert hand.actions[0].action_type == ActionType.CALL
 
-def test_process_file_stream_yields_at_end(mock_tokenizer, mock_initial_state):
-    """Testa se o restante do contexto é yieldado ao final do arquivo."""
-    filepath = Path("test_log.txt")
-    mock_file_content = "HandStart\nAction1"
+def test_process_stream_yields_at_end(tokenizer, initial_state):
+    """Testa se o restante do contexto é yieldado ao final do iterador."""
+    stream = [
+        "Poker Hand #RC1: Hold'em No Limit ($0.01/$0.02) - 2026/06/19 10:00:00\n",
+        "Hero: raises $0.02 to $0.04\n"
+    ]
     
-    token_start1 = HandStartEvent(hand_id="1", timestamp="2026")
-    token_action = RawActionEvent(player="P1", action_type="CALL", amount=10.0)
-    
-    mock_tokenizer.parse_line.side_effect = [token_start1, token_action]
-    
-    state1 = MagicMock()
-    action = Action(player="P1", action_type=ActionType.CALL, street=Street.PRE_FLOP, amount=10.0)
-    
-    def mock_process(token, ctx):
-        if isinstance(token, HandStartEvent):
-            return state1, HandContext(hand_id=token.hand_id, timestamp="2026")
-        elif isinstance(token, RawActionEvent):
-            return state1, ctx.add_action(action)
-        return state1, ctx
-        
-    mock_initial_state.process.side_effect = mock_process
-    state1.process.side_effect = mock_process
-
-    with patch("builtins.open", mock_open(read_data=mock_file_content)):
-        results = list(process_file_stream(filepath, mock_tokenizer, mock_initial_state))
+    results = list(process_stream(stream, "test_log.txt", tokenizer, initial_state))
         
     assert len(results) == 1
-    assert results[0].hand_id == "1"
-    assert results[0].source_file == "test_log.txt"
-    assert len(results[0].actions) == 1
+    hand = results[0]
+    assert hand.hand_id == "RC1"
+    assert hand.source_file == "test_log.txt"
+    assert len(hand.actions) == 1
+    assert hand.actions[0].player == "Hero"
+    assert hand.actions[0].action_type == ActionType.RAISE
+    assert hand.actions[0].amount == 0.04
 
 @patch("extractor.HandLoader")
 @patch("extractor.Path.exists")
@@ -163,7 +118,7 @@ def test_main_with_new_files(mock_glob, mock_exists, mock_loader, capsys):
     
     with patch("builtins.open", mock_file), \
          patch("extractor.os.getenv", return_value="dummy_path"), \
-         patch("extractor.process_file_stream", return_value=iter([])) as mock_process:
+         patch("extractor.process_stream", return_value=iter([])) as mock_process:
         
         main()
         
