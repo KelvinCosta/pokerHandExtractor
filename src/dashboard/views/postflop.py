@@ -197,6 +197,63 @@ def render_postflop(df):
 
     st.divider()
 
+    st.subheader("🕵️‍♂️ Auditoria de Linhas (Showdown vs Non-Showdown)")
+    st.write("Analise as mãos exatas que estão movimentando suas linhas, junto com as maiores Pot Odds que você enfrentou.")
+
+    # Mãos de Showdown (Linha Azul)
+    df_blue = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="inner")
+    
+    # Mãos de Non-Showdown (Linha Vermelha)
+    df_red = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="anti")
+
+    # Juntar todas e classificar
+    df_blue = df_blue.with_columns(pl.lit("🔵 Azul (Showdown)").alias("linha_impactada"))
+    df_red = df_red.with_columns(pl.lit("🔴 Vermelha (Non-SD)").alias("linha_impactada"))
+    
+    df_audit = pl.concat([df_blue, df_red]).sort("net_profit", descending=False)
+
+    # Verifica se as colunas de pot odds já existem (para não quebrar caso o datalake ainda não tenha sido atualizado)
+    cols_meta = ["hand_id", "hero_cards", "board_str"]
+    if "hero_flop_pot_odds" in df.columns:
+        cols_meta.extend(["hero_flop_pot_odds", "hero_turn_pot_odds", "hero_river_pot_odds"])
+
+    # Obter os metadados (cartas e odds) da tabela base
+    df_meta = (
+        df.filter(pl.col("player") == "Hero")
+        .select(cols_meta)
+        .unique(subset=["hand_id"])
+    )
+
+    df_audit = df_audit.join(df_meta, on="hand_id", how="left")
+
+    col_config = {
+        "hand_id": "ID da Mão",
+        "linha_impactada": "Linha",
+        "net_profit": st.column_config.NumberColumn("Net Profit ($)", format="$%.2f"),
+        "hero_cards": "Cartas do Herói",
+        "board_str": "Board"
+    }
+    
+    col_order = ["hand_id", "linha_impactada", "net_profit", "hero_cards", "board_str"]
+
+    if "hero_flop_pot_odds" in df.columns:
+        col_config.update({
+            "hero_flop_pot_odds": st.column_config.NumberColumn("Flop Pot Odds", format="%.1f%%"),
+            "hero_turn_pot_odds": st.column_config.NumberColumn("Turn Pot Odds", format="%.1f%%"),
+            "hero_river_pot_odds": st.column_config.NumberColumn("River Pot Odds", format="%.1f%%")
+        })
+        col_order.extend(["hero_flop_pot_odds", "hero_turn_pot_odds", "hero_river_pot_odds"])
+
+    st.dataframe(
+        df_audit.to_pandas(),
+        use_container_width=True,
+        hide_index=True,
+        column_config=col_config,
+        column_order=col_order
+    )
+
+    st.divider()
+
     st.subheader("🩺 Diagnóstico do Pós-Flop")
     
     with st.expander("Ver Análise de Texto Completa", expanded=True):

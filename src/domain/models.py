@@ -25,6 +25,7 @@ class Action:
     amount: float = 0.0
     is_all_in: bool = False
     invested_amount: float = 0.0
+    pot_odds: float = 0.0
 
 @dataclass(frozen=True, slots=True)
 class HandContext:
@@ -43,7 +44,7 @@ class HandContext:
 
     @property
     def current_pot(self) -> float:
-        return sum(action.amount for action in self.actions if action.action_type not in (ActionType.COLLECT, ActionType.FOLD))
+        return sum(action.invested_amount for action in self.actions if action.action_type not in (ActionType.COLLECT, ActionType.FOLD))
 
     def add_action(self, action: Action) -> 'HandContext':
         return replace(self, actions=self.actions + (action,))

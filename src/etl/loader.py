@@ -44,7 +44,8 @@ class HandLoader:
                             "street": a.street.name if hasattr(a.street, "name") else str(a.street),
                             "amount": a.amount,
                             "is_all_in": a.is_all_in,
-                            "invested_amount": a.invested_amount
+                            "invested_amount": a.invested_amount,
+                            "pot_odds": a.pot_odds
                         }
                         for a in hand.actions
                     ],
@@ -53,7 +54,10 @@ class HandLoader:
                     "player_cards": [{"player": p, "cards": c} for p, c in hand.player_cards.items()],
                     "hero_cards": hand.player_cards.get("Hero", ""),
                     "lista_vencedores": [a.player for a in hand.actions if a.action_type == ActionType.COLLECT],
-                    "hero_ganhou": any(a.player == "Hero" and a.action_type == ActionType.COLLECT for a in hand.actions)
+                    "hero_ganhou": any(a.player == "Hero" and a.action_type == ActionType.COLLECT for a in hand.actions),
+                    "hero_flop_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "FLOP" or str(a.street) == "FLOP")] + [0.0]),
+                    "hero_turn_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "TURN" or str(a.street) == "TURN")] + [0.0]),
+                    "hero_river_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "RIVER" or str(a.street) == "RIVER")] + [0.0])
                 })
             
             df = pl.DataFrame(dict_batch)

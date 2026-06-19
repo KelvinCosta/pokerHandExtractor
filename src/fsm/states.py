@@ -50,11 +50,24 @@ class BaseStreetState(State):
             action_enum = _map_action_type(token.action_type)
             
             # Calcula a quantia exata (incremental) gasta
+            actions_on_street = [a for a in context.actions if a.street == self.street]
+            
             if action_enum == ActionType.RAISE:
-                previous_invested = sum(a.invested_amount for a in context.actions if a.player == token.player and a.street == self.street)
+                previous_invested = sum(a.invested_amount for a in actions_on_street if a.player == token.player)
                 invested_amount = token.amount - previous_invested
             else:
                 invested_amount = token.amount
+                
+            # Cálculo de Pot Odds
+            highest_bet = max([a.amount for a in actions_on_street if a.action_type in (ActionType.POST, ActionType.BET, ActionType.RAISE)] + [0.0])
+            previous_invested_for_odds = sum(a.invested_amount for a in actions_on_street if a.player == token.player)
+            
+            amount_to_call = max(0.0, highest_bet - previous_invested_for_odds)
+            pot_before_action = context.current_pot
+            
+            pot_odds = 0.0
+            if amount_to_call > 0 and action_enum in (ActionType.CALL, ActionType.FOLD, ActionType.RAISE):
+                pot_odds = amount_to_call / (pot_before_action + amount_to_call)
 
             action = Action(
                 player=token.player, 
@@ -62,7 +75,8 @@ class BaseStreetState(State):
                 amount=token.amount,
                 street=self.street,
                 is_all_in=token.is_all_in,
-                invested_amount=round(invested_amount, 2)
+                invested_amount=round(invested_amount, 2),
+                pot_odds=round(pot_odds * 100, 2)
             )
             new_context = context.add_action(action)
             
