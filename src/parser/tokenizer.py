@@ -5,6 +5,7 @@ from typing import List, Optional, Union
 class HandStartEvent(BaseModel):
     hand_id: str
     timestamp: str = ""
+    game_info: str = ""
 
 class StreetChangeEvent(BaseModel):
     street_name: str 
@@ -32,7 +33,7 @@ Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEv
 
 class GGPokerTokenizer:
     def __init__(self):
-        self.re_hand_start = re.compile(r"^Poker Hand #(RC[0-9]+):.* - (\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
+        self.re_hand_start = re.compile(r"^Poker Hand #([a-zA-Z0-9]+):\s*(.*?)\s*-\s*(\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2})")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
         self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(.*)")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
@@ -47,7 +48,7 @@ class GGPokerTokenizer:
 
         match_start = self.re_hand_start.search(line)
         if match_start:
-            return HandStartEvent(hand_id=match_start.group(1), timestamp=match_start.group(2))
+            return HandStartEvent(hand_id=match_start.group(1), game_info=match_start.group(2).strip(), timestamp=match_start.group(3))
 
         match_street = self.re_street.search(line)
         if match_street:

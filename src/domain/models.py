@@ -31,6 +31,7 @@ class Action:
 class HandContext:
     hand_id: str
     timestamp: str
+    game_info: str = ""
     actions: Tuple[Action, ...] = field(default_factory=tuple)
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
     player_cards: Mapping[str, str] = field(default_factory=dict)

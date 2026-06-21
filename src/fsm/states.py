@@ -133,6 +133,7 @@ class InitState(State):
     def process(self, token: Token, context: Optional[HandContext]) -> Tuple[State, Optional[HandContext]]:
         if isinstance(token, HandStartEvent):
             data_capturada = getattr(token, "timestamp", "")
-            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada)
+            game_info = getattr(token, "game_info", "")
+            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada, game_info=game_info)
             return PreFlopState(), new_context
         return self, context

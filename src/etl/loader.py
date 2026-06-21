@@ -9,6 +9,20 @@ class HandLoader:
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
 
+    def _parse_game_type(self, source_file: str, game_info: str, hand_id: str) -> str:
+        name = source_file.lower()
+        if "rushandcash" in name or hand_id.startswith("RC"):
+            return "Rush & Cash"
+        if "spin&gold" in name:
+            return "Spin & Gold"
+        if "mystery battle royale" in name or "mbr" in name:
+            return "Mystery Battle Royale"
+        if "tournament" in name or "bounty" in name or "freeroll" in name or "step" in name:
+            return "Tournament"
+        if "tournament" in game_info.lower():
+            return "Tournament"
+        return "Regular Cash"
+
     def process_and_save(self, hands_iterator: Iterator[HandContext], batch_size: int = 10000) -> int:
         total_processed = 0
         
@@ -30,6 +44,8 @@ class HandLoader:
                     "hand_id": hand.hand_id,
                     "date": hand.timestamp,
                     "source_file": hand.source_file,
+                    "game_info": hand.game_info,
+                    "game_type": self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id),
                     "current_pot": hand.current_pot, 
                     "total_pot_final": hand.total_pot,
                     "rake": hand.rake,

@@ -20,11 +20,37 @@ def render_sidebar(df, nome_coluna_data):
                 data_inicio, data_fim = filtro_data
                 
                 df = df.filter(
-                    pl.col("data_limpa").is_between(data_inicio, data_fim) &
-                    pl.col("hand_id").str.starts_with("RC")
+                    pl.col("data_limpa").is_between(data_inicio, data_fim)
                 )
     else:
         st.sidebar.warning("⚠️ Coluna de data não encontrada no seu ficheiro Parquet. Verifique se o nome é 'date' ou 'timestamp'.")
+        
+    st.sidebar.divider()
+    
+    # Filtro Dinâmico de Tipo de Jogo
+    if "game_type" in df.columns:
+        tipos_disponiveis = df.select("game_type").drop_nulls().unique().to_series().to_list()
+        
+        # Garante que as opções padrão existem nas opções disponíveis (Rush & Cash por padrão)
+        default_options = [t for t in tipos_disponiveis if "Rush & Cash" in t]
+        if not default_options and tipos_disponiveis:
+            default_options = [tipos_disponiveis[0]]
+            
+        selecionados = st.sidebar.multiselect(
+            "🃏 Modalidades de Jogo:",
+            options=tipos_disponiveis,
+            default=default_options,
+            help="Selecione as modalidades que deseja analisar para evitar a mistura de métricas entre torneios e cash games."
+        )
+        
+        if not selecionados:
+            st.sidebar.error("Selecione pelo menos um tipo de jogo.")
+            st.stop()
+            
+        df = df.filter(pl.col("game_type").is_in(selecionados))
+    else:
+        # Backward compatibility (se o banco for antigo e não tiver game_type)
+        df = df.filter(pl.col("hand_id").str.starts_with("RC"))
         
     st.sidebar.divider()
     pesquisa_hand_id = st.sidebar.text_input("🔍 Buscar por Hand ID:")
