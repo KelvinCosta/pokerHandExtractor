@@ -70,19 +70,42 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
     # Filtra apenas potes onde Hero estava envolvido (colocou > 0 ou puxou > 0)
     # df_pnl = df_pnl.filter((pl.col("hero_colocou") > 0) | (pl.col("hero_puxou") > 0))
 
-    sd_winnings = df_pnl.filter(pl.col("went_to_showdown") == True)["net_profit"].sum()
-    nsd_winnings = df_pnl.filter(pl.col("went_to_showdown") == False)["net_profit"].sum()
-    total_winnings = sd_winnings + nsd_winnings
+    # Precisamos do game_type
+    df_game_types = df.select(["hand_id", "game_type"]).unique()
+    df_pnl = df_pnl.join(df_game_types, on="hand_id", how="left")
+
+    tournament_types = ["Tournament", "Spin & Gold", "Mystery Battle Royale"]
+    
+    # Cash Game
+    df_cash_pnl = df_pnl.filter(~pl.col("game_type").is_in(tournament_types))
+    sd_winnings_cash = df_cash_pnl.filter(pl.col("went_to_showdown") == True)["net_profit"].sum()
+    nsd_winnings_cash = df_cash_pnl.filter(pl.col("went_to_showdown") == False)["net_profit"].sum()
+    total_winnings_cash = sd_winnings_cash + nsd_winnings_cash
+
+    # Torneios
+    df_tourn_pnl = df_pnl.filter(pl.col("game_type").is_in(tournament_types))
+    sd_winnings_tourn = df_tourn_pnl.filter(pl.col("went_to_showdown") == True)["net_profit"].sum()
+    nsd_winnings_tourn = df_tourn_pnl.filter(pl.col("went_to_showdown") == False)["net_profit"].sum()
+    total_winnings_tourn = sd_winnings_tourn + nsd_winnings_tourn
 
     # ==========================
     # MÉTRICAS E GRÁFICO
     # ==========================
     st.subheader("💳 Resumo Financeiro (Apenas Potes ≥ 40 BBs)")
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("💵 Total Net Profit", f"${total_winnings:.2f}")
-    col2.info(f"**🔵 Linha Azul (SD Winnings)**\n\n### ${sd_winnings:.2f}")
-    col3.error(f"**🔴 Linha Vermelha (Non-SD Winnings)**\n\n### ${nsd_winnings:.2f}")
+    if df_cash_pnl.height > 0:
+        st.write("#### 💰 Cash Game ($)")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("💵 Total Net Profit", f"${total_winnings_cash:.2f}")
+        col2.info(f"**🔵 Linha Azul (SD Winnings)**\n\n### ${sd_winnings_cash:.2f}")
+        col3.error(f"**🔴 Linha Vermelha (Non-SD Winnings)**\n\n### ${nsd_winnings_cash:.2f}")
+
+    if df_tourn_pnl.height > 0:
+        st.write("#### 🏆 Torneios (Net Chips)")
+        col1_t, col2_t, col3_t = st.columns(3)
+        col1_t.metric("💵 Total Net Chips", f"{total_winnings_tourn:,.0f} Chips")
+        col2_t.info(f"**🔵 Linha Azul (SD Winnings)**\n\n### {sd_winnings_tourn:,.0f} Chips")
+        col3_t.error(f"**🔴 Linha Vermelha (Non-SD Winnings)**\n\n### {nsd_winnings_tourn:,.0f} Chips")
 
     st.divider()
     st.subheader("📈 Evolução Acumulada em Potes Grandes")
@@ -132,6 +155,7 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
         .join(df_villains_cards, on="hand_id", how="left")
         .select([
             "hand_id",
+            "game_type",
             "winning_villain",
             "hero_cards",
             "villains_cards",
@@ -149,12 +173,13 @@ def render_big_pots(df, df_hero_cards, df_board, df_villains_cards):
         hide_index=True,
         column_config={
             "hand_id": "ID da Mão",
+            "game_type": "Modalidade",
             "winning_villain": "Vilão Vencedor",
             "hero_cards": "Cartas do Herói",
             "villains_cards": "Cartas dos Vilões",
             "board": "Board (Cartas Comunitárias)",
             "went_to_showdown": "Showdown?",
-            "net_profit": st.column_config.NumberColumn("Net Profit ($)", format="$%.2f"),
+            "net_profit": st.column_config.NumberColumn("Net Profit / Chips", format="%.2f"),
             "pot_in_bb": st.column_config.NumberColumn("Tamanho Pote (BB)", format="%.1f BB")
         }
     )

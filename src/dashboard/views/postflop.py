@@ -187,13 +187,35 @@ def render_postflop(df):
     else:
         df_hero_pnl_filtrado = df_hero_pnl
 
-    sd_winnings = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
-    nsd_winnings = df_hero_pnl_filtrado.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
-    col_sd, col_nsd = st.columns(2)
-    with col_sd:
-        st.info(f"**🔵 SD Winnings (Linha Azul)**\n\n### ${sd_winnings:.2f}")
-    with col_nsd:
-        st.error(f"**🔴 Non-SD Winnings (Linha Vermelha)**\n\n### ${nsd_winnings:.2f}")
+    # Precisamos pegar o game_type de volta para df_hero_pnl_filtrado
+    df_game_types = df.select(["hand_id", "game_type"]).unique()
+    df_hero_pnl_filtrado = df_hero_pnl_filtrado.join(df_game_types, on="hand_id", how="left")
+
+    tournament_types = ["Tournament", "Spin & Gold", "Mystery Battle Royale"]
+    
+    # Linhas para Cash Game
+    df_cash_pnl = df_hero_pnl_filtrado.filter(~pl.col("game_type").is_in(tournament_types))
+    if df_cash_pnl.height > 0:
+        st.write("#### 💰 Cash Game ($)")
+        sd_winnings_cash = df_cash_pnl.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
+        nsd_winnings_cash = df_cash_pnl.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
+        col_sd, col_nsd = st.columns(2)
+        with col_sd:
+            st.info(f"**🔵 SD Winnings (Linha Azul)**\n\n### ${sd_winnings_cash:.2f}")
+        with col_nsd:
+            st.error(f"**🔴 Non-SD Winnings (Linha Vermelha)**\n\n### ${nsd_winnings_cash:.2f}")
+
+    # Linhas para Torneio
+    df_tourn_pnl = df_hero_pnl_filtrado.filter(pl.col("game_type").is_in(tournament_types))
+    if df_tourn_pnl.height > 0:
+        st.write("#### 🏆 Torneios (Net Chips)")
+        sd_winnings_tourn = df_tourn_pnl.join(showdown_hands, on="hand_id", how="inner")["net_profit"].sum()
+        nsd_winnings_tourn = df_tourn_pnl.join(showdown_hands, on="hand_id", how="anti")["net_profit"].sum()
+        col_sd_t, col_nsd_t = st.columns(2)
+        with col_sd_t:
+            st.info(f"**🔵 SD Winnings (Linha Azul)**\n\n### {sd_winnings_tourn:,.0f} Chips")
+        with col_nsd_t:
+            st.error(f"**🔴 Non-SD Winnings (Linha Vermelha)**\n\n### {nsd_winnings_tourn:,.0f} Chips")
 
     st.divider()
 
@@ -228,13 +250,14 @@ def render_postflop(df):
 
     col_config = {
         "hand_id": "ID da Mão",
+        "game_type": "Modalidade",
         "linha_impactada": "Linha",
-        "net_profit": st.column_config.NumberColumn("Net Profit ($)", format="$%.2f"),
+        "net_profit": st.column_config.NumberColumn("Net Profit / Chips", format="%.2f"),
         "hero_cards": "Cartas do Herói",
         "board_str": "Board"
     }
     
-    col_order = ["hand_id", "linha_impactada", "net_profit", "hero_cards", "board_str"]
+    col_order = ["hand_id", "game_type", "linha_impactada", "net_profit", "hero_cards", "board_str"]
 
     if "hero_flop_pot_odds" in df.columns:
         col_config.update({

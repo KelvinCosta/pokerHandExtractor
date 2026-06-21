@@ -34,11 +34,12 @@ def render_health(df):
     )
 
     # 1. Lucro de Cash Games (apenas net_profit das mãos)
-    df_cash = lucro_por_mao.filter(pl.col("game_type") != "Tournament")
+    tournament_types = ["Tournament", "Spin & Gold", "Mystery Battle Royale"]
+    df_cash = lucro_por_mao.filter(~pl.col("game_type").is_in(tournament_types))
     cash_net_profit = df_cash["net_profit"].sum()
     
     # 2. Lucro de Torneios
-    df_tournaments_hands = lucro_por_mao.filter(pl.col("game_type") == "Tournament")
+    df_tournaments_hands = lucro_por_mao.filter(pl.col("game_type").is_in(tournament_types))
     tournament_net_profit = 0.0
     df_tournaments_daily = pl.DataFrame({"dia": [], "net_profit_diario": []}, schema={"dia": pl.Utf8, "net_profit_diario": pl.Float64})
     
