@@ -12,9 +12,19 @@ class TournamentSummary(BaseModel):
 class SummaryParser:
     def __init__(self):
         self.re_tournament = re.compile(r"^Tournament #([0-9]+),")
-        self.re_buyin = re.compile(r"^Buy-in:\s*\$([0-9.]+)")
+        self.re_buyin = re.compile(r"^Buy-in:\s*\$([0-9.,]+)")
         self.re_free = re.compile(r"^Buy-in:\s*Free", re.IGNORECASE)
-        self.re_prize = re.compile(r"^You received a total of \$([0-9.]+)")
+        self.re_prize = re.compile(r"^You received a total of \$([0-9.,]+)")
+
+    def _safe_float(self, val_str: str) -> float:
+        # Remover ponto final (caso a frase termine com ponto, ex: "$0.5.")
+        val_str = val_str.rstrip(".")
+        # Remover vírgulas de milhar (ex: "2,500.50" -> "2500.50")
+        val_str = val_str.replace(",", "")
+        try:
+            return float(val_str)
+        except ValueError:
+            return 0.0
 
     def is_summary_file(self, filepath: str) -> bool:
         """Verifica se o arquivo é um Tournament Summary (geralmente bem pequeno)"""
@@ -49,7 +59,7 @@ class SummaryParser:
                         
                     match_buyin = self.re_buyin.search(line)
                     if match_buyin:
-                        buy_in = float(match_buyin.group(1))
+                        buy_in = self._safe_float(match_buyin.group(1))
                         continue
                     elif self.re_free.search(line):
                         buy_in = 0.0
@@ -57,7 +67,7 @@ class SummaryParser:
                         
                     match_prize = self.re_prize.search(line)
                     if match_prize:
-                        prize = float(match_prize.group(1))
+                        prize = self._safe_float(match_prize.group(1))
                         continue
 
             if t_id:
