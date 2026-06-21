@@ -3,6 +3,7 @@ import polars as pl
 from typing import Iterator
 from itertools import islice
 from src.domain.models import HandContext, ActionType
+from src.parser.summary_parser import TournamentSummary
 
 class HandLoader:
     def __init__(self, output_dir: str):
@@ -128,3 +129,22 @@ class HandLoader:
             
         print(f"📊 Carga completa! Total de mãos particionadas: {total_processed}")
         return total_processed
+
+    def save_summaries(self, summaries: list[TournamentSummary]):
+        if not summaries:
+            return
+            
+        file_path = os.path.join(self.output_dir, "tournaments.parquet")
+        
+        dict_batch = [s.model_dump() for s in summaries]
+        new_df = pl.DataFrame(dict_batch)
+        
+        if os.path.exists(file_path):
+            existing_df = pl.read_parquet(file_path)
+            # Combinar e remover duplicatas pelo tournament_id
+            df = pl.concat([existing_df, new_df]).unique(subset=["tournament_id"], keep="last")
+        else:
+            df = new_df
+            
+        df.write_parquet(file_path, compression="zstd")
+        print(f"✅ Torneios atualizados: {len(summaries)} novos sumários salvos no Datalake (Total: {df.height})")

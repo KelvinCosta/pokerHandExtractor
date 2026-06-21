@@ -10,6 +10,7 @@ from src.fsm.states import InitState, TerminalState, State
 from src.domain.models import HandContext
 from src.etl.loader import HandLoader
 from src.etl.repository import JsonProcessedHandsRepository
+from src.parser.summary_parser import SummaryParser
 
 def process_stream(stream: Iterable[str], source_name: str, tokenizer, initial_state: State) -> Iterator[HandContext]:
     current_state = initial_state
@@ -63,18 +64,37 @@ def main():
     
     tokenizer = GGPokerTokenizer()
     initial_state = InitState()
+    summary_parser = SummaryParser()
     
+    summaries_to_save = []
+    hands_files_to_process = []
+    
+    # 1. Separar Sumários vs Históricos de Mãos
+    for file_path in new_txt_files:
+        if summary_parser.is_summary_file(str(file_path)):
+            summary = summary_parser.parse_file(str(file_path))
+            if summary:
+                summaries_to_save.append(summary)
+        else:
+            hands_files_to_process.append(file_path)
+
     def hand_stream_pipeline() -> Iterator[HandContext]:
-        for file_path in new_txt_files:
+        for file_path in hands_files_to_process:
             with open(file_path, 'r', encoding='utf-8') as f:
                 yield from process_stream(f, file_path.name, tokenizer, initial_state)
 
     print("💾 Iniciando a carga no Polars (ETL - Camada Silver)...\n")
     loader = HandLoader(output_dir=str(silver_dir))
     
-    processed_count = loader.process_and_save(hand_stream_pipeline())
+    # Salvar Sumários
+    if summaries_to_save:
+        loader.save_summaries(summaries_to_save)
+        
+    processed_count = 0
+    if hands_files_to_process:
+        processed_count = loader.process_and_save(hand_stream_pipeline())
     
-    if processed_count > 0:
+    if processed_count > 0 or summaries_to_save:
         # Atualiza o log de processados usando o Repository
         repo.mark_as_processed([f.name for f in new_txt_files])
         print(f"\n✅ ETL incremental concluído com sucesso!")

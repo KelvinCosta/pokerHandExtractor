@@ -4,13 +4,22 @@ from .config import DATALAKE_SILVER
 
 @st.cache_data
 def load_data():
-    df = pl.scan_parquet(DATALAKE_SILVER / "*.parquet").collect()
+    df = pl.scan_parquet(DATALAKE_SILVER / "hands_part_*.parquet").collect()
     
     # Previne dados duplicados caso o usuário não delete os parquets antigos ao re-extrair
     df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
     
     df_gold = df.explode("actions").unnest("actions")
     return df_gold
+
+@st.cache_data
+def load_tournaments():
+    try:
+        df = pl.read_parquet(DATALAKE_SILVER / "tournaments.parquet")
+        return df
+    except Exception:
+        # Se o arquivo ainda não existir, retorna df vazio com as colunas esperadas
+        return pl.DataFrame(schema={"tournament_id": pl.Utf8, "buy_in": pl.Float64, "prize": pl.Float64, "source_file": pl.Utf8})
 
 def get_base_dataframe():
     df = load_data()

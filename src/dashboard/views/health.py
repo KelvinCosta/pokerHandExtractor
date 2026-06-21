@@ -1,5 +1,6 @@
 import streamlit as st
 import polars as pl
+from src.dashboard.data_loader import load_tournaments
 
 def render_health(df):
     st.title("❤️ Saúde Geral")
@@ -20,7 +21,9 @@ def render_health(df):
             pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
             pl.col("invested_amount").filter((pl.col("player") == "Hero") & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"]))).sum().fill_null(0.0).alias("investido"),
             pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT")).sum().fill_null(0.0).alias("coletado"),
-            pl.col("date").first().alias("timestamp")
+            pl.col("date").first().alias("timestamp"),
+            pl.col("game_type").first().alias("game_type"),
+            pl.col("game_info").first().alias("game_info")
         )
         .with_columns(
             (pl.col("coletado") - pl.col("investido")).alias("net_profit")
@@ -30,10 +33,46 @@ def render_health(df):
         )
     )
 
-    total_net_profit = lucro_por_mao["net_profit"].sum()
-    total_profit_bb = lucro_por_mao["profit_in_bb"].sum()
+    # 1. Lucro de Cash Games (apenas net_profit das mãos)
+    df_cash = lucro_por_mao.filter(pl.col("game_type") != "Tournament")
+    cash_net_profit = df_cash["net_profit"].sum()
     
-    # Win rate: bb / 100 hands
+    # 2. Lucro de Torneios
+    df_tournaments_hands = lucro_por_mao.filter(pl.col("game_type") == "Tournament")
+    tournament_net_profit = 0.0
+    df_tournaments_daily = pl.DataFrame({"dia": [], "net_profit_diario": []}, schema={"dia": pl.Utf8, "net_profit_diario": pl.Float64})
+    
+    if df_tournaments_hands.height > 0:
+        # Extrair tournament_id
+        df_t = df_tournaments_hands.with_columns(
+            pl.col("game_info").str.extract(r"Tournament #([0-9]+)").alias("tournament_id"),
+            pl.col("timestamp").str.slice(0, 10).alias("dia")
+        )
+        
+        # Mapear 1 dia por torneio (o primeiro dia que ele aparece)
+        t_days = df_t.drop_nulls("tournament_id").group_by("tournament_id").agg(pl.col("dia").first())
+        
+        # Carregar sumários
+        df_summaries = load_tournaments()
+        if df_summaries.height > 0:
+            df_summaries = df_summaries.with_columns(pl.col("tournament_id").cast(pl.Utf8))
+            
+            # Join para pegar buy_in e prize
+            t_joined = t_days.join(df_summaries, on="tournament_id", how="inner")
+            
+            if t_joined.height > 0:
+                t_joined = t_joined.with_columns(
+                    (pl.col("prize") - pl.col("buy_in")).alias("t_profit")
+                )
+                tournament_net_profit = t_joined["t_profit"].sum()
+                
+                # Agrupar por dia para o gráfico
+                df_tournaments_daily = t_joined.group_by("dia").agg(pl.col("t_profit").sum().alias("net_profit_diario"))
+
+    total_net_profit = cash_net_profit + tournament_net_profit
+    
+    # Win rate: bb / 100 hands (geral em bb)
+    total_profit_bb = lucro_por_mao["profit_in_bb"].sum()
     win_rate_bb100 = (total_profit_bb / total_maos) * 100
 
     col1, col2, col3 = st.columns(3)
@@ -58,11 +97,18 @@ def render_health(df):
     
     st.subheader("📈 Evolução do Bankroll")
     
-    grafico_df = (
-        lucro_por_mao
+    grafico_cash = (
+        df_cash
         .with_columns(pl.col("timestamp").str.slice(0, 10).alias("dia"))
         .group_by("dia")
         .agg(pl.col("net_profit").sum().alias("net_profit_diario"))
+    )
+    
+    # Combinar o diário de Cash com o diário de Torneio
+    grafico_df = pl.concat([grafico_cash, df_tournaments_daily]).group_by("dia").agg(pl.col("net_profit_diario").sum())
+    
+    grafico_df = (
+        grafico_df
         .sort("dia")
         .with_columns(
             pl.col("net_profit_diario").cum_sum().alias("Net Profit Cumulativo ($)")
