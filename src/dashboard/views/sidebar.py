@@ -36,10 +36,14 @@ def render_sidebar(df, nome_coluna_data):
         if not default_options and tipos_disponiveis:
             default_options = [tipos_disponiveis[0]]
             
+        # Inicializar o estado se não existir
+        if "game_type_filter" not in st.session_state:
+            st.session_state["game_type_filter"] = default_options
+
         selecionados = st.sidebar.multiselect(
             "🃏 Modalidades de Jogo:",
             options=tipos_disponiveis,
-            default=default_options,
+            key="game_type_filter",
             help="Selecione as modalidades que deseja analisar para evitar a mistura de métricas entre torneios e cash games."
         )
         
