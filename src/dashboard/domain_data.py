@@ -31,8 +31,7 @@ def get_viloes_cached(df_p):
     """Extrai os IDs dos jogadores (exceto Hero) nas mãos válidas."""
     return (
         df_p.filter(
-            (pl.col("player") != "Hero") & 
-            (pl.col("hand_id").str.starts_with("RC"))
+            (pl.col("player") != "Hero")
         )
         .select(["hand_id", "player"])
         .unique() 

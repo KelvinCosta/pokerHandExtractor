@@ -3,21 +3,18 @@ import polars as pl
 
 def render_health(df):
     st.title("❤️ Saúde Geral")
-    st.write("Visão geral de lucratividade e volume de jogo (Apenas Cash Games - Rush & Cash).")
-
-    # Filtra apenas Cash Games (Começam com RC)
-    df_cash = df.filter(pl.col("hand_id").str.starts_with("RC"))
+    st.write("Visão geral de lucratividade e volume de jogo da seleção atual.")
 
     # Total de Mãos
-    total_maos = df_cash.select("hand_id").n_unique()
+    total_maos = df.select("hand_id").n_unique()
 
     if total_maos == 0:
-        st.warning("Nenhuma mão de Cash Game (Rush & Cash) encontrada no período.")
+        st.warning("Nenhuma mão encontrada no período para o filtro atual.")
         return
 
     # Descobre o BB da mão e calcula finanças do Hero (Tudo em um único groupby ultra-rápido)
     lucro_por_mao = (
-        df_cash
+        df
         .group_by("hand_id")
         .agg(
             pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
