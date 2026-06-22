@@ -13,7 +13,8 @@ def render_sidebar(df, nome_coluna_data):
                 "Selecione o Período das Mãos:",
                 value=(min_date, max_date),
                 min_value=min_date,
-                max_value=max_date
+                max_value=max_date,
+                key="date_filter"
             )
 
             if isinstance(filtro_data, tuple) and len(filtro_data) == 2:

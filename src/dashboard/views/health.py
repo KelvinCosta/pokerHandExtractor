@@ -53,22 +53,51 @@ def render_health(df):
         # Mapear 1 dia por torneio (o primeiro dia que ele aparece)
         t_days = df_t.drop_nulls("tournament_id").group_by("tournament_id").agg(pl.col("dia").first())
         
-        # Carregar sumários
         df_summaries = load_tournaments()
         if df_summaries.height > 0:
             df_summaries = df_summaries.with_columns(pl.col("tournament_id").cast(pl.Utf8))
             
-            # Join para pegar buy_in e prize
-            t_joined = t_days.join(df_summaries, on="tournament_id", how="inner")
+            # Extrair data do nome do arquivo (ex: GG20260614)
+            df_summaries = df_summaries.with_columns(
+                pl.col("source_file").str.extract(r"GG(\d{8})").alias("raw_date")
+            ).with_columns(
+                (pl.col("raw_date").str.slice(0, 4) + "-" + pl.col("raw_date").str.slice(4, 2) + "-" + pl.col("raw_date").str.slice(6, 2)).alias("dia_file")
+            )
+            
+            # Inferir game_type do arquivo para filtrar corretamente mesmo sem mãos associadas
+            df_summaries = df_summaries.with_columns(
+                pl.when(pl.col("source_file").str.contains("(?i)spin.?gold")).then(pl.lit("Spin & Gold"))
+                .when(pl.col("source_file").str.contains("(?i)mystery battle royale")).then(pl.lit("Mystery Battle Royale"))
+                .otherwise(pl.lit("Tournament")).alias("summary_game_type")
+            )
+
+            # Join FULL para manter torneios sem mãos exportadas (ex: flip&go onde não teve mão jogada)
+            t_joined = t_days.join(df_summaries, on="tournament_id", how="full", coalesce=True)
             
             if t_joined.height > 0:
                 t_joined = t_joined.with_columns(
+                    pl.coalesce(["dia", "dia_file"]).alias("dia_oficial")
+                ).drop_nulls("dia_oficial")
+                
+                # Aplicar filtro de game_type baseado no que o usuário selecionou na sidebar
+                tipos_selecionados = st.session_state.get("game_type_filter", tournament_types)
+                t_joined = t_joined.filter(pl.col("summary_game_type").is_in(tipos_selecionados))
+                
+                # Aplicar filtro de datas baseado no filtro exato da sidebar
+                datas = st.session_state.get("date_filter")
+                if datas and isinstance(datas, tuple) and len(datas) == 2:
+                    min_dia_str = datas[0].strftime("%Y-%m-%d")
+                    max_dia_str = datas[1].strftime("%Y-%m-%d")
+                    t_joined = t_joined.filter(pl.col("dia_oficial").is_between(pl.lit(min_dia_str), pl.lit(max_dia_str)))
+                
+                t_joined = t_joined.fill_null(0.0).with_columns(
                     (pl.col("prize") - pl.col("buy_in")).alias("t_profit")
                 )
+                
                 tournament_net_profit = t_joined["t_profit"].sum()
                 
-                # Agrupar por dia para o gráfico
-                df_tournaments_daily = t_joined.group_by("dia").agg(pl.col("t_profit").sum().alias("net_profit_diario"))
+                # Agrupar por dia oficial para o gráfico
+                df_tournaments_daily = t_joined.group_by("dia_oficial").agg(pl.col("t_profit").sum().alias("net_profit_diario")).rename({"dia_oficial": "dia"})
 
     total_net_profit = cash_net_profit + tournament_net_profit
     
