@@ -101,9 +101,15 @@ def render_health(df):
 
     total_net_profit = cash_net_profit + tournament_net_profit
     
-    # Win rate: bb / 100 hands (geral em bb)
-    total_profit_bb = lucro_por_mao["profit_in_bb"].sum()
-    win_rate_bb100 = (total_profit_bb / total_maos) * 100
+    # Win rate: bb / 100 hands (apenas Cash Game)
+    # TODO: No futuro, criar uma métrica separada de Win Rate (bb/100) específica para Torneios.
+    # Por enquanto, mantemos o Win Rate atrelado exclusivamente ao Cash Game, para que as eliminações
+    # inevitáveis em torneios (perda de todas as fichas/BBs) não puxem a média financeira para baixo.
+    if df_cash.height > 0:
+        total_profit_bb = df_cash["profit_in_bb"].sum()
+        win_rate_bb100 = (total_profit_bb / df_cash.height) * 100
+    else:
+        win_rate_bb100 = 0.0
 
     col1, col2, col3 = st.columns(3)
     
