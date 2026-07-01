@@ -13,21 +13,19 @@ from src.db.warehouse import DuckDBWarehouse
 from src.llm.state_builder import SessionStateCalculator
 from src.dashboard.config import DATALAKE_SILVER
 
-def auditar_estado_cognitivo_local(payload_json, modelo="llama3"):
+def iniciar_mentoria(estado_json, modelo="llama3"):
     """
-    Função que usa LangChain e Ollama para auditar o JSON localmente.
+    Inicia uma sessão interativa de mentoria com a IA, mantendo o contexto da conversa.
     """
-    
-    # 1. Instanciar o modelo local
     try:
+        # Nota: O aviso de DeprecationWarning é normal por estarmos usando langchain_community.
+        # Em versões futuras, pode-se migrar para langchain_ollama.
         llm = Ollama(model=modelo) 
     except Exception as e:
         print(f"Erro ao conectar com Ollama: {e}")
-        print("Certifique-se de que o Ollama está rodando (ollama run llama3)")
-        return None
+        return
 
-    # 2. Criar o Template Socrático
-    template = """
+    template_inicial = """
     Você é um mentor de alta performance focado na psicologia de jogadores profissionais de Poker.
     
     Regras estritas:
@@ -42,19 +40,61 @@ def auditar_estado_cognitivo_local(payload_json, modelo="llama3"):
     Escreva abaixo ÚNICA e EXCLUSIVAMENTE a sua pergunta socrática:
     """
     
-    prompt = PromptTemplate.from_template(template)
-    chain = prompt | llm
-
-    # 3. Injetar o JSON e executar
-    dados_str = json.dumps(payload_json, indent=2)
-    print(f"🧠 Processando análise via Ollama (modelo: {modelo})... Aguarde.")
+    prompt_inicial = PromptTemplate.from_template(template_inicial)
+    dados_str = json.dumps(estado_json, indent=2)
     
+    print(f"🧠 Processando análise via Ollama (modelo: {modelo})... Aguarde.")
     try:
-        resposta = chain.invoke({"dados_do_jogador": dados_str})
-        return resposta
+        primeira_pergunta = (prompt_inicial | llm).invoke({"dados_do_jogador": dados_str}).strip()
     except Exception as e:
         print(f"Falha na comunicação com o modelo local: {e}")
-        return None
+        return
+
+    print("\n=== 🔮 FEEDBACK INICIAL DO MENTOR ===")
+    print(primeira_pergunta)
+    print("=======================================\n")
+    
+    # Inicia o histórico da conversa
+    historico = f"Dados da Janela do Jogador:\n{dados_str}\n\nSua primeira pergunta ao jogador foi:\n{primeira_pergunta}\n"
+    
+    # Loop de interação
+    while True:
+        try:
+            resposta_jogador = input("🗣️  Sua resposta (ou 'sair' para encerrar): ")
+            if resposta_jogador.lower() in ['sair', 'exit', 'quit']:
+                print("\nMentoria encerrada. Boa sorte nas mesas e foco no longo prazo!")
+                break
+                
+            historico += f"\nO Jogador respondeu: {resposta_jogador}\n"
+            
+            template_interativo = """
+            Você é um mentor de alta performance focado na psicologia de jogadores de Poker.
+            
+            Histórico da conversa até agora:
+            {historico}
+            
+            Instruções:
+            1. Avalie a resposta do jogador.
+            2. Seja direto e incisivo. Dê um conselho curto OU faça uma nova pergunta reflexiva.
+            3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
+            
+            Sua resposta:
+            """
+            
+            prompt_interativo = PromptTemplate.from_template(template_interativo)
+            
+            print("🧠 O Mentor está analisando sua resposta...")
+            nova_fala_mentor = (prompt_interativo | llm).invoke({"historico": historico}).strip()
+            
+            print("\n=== 🔮 MENTOR ===")
+            print(nova_fala_mentor)
+            print("===================\n")
+            
+            historico += f"\nVocê (Mentor) disse: {nova_fala_mentor}\n"
+            
+        except KeyboardInterrupt:
+            print("\n\nMentoria interrompida. Boa sorte nas mesas!")
+            break
 
 def main():
     parser = argparse.ArgumentParser(description="Auditoria Socrática da Sessão de Poker")
@@ -80,13 +120,8 @@ def main():
     print(json.dumps(estado_json, indent=2))
     print("--------------------------------\n")
     
-    # Chama o motor da LangChain
-    alerta_na_tela = auditar_estado_cognitivo_local(estado_json, modelo=args.model)
-    
-    if alerta_na_tela:
-        print("\n=== 🔮 FEEDBACK DO MENTOR ===")
-        print(alerta_na_tela.strip())
-        print("===============================\n")
+    # Chama o motor da LangChain (agora em formato de Loop Interativo)
+    iniciar_mentoria(estado_json, modelo=args.model)
 
 if __name__ == "__main__":
     main()
