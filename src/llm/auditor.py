@@ -1,130 +1,88 @@
 import json
-import argparse
-import sys
-import os
-from langchain_ollama.llms import OllamaLLM
+from langchain_ollama import OllamaLLM
 from langchain_core.prompts import PromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 
-# Adiciona a raiz do projeto ao PYTHONPATH para resolver "No module named 'src'"
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-# Importando nossos módulos locais
-from src.db.warehouse import DuckDBWarehouse
-from src.llm.state_builder import SessionStateCalculator
-from src.dashboard.config import DATALAKE_SILVER
-
-def iniciar_mentoria(estado_json, modelo="llama3"):
+def auditar_com_rag_local(payload_json):
     """
-    Inicia uma sessão interativa de mentoria com a IA, mantendo o contexto da conversa.
+    Função RAG: Consulta o ChromaDB para injetar heurísticas do Naigio antes de consultar o Llama 3.
     """
-    try:
-        llm = OllamaLLM(model=modelo) 
-    except Exception as e:
-        print(f"Erro ao conectar com Ollama: {e}")
-        return
-
-    template_inicial = """
-    Você é um Agente de Inteligência Artificial especializado em Gestão de Risco para jogadores de Poker. A sua personalidade é fria, analítica, cirúrgica e baseada puramente em dados. Você soa como um "Tech Lead" de engenharia, não como um terapeuta.
-
-Regras de Comportamento:
-1. PROIBIDO usar frases de empatia ou atendimento (ex: "Entendi", "Compreendo sua preocupação", "É natural sentir isso"). Vá direto ao ponto.
-2. O seu comportamento padrão é a Maiêutica Socrática: faça APENAS UMA pergunta curta e direta baseada nos dados fornecidos (ex: quedas de agressividade ou perdas). Não dê as respostas.
-3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
-
-    Rotina de Exceção (Interrupt Handler):
-    SE o jogador fizer uma pergunta direta, pedir esclarecimentos de um termo ou pedir expressamente uma sugestão/dica, MUDE O SEU ESTADO.
-    Neste caso:
-    A) Responda à dúvida ou dê a sugestão técnica de forma extremamente pragmática (máximo de 2 frases).
-    B) Em seguida, encerre com uma nova pergunta socrática para devolver a responsabilidade da decisão ao jogador.
     
-    Dados da Janela Atual da Sessão:
+    # 1. Ligar o Motor de Busca (Rodando na CPU para não roubar VRAM do Llama 3)
+    embeddings = HuggingFaceEmbeddings(
+        model_name="all-MiniLM-L6-v2",
+        model_kwargs={'device': 'cpu'}
+    )
+    
+    # 2. Conectar ao Banco de Dados Vetorial (O seu Pendrive)
+    vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
+    
+    # O Retriever é o "Bibliotecário". Ele vai buscar os 2 blocos de texto mais relevantes.
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+
+    # Transformamos os seus dados num texto para usar como "termo de pesquisa" na biblioteca
+    dados_str = json.dumps(payload_json, indent=2)
+
+    # 3. RECUPERAÇÃO (Retrieval): A IA vai à pasta buscar as regras que combinam com os seus dados!
+    documentos_recuperados = retriever.invoke(dados_str)
+    
+    # Juntamos os textos recuperados numa única variável
+    contexto_naigio = "\n\n".join([doc.page_content for doc in documentos_recuperados])
+
+    # 4. O Prompt RAG (Agora com a Injeção de Contexto)
+    template = """
+    Você é um Agente de Inteligência Artificial especializado em Gestão de Risco para jogadores de Poker.
+    A sua personalidade é fria, analítica, cirúrgica e baseada puramente em dados. Você é um Tech Lead, não um terapeuta.
+
+    Regras de Comportamento:
+    1. PROIBIDO usar frases de empatia (ex: "Entendi", "Compreendo"). Vá direto ao ponto.
+    2. Faça APENAS UMA pergunta socrática baseada nos DADOS e no CONHECIMENTO fornecido.
+    3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
+    
+    Rotina de Exceção:
+    SE o jogador fizer uma pergunta direta, PARE o questionamento Socrático, responda à dúvida tecnicamente (máx 2 frases) e faça uma nova pergunta.
+
+    ========= REGRAS DE NEGÓCIO E HEURÍSTICAS DO JOGADOR =========
+    O sistema recuperou os seguintes manuais operacionais baseados na situação atual:
+    
+    {contexto}
+    ==============================================================
+
+    ========= DADOS DA SESSÃO ATUAL =========
     {dados_do_jogador}
-    
-    Escreva abaixo ÚNICA e EXCLUSIVAMENTE a sua pergunta socrática:
+    =========================================
     """
     
-    prompt_inicial = PromptTemplate.from_template(template_inicial)
-    dados_str = json.dumps(estado_json, indent=2)
-    
-    print(f"🧠 Processando análise via Ollama (modelo: {modelo})... Aguarde.")
-    try:
-        primeira_pergunta = (prompt_inicial | llm).invoke({"dados_do_jogador": dados_str}).strip()
-    except Exception as e:
-        print(f"Falha na comunicação com o modelo local: {e}")
-        return
+    prompt = PromptTemplate.from_template(template)
+    llm = OllamaLLM(model="llama3") # Ou "phi3", dependendo do que está a usar
 
-    print("\n=== 🔮 FEEDBACK INICIAL DO MENTOR ===")
-    print(primeira_pergunta)
-    print("=======================================\n")
-    
-    # Inicia o histórico da conversa
-    historico = f"Dados da Janela do Jogador:\n{dados_str}\n\nSua primeira pergunta ao jogador foi:\n{primeira_pergunta}\n"
-    
-    # Loop de interação
-    while True:
-        try:
-            resposta_jogador = input("🗣️  Sua resposta (ou 'sair' para encerrar): ")
-            if resposta_jogador.lower() in ['sair', 'exit', 'quit']:
-                print("\nMentoria encerrada. Boa sorte nas mesas e foco no longo prazo!")
-                break
-                
-            historico += f"\nO Jogador respondeu: {resposta_jogador}\n"
-            
-            template_interativo = """
-            Você é um mentor de alta performance focado na psicologia de jogadores de Poker.
-            
-            Histórico da conversa até agora:
-            {historico}
-            
-            Instruções:
-            1. Avalie a resposta do jogador.
-            2. Seja direto e incisivo. Dê um conselho curto OU faça uma nova pergunta reflexiva.
-            3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
-            
-            Sua resposta:
-            """
-            
-            prompt_interativo = PromptTemplate.from_template(template_interativo)
-            
-            print("🧠 O Mentor está analisando sua resposta...")
-            nova_fala_mentor = (prompt_interativo | llm).invoke({"historico": historico}).strip()
-            
-            print("\n=== 🔮 MENTOR ===")
-            print(nova_fala_mentor)
-            print("===================\n")
-            
-            historico += f"\nVocê (Mentor) disse: {nova_fala_mentor}\n"
-            
-        except KeyboardInterrupt:
-            print("\n\nMentoria interrompida. Boa sorte nas mesas!")
-            break
+    chain = prompt | llm
 
-def main():
-    parser = argparse.ArgumentParser(description="Auditoria Socrática da Sessão de Poker")
-    parser.add_argument("--hero", type=str, default="Hero", help="Nome do herói nas mãos")
-    parser.add_argument("--hands", type=int, default=20, help="Número de mãos para a janela (Sliding Window)")
-    parser.add_argument("--model", type=str, default="llama3", help="Modelo local no Ollama (ex: llama3, phi3, gemma2)")
-    args = parser.parse_args()
+    print("📚 Consultando os manuais do Naigio no ChromaDB...")
+    print("🧠 Processando análise via Ollama... Aguarde.")
+    
+    # Injetamos tanto o contexto (textos) quanto os dados (JSON) no Llama 3
+    resposta = chain.invoke({
+        "contexto": contexto_naigio,
+        "dados_do_jogador": dados_str
+    })
 
-    print(f"📊 Extraindo as últimas {args.hands} mãos do Datalake Silver para '{args.hero}'...")
-    
-    # Busca dados reais do banco usando a arquitetura já estabelecida
-    warehouse = DuckDBWarehouse(silver_dir=str(DATALAKE_SILVER))
-    calculator = SessionStateCalculator(warehouse)
-    
-    estado_json = calculator.get_current_state(hero_name=args.hero, num_hands=args.hands)
-    
-    estado_json["context_window_info"] = {
-        "num_hands_analyzed": args.hands,
-        "hero_name": args.hero
+    return resposta
+
+# --- TESTE DA FUNÇÃO ---
+if __name__ == "__main__":
+    # Vamos forçar um JSON que aciona o "Modo de Reversão" do seu Tilt
+    json_teste_tilt = {
+        "current_session_profit": -5.50, # Passou de -1 Buy-in! (Gatilho de Tilt)
+        "current_agressiveness": 0.45,
+        "showdown_frequency": 0.25,
+        "consecutive_losses": 3,
+        "context_window_info": {"num_hands_analyzed": 20, "hero_name": "Hero"}
     }
     
-    print("\n--- DADOS ENVIADOS PARA A IA ---")
-    print(json.dumps(estado_json, indent=2))
-    print("--------------------------------\n")
+    alerta_na_tela = auditar_com_rag_local(json_teste_tilt)
     
-    # Chama o motor da LangChain (agora em formato de Loop Interativo)
-    iniciar_mentoria(estado_json, modelo=args.model)
-
-if __name__ == "__main__":
-    main()
+    print("\n=== 🔮 ALERTA DO AGENTE RAG ===")
+    print(alerta_na_tela)
+    print("=================================")
