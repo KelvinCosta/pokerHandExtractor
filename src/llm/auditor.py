@@ -31,6 +31,9 @@ def iniciar_mentoria(estado_json, modelo="llama3"):
     2. Faça APENAS UMA pergunta socrática, curta e direta, focada no estado mental do jogador.
     3. Avalie apenas os dados abaixo. Foco em anomalias como quedas de agressividade (agressiveness_deviation negativo) ou fadiga (session_duration_minutes).
     4. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
+
+    Regra de Exceção: 
+    Se o jogador fizer uma pergunta direta ou pedir esclarecimentos sobre um termo que você usou, PARE o questionamento Socrático. Explique o conceito de forma clara, técnica e focada no poker, e só depois retome a avaliação
     
     Dados da Janela Atual da Sessão:
     {dados_do_jogador}
