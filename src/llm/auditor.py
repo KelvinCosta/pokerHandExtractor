@@ -54,8 +54,8 @@ def auditar_com_rag_local(payload_json):
     =========================================
     """
     
-    prompt = PromptTemplate.from_template(template)
-    llm = OllamaLLM(model="llama3") # Ou "phi3", dependendo do que está a usar
+    # Você tem uma RTX 3060 de 12GB! Sobra VRAM. Voltamos para o Llama 3 (O melhor).
+    llm = OllamaLLM(model="llama3", num_ctx=4096)
 
     chain = prompt | llm
 
