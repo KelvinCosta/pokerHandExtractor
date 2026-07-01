@@ -2,7 +2,7 @@ import json
 import argparse
 import sys
 import os
-from langchain_community.llms import Ollama
+from langchain_ollama.llms import OllamaLLM
 from langchain_core.prompts import PromptTemplate
 
 # Adiciona a raiz do projeto ao PYTHONPATH para resolver "No module named 'src'"
@@ -18,9 +18,7 @@ def iniciar_mentoria(estado_json, modelo="llama3"):
     Inicia uma sessão interativa de mentoria com a IA, mantendo o contexto da conversa.
     """
     try:
-        # Nota: O aviso de DeprecationWarning é normal por estarmos usando langchain_community.
-        # Em versões futuras, pode-se migrar para langchain_ollama.
-        llm = Ollama(model=modelo) 
+        llm = OllamaLLM(model=modelo) 
     except Exception as e:
         print(f"Erro ao conectar com Ollama: {e}")
         return
