@@ -105,8 +105,15 @@ class SessionStateCalculator:
             ORDER BY date DESC
             LIMIT {num_hands}
         """
+        # Contorno para OutOfMemoryException do DuckDB Arrow Allocator quando o Ollama consome muita RAM:
+        # Convertendo via fetchall (tuplas nativas do Python) ao invés do .pl() direto
+        result = self.warehouse.execute(query)
+        columns = [desc[0] for desc in result.description]
+        data = [dict(zip(columns, row)) for row in result.fetchall()]
         
-        df = self.warehouse.execute(query).pl()
-        df = df.sort("date")
+        df = pl.DataFrame(data)
+        
+        if "date" in df.columns:
+            df = df.sort("date")
         
         return self.calculate_from_window(df, hero_name, session_duration_minutes, total_hands_played)
