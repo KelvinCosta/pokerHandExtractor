@@ -6,7 +6,7 @@ class SessionStateCalculator:
         self.warehouse = warehouse
         self.baseline_agressiveness = baseline_agressiveness
 
-    def calculate_from_window(self, df: pl.DataFrame, hero_name: str) -> dict:
+    def calculate_from_window(self, df: pl.DataFrame, hero_name: str, session_duration_minutes: float = 0.0, total_hands_played: int = 0) -> dict:
         """
         Sliding Window Calculator: Recebe um bloco (janela) de N mãos e calcula as métricas 
         comportamentais puras para essa janela específica.
@@ -63,16 +63,42 @@ class SessionStateCalculator:
             agressiveness = agressive_actions / total_valid_actions
             
         return {
-            "current_session_profit": float(profit),
-            "agressiveness_deviation": float(agressiveness - self.baseline_agressiveness),
-            "showdown_frequency": float(showdown_count / df.height),
-            "consecutive_losses": int(consecutive_losses)
+            "current_session_profit": round(profit, 2),
+            "current_agressiveness": round(agressiveness, 2),
+            "baseline_agressiveness": round(self.baseline_agressiveness, 2),
+            "agressiveness_deviation": round(agressiveness - self.baseline_agressiveness, 2),
+            "showdown_frequency": round(showdown_count / df.height, 2),
+            "consecutive_losses": int(consecutive_losses),
+            "session_duration_minutes": round(session_duration_minutes, 2),
+            "total_hands_played": int(total_hands_played)
         }
 
     def get_current_state(self, hero_name: str, num_hands: int = 20) -> dict:
         table = self.warehouse.get_silver_table()
         
-        # Extrair as últimas num_hands agrupadas pela data
+        # 1. Calcula estatísticas gerais da sessão inteira (considerando mãos das últimas 12 horas)
+        session_query = f"""
+            WITH LastHand AS (
+                SELECT MAX(CAST(date AS TIMESTAMP)) as last_time FROM {table}
+            )
+            SELECT 
+                COUNT(*) as total_hands,
+                MIN(CAST(date AS TIMESTAMP)) as session_start,
+                MAX(CAST(date AS TIMESTAMP)) as session_end
+            FROM {table}, LastHand
+            WHERE CAST(date AS TIMESTAMP) >= last_time - INTERVAL 12 HOUR
+        """
+        session_stats = self.warehouse.execute(session_query).fetchone()
+        total_hands_played = session_stats[0] if session_stats else 0
+        session_start = session_stats[1] if session_stats else None
+        session_end = session_stats[2] if session_stats else None
+        
+        session_duration_minutes = 0.0
+        if session_start and session_end:
+            diff = session_end - session_start
+            session_duration_minutes = diff.total_seconds() / 60.0
+
+        # 2. Extrai as últimas num_hands agrupadas pela data para a Sliding Window
         query = f"""
             SELECT *
             FROM {table}
@@ -83,4 +109,4 @@ class SessionStateCalculator:
         df = self.warehouse.execute(query).pl()
         df = df.sort("date")
         
-        return self.calculate_from_window(df, hero_name)
+        return self.calculate_from_window(df, hero_name, session_duration_minutes, total_hands_played)
