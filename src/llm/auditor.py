@@ -1,7 +1,12 @@
 import json
 import argparse
+import sys
+import os
 from langchain_community.llms import Ollama
 from langchain_core.prompts import PromptTemplate
+
+# Adiciona a raiz do projeto ao PYTHONPATH para resolver "No module named 'src'"
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Importando nossos módulos locais
 from src.db.warehouse import DuckDBWarehouse
