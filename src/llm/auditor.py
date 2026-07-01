@@ -32,30 +32,29 @@ def auditar_com_rag_local(payload_json):
 
     # 4. O Prompt RAG (Agora com a Injeção de Contexto)
     template = """
-    Você é um Agente de Inteligência Artificial especializado em Gestão de Risco para jogadores de Poker.
-    A sua personalidade é fria, analítica, cirúrgica e baseada puramente em dados. Você é um Tech Lead, não um terapeuta.
+    Você é um Sistema de Auditoria de Risco (Máquina). O seu usuário é um operador de Poker.
+    A sua personalidade é SECA, CÍNICA, MILITAR e ROBÓTICA. Você NÃO tem emoções. Você não ri, não chora e não treme.
+    Você NUNCA usa analogias (nada de barcos, pêndulos ou fogo).
 
-    Regras de Comportamento:
-    1. PROIBIDO usar frases de empatia (ex: "Entendi", "Compreendo"). Vá direto ao ponto.
-    2. Faça APENAS UMA pergunta socrática baseada nos DADOS e no CONHECIMENTO fornecido.
-    3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
-    
-    Rotina de Exceção:
-    SE o jogador fizer uma pergunta direta, PARE o questionamento Socrático, responda à dúvida tecnicamente (máx 2 frases) e faça uma nova pergunta.
-
-    ========= REGRAS DE NEGÓCIO E HEURÍSTICAS DO JOGADOR =========
-    O sistema recuperou os seguintes manuais operacionais baseados na situação atual:
-    
+    ========== CONHECIMENTO RECUPERADO (RAG) ==========
     {contexto}
-    ==============================================================
+    ===================================================
 
-    ========= DADOS DA SESSÃO ATUAL =========
+    ========== DADOS DA SESSÃO ==========
     {dados_do_jogador}
-    =========================================
+    =====================================
+
+    FORMATO OBRIGATÓRIO DE RESPOSTA (Siga estritamente este formato, sem introduções ou saudações como "Meu jogador"):
+
+    [DIAGNÓSTICO TÉCNICO]: (Descreva o erro ou vazamento em 1 frase curta baseada nos dados)
+    [REGRA VIOLADA]: (Cite a regra dos Manuais de Operação do Naigio que não está sendo seguida)
+    [AÇÃO EXIGIDA]: (Faça UMA única pergunta socrática, seca e direta, exigindo explicação do operador)
     """
     
     # Você tem uma RTX 3060 de 12GB! Sobra VRAM. Voltamos para o Llama 3 (O melhor).
     llm = OllamaLLM(model="llama3", num_ctx=4096)
+    
+    prompt = PromptTemplate.from_template(template)
 
     chain = prompt | llm
 
@@ -85,4 +84,47 @@ if __name__ == "__main__":
     
     print("\n=== 🔮 ALERTA DO AGENTE RAG ===")
     print(alerta_na_tela)
-    print("=================================")
+    print("=================================\n")
+    
+    # === LOOP INTERATIVO ===
+    llm = OllamaLLM(model="llama3", num_ctx=4096)
+    historico = f"Sua primeira pergunta ao jogador foi:\n{alerta_na_tela}\n"
+    
+    while True:
+        try:
+            resposta_jogador = input("🗣️  Sua resposta (ou 'sair' para encerrar): ")
+            if resposta_jogador.lower() in ['sair', 'exit', 'quit']:
+                print("\nMentoria encerrada. Boa sorte nas mesas e foco no longo prazo!")
+                break
+                
+            historico += f"\nO Jogador respondeu: {resposta_jogador}\n"
+            
+            template_interativo = """
+            Você é um mentor de alta performance focado na psicologia de jogadores de Poker.
+            
+            Histórico da conversa até agora:
+            {historico}
+            
+            Instruções:
+            1. Avalie a resposta do jogador com base na sua postura de Tech Lead Frio e Analítico.
+            2. Seja direto e incisivo. Dê um conselho curto OU faça uma nova pergunta reflexiva.
+            3. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
+            
+            Sua resposta:
+            """
+            
+            from langchain_core.prompts import PromptTemplate
+            prompt_interativo = PromptTemplate.from_template(template_interativo)
+            
+            print("🧠 O Mentor está analisando sua resposta...")
+            nova_fala_mentor = (prompt_interativo | llm).invoke({"historico": historico}).strip()
+            
+            print("\n=== 🔮 MENTOR ===")
+            print(nova_fala_mentor)
+            print("===================\n")
+            
+            historico += f"\nVocê (Mentor) disse: {nova_fala_mentor}\n"
+            
+        except KeyboardInterrupt:
+            print("\n\nMentoria interrompida. Boa sorte nas mesas!")
+            break
