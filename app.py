@@ -3,33 +3,30 @@ import polars as pl
 from src.dashboard.data_loader import get_base_dataframe
 from src.dashboard.views.sidebar import render_sidebar
 from src.dashboard.views.overview import render_overview
-from src.dashboard.views.villains import render_villains, get_df_viloes
+from src.dashboard.views.villains import render_villains
 from src.dashboard.views.rivalry import render_rivalry
+from src.dashboard.views.health import render_health
+from src.dashboard.domain_data import get_hero_cards, get_board, get_viloes_cached, get_villains_cards_shown
+from src.dashboard.config import carregar_tags
 from src.dashboard.views.river_audit import render_river_audit
 from src.dashboard.views.cbet_audit import render_cbet_audit
-from src.dashboard.views.health import render_health
+from src.dashboard.views.preflop import render_preflop
+from src.dashboard.views.postflop import render_postflop
+from src.dashboard.views.population import render_population_range
+from src.dashboard.views.big_pots import render_big_pots
 
 st.set_page_config(layout="wide")
-st.title("📊 Poker Telemetry Dashboard (RnC NL2)")
+st.title("📊 Poker Telemetry Dashboard")
 
-# Carrega os dados brutos
 df, nome_coluna_data = get_base_dataframe()
-
-# Aplica os filtros da Sidebar
 df_clean = render_sidebar(df, nome_coluna_data)
 
-from src.dashboard.domain_data import get_hero_cards, get_board, get_viloes_cached, get_villains_cards_shown
-
-from src.dashboard.config import carregar_tags
-
-# Função para fornecer o df_tags para as páginas que precisam dele
 def get_df_tags():
     dicionario_tags = carregar_tags()
     if dicionario_tags:
         return pl.DataFrame({"player": list(dicionario_tags.keys()), "notas_vilao": list(dicionario_tags.values())})
     return pl.DataFrame({"player": [], "notas_vilao": []}, schema={"player": pl.Utf8, "notas_vilao": pl.Utf8})
 
-# Define as páginas
 def page_health():
     render_health(df_clean)
 
@@ -46,9 +43,8 @@ def page_rivalry():
     df_viloes = get_viloes_cached(df_clean)
     render_rivalry(df_clean, df_viloes, df_tags)
 
+
 def page_river():
-    st.divider()
-    st.subheader("River Sizing EV Delta")
     hero_cards_df = get_hero_cards(df_clean)
     board_df = get_board(df_clean)
     render_river_audit(df_clean, hero_cards_df, board_df)
@@ -58,22 +54,17 @@ def page_cbet():
     board_df = get_board(df_clean)
     render_cbet_audit(df_clean, hero_cards_df, board_df)
 
-from src.dashboard.views.preflop import render_preflop
-
 def page_preflop():
     render_preflop(df_clean)
 
-from src.dashboard.views.postflop import render_postflop
 
 def page_postflop():
     render_postflop(df_clean)
 
-from src.dashboard.views.population import render_population_range
 
 def page_population():
     render_population_range(df_clean)
 
-from src.dashboard.views.big_pots import render_big_pots
 
 def page_big_pots():
     hero_cards_df = get_hero_cards(df_clean)
@@ -81,7 +72,6 @@ def page_big_pots():
     villains_cards_df = get_villains_cards_shown(df_clean)
     render_big_pots(df_clean, hero_cards_df, board_df, villains_cards_df)
 
-# Cria o menu de navegação lateral para as outras abas
 pg = st.navigation({
     "Painéis Detalhados": [
         st.Page(page_health, title="Saúde Geral", icon="❤️"),
@@ -97,5 +87,4 @@ pg = st.navigation({
     ]
 })
 
-# Executa a página selecionada abaixo do Overview
 pg.run()
