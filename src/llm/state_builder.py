@@ -6,23 +6,11 @@ class SessionStateCalculator:
         self.warehouse = warehouse
         self.baseline_agressiveness = baseline_agressiveness
 
-    def get_current_state(self, hero_name: str, num_hands: int = 20) -> dict:
-        table = self.warehouse.get_silver_table()
-        
-        # Extrair as últimas num_hands agrupadas pela data
-        query = f"""
-            SELECT *
-            FROM {table}
-            ORDER BY date DESC
-            LIMIT {num_hands}
+    def calculate_from_window(self, df: pl.DataFrame, hero_name: str) -> dict:
         """
-        
-        # Utilizamos DuckDB para ler e já retornar como Polars DataFrame
-        df = self.warehouse.execute(query).pl()
-        
-        # Ordenamos de forma ascendente cronologicamente para cálculos em sequencia
-        df = df.sort("date")
-        
+        Sliding Window Calculator: Recebe um bloco (janela) de N mãos e calcula as métricas 
+        comportamentais puras para essa janela específica.
+        """
         if df.height == 0:
             return {
                 "current_session_profit": 0.0,
@@ -42,7 +30,7 @@ class SessionStateCalculator:
             board_cards = row["board_cards"] or []
             actions = row["actions"] or []
             
-            # 1. Showdown Frequency (Simplificado pela presença das 5 comunitárias)
+            # 1. Showdown Frequency
             if len(board_cards) == 5:
                 showdown_count += 1
                 
@@ -52,12 +40,9 @@ class SessionStateCalculator:
             else:
                 consecutive_losses += 1
                 
-            # Filtra apenas ações do Hero
             hero_actions = [a for a in actions if a["player"] == hero_name]
             
             if hero_actions:
-                # O investimento total da mão do hero é o pico do invested_amount nas ações
-                # E garantimos que lide com nulos
                 max_invested = max([float(a["invested_amount"] or 0.0) for a in hero_actions] + [0.0])
                 profit -= max_invested
                 
@@ -65,11 +50,9 @@ class SessionStateCalculator:
                     a_type = act["action_type"]
                     amount = float(act["amount"] or 0.0)
                     
-                    # 3. Lucro da Sessão (Somar tudo que ele recolheu)
                     if a_type == "COLLECT":
                         profit += amount
                         
-                    # 4. Desvio de agressividade (Bets + Raises vs Ações Voluntárias)
                     if a_type in ("BET", "RAISE", "CALL", "CHECK", "FOLD"):
                         total_valid_actions += 1
                         if a_type in ("BET", "RAISE"):
@@ -85,3 +68,19 @@ class SessionStateCalculator:
             "showdown_frequency": float(showdown_count / df.height),
             "consecutive_losses": int(consecutive_losses)
         }
+
+    def get_current_state(self, hero_name: str, num_hands: int = 20) -> dict:
+        table = self.warehouse.get_silver_table()
+        
+        # Extrair as últimas num_hands agrupadas pela data
+        query = f"""
+            SELECT *
+            FROM {table}
+            ORDER BY date DESC
+            LIMIT {num_hands}
+        """
+        
+        df = self.warehouse.execute(query).pl()
+        df = df.sort("date")
+        
+        return self.calculate_from_window(df, hero_name)
