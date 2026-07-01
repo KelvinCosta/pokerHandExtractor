@@ -34,6 +34,7 @@ def auditar_estado_cognitivo_local(payload_json, modelo="llama3"):
     1. Nunca dê sermões, dicas técnicas ou explique a matemática.
     2. Faça APENAS UMA pergunta socrática, curta e direta, focada no estado mental do jogador.
     3. Avalie apenas os dados abaixo. Foco em anomalias como quedas de agressividade (agressiveness_deviation negativo) ou fadiga (session_duration_minutes).
+    4. Responda única e obrigatoriamente em Português do Brasil (PT-BR).
     
     Dados da Janela Atual da Sessão:
     {dados_do_jogador}
