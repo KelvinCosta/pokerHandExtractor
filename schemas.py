@@ -36,10 +36,10 @@ class PlayerStats(BaseModel):
 from typing import List
 
 class DiagnosticReport(BaseModel):
-    estado_comportamental: str = Field(..., description="Resumo do estado mental detectado (ex: 'Tilt de Raiva', 'Medo de Perder', 'Sólido')")
-    nivel_gravidade: int = Field(..., ge=1, le=5, description="Nível de gravidade do tilt de 1 a 5 (1 = Normal, 5 = Tilt Severo)")
-    red_flags: List[str] = Field(..., description="Lista de anomalias detectadas nos dados (ex: 'VPIP aumentou 4%', 'Downswing de 150bb')")
-    diretriz_inquisidor: str = Field(..., description="Diretriz para o Agente 2 conduzir a entrevista socrática (ex: 'Questione o motivo do VPIP ter subido logo após a queda')")
+    status_variancia: str = Field(..., description="Resumo do status da variância e anomalia (ex: 'Flutuação Normal', 'Zona Amarela', 'Zona Crítica')")
+    nivel_gravidade: int = Field(..., ge=1, le=5, description="Nível de gravidade do desvio matemático de 1 a 5")
+    red_flags: List[str] = Field(..., description="Lista de anomalias detectadas nos dados (ex: 'VPIP aumentou 6%', 'Downswing de 180bb')")
+    diretriz_investigacao: str = Field(..., description="Diretriz para o Agente 2 conduzir a entrevista socrática neutra (ex: 'Questione a mudança de range')")
 
 class FinalBehavioralReport(BaseModel):
     admitiu_erro: bool = Field(..., description="O jogador reconheceu as falhas apontadas?")
