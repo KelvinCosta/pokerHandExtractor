@@ -6,6 +6,14 @@ class TimeWindow(BaseModel):
     end_date: datetime = Field(..., description="Fim da janela de tempo analisada")
     stake_level: float = Field(..., description="Nível de aposta (ex: 2.0 para NL2, 10.0 para NL10)")
 
+class RecentTrend(BaseModel):
+    hands_analyzed: int = Field(..., description="Tamanho da amostra recente (25% das mãos totais)")
+    profit_bb: float = Field(..., description="Lucro no bloco recente")
+    win_rate_bb100: float = Field(..., description="Win rate no bloco recente")
+    vpip: float = Field(..., description="VPIP recente")
+    pfr: float = Field(..., description="PFR recente")
+    aggressiveness_factor: float = Field(..., description="Fator de agressividade recente")
+
 class PlayerStats(BaseModel):
     player_id: str = Field(..., description="Identificador único do jogador")
     hands_played: int = Field(0, description="Volume de mãos jogadas no período")
@@ -21,6 +29,7 @@ class PlayerStats(BaseModel):
     consecutive_wins: int = Field(0, description="Maior sequência de ganhos contínuos", ge=0)
     consecutive_losses: int = Field(0, description="Maior sequência de perdas contínuas (Sinal vermelho para Tilt)", ge=0)
     time_window: TimeWindow = Field(..., description="Metadados da janela de tempo")
+    recent_trend: RecentTrend = Field(..., description="Recorte das últimas 25% de mãos jogadas para detectar desvios de comportamento recentes")
     
     model_config = {
         "frozen": True,  # Garante a imutabilidade do modelo
