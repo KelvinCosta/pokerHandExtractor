@@ -26,6 +26,7 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
         FROM read_parquet('{parquet_path}')
         WHERE player_id = '{player_id}' 
           AND hand_timestamp >= '{start_date.isoformat()}'
+          AND stake_level = {stake_level}
     """
     
     try:
