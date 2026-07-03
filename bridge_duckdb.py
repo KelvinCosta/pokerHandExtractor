@@ -6,14 +6,13 @@ from pydantic import ValidationError
 
 from schemas import PlayerStats, TimeWindow
 
-def extract_player_metrics(player_id: str, days_limit: int, parquet_path: str = "hands_mock.parquet") -> PlayerStats:
+def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, parquet_path: str = "hands_mock.parquet") -> PlayerStats:
     """
     Conecta ao DuckDB, executa a query analítica sobre o arquivo Parquet 
     e retorna as estatísticas validadas do jogador.
     """
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_limit)
-    stake_level = 2.0  # Exemplo (NL2): Na prática, viria do banco ou como argumento
     
     # Query analítica (agregando dados da sessão)
     query = f"""
@@ -58,13 +57,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Extrai estatísticas determinísticas de Poker via DuckDB.")
     parser.add_argument("--player-id", type=str, required=True, help="ID do jogador a ser analisado.")
     parser.add_argument("--days", type=int, default=30, help="Janela de tempo em dias (padrão: 30).")
+    parser.add_argument("--stake-level", type=float, required=True, help="Nível de aposta predominante (ex: 2.0 para NL2, 10.0 para NL10).")
     parser.add_argument("--out", type=str, default="current_state.json", help="Caminho do arquivo JSON de saída.")
     
     args = parser.parse_args()
     
     try:
         # Executa a extração matemática
-        stats = extract_player_metrics(args.player_id, args.days)
+        stats = extract_player_metrics(args.player_id, args.days, args.stake_level)
         
         # Exporta o resultado utilizando Pydantic para serialização nativa
         output_path = Path(args.out)
