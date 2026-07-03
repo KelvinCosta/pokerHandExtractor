@@ -25,22 +25,31 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
 
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_limit)
+    start_date_str = start_date.strftime('%Y/%m/%d %H:%M:%S')
     
     # Query analítica real: Desempacota o array de structs 'actions' para calcular o comportamento.
     query = f"""
-        WITH unnested_actions AS (
+        WITH raw_unnest AS (
             SELECT 
                 hand_id,
                 date as hand_timestamp,
                 stake_level,
-                a.player,
-                a.action_type,
-                a.invested_amount,
-                a.amount,
-                a.street
-            FROM read_parquet('{parquet_path}'), UNNEST(actions) as a
-            WHERE stake_level = {stake_level}
-              AND date >= '{start_date.isoformat()}'
+                UNNEST(actions) as act
+            FROM read_parquet('{parquet_path}')
+            WHERE ABS(stake_level - {stake_level}) < 0.001
+              AND date >= '{start_date_str}'
+        ),
+        unnested_actions AS (
+            SELECT
+                hand_id,
+                hand_timestamp,
+                stake_level,
+                act.player as player,
+                act.action_type as action_type,
+                act.invested_amount as invested_amount,
+                act.amount as amount,
+                act.street as street
+            FROM raw_unnest
         ),
         hand_metrics AS (
             SELECT 
@@ -56,9 +65,9 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
         )
         SELECT 
             '{player_id}' as player_id,
-            CAST(COALESCE(SUM(COALESCE(coletado, 0) - COALESCE(investido, 0)) / {stake_level}, 0) AS DOUBLE) as profit_bb,
-            CAST(COALESCE(SUM(agg_actions) / NULLIF(SUM(call_actions), 0), 0) AS DOUBLE) as aggressiveness_factor,
-            CAST(COALESCE(AVG(went_to_showdown) * 100, 0) AS DOUBLE) as showdown_frequency,
+            ROUND(CAST(COALESCE(SUM(COALESCE(coletado, 0) - COALESCE(investido, 0)) / {stake_level}, 0) AS DOUBLE), 2) as profit_bb,
+            ROUND(CAST(COALESCE(SUM(agg_actions) / NULLIF(SUM(call_actions), 0), 0) AS DOUBLE), 2) as aggressiveness_factor,
+            ROUND(CAST(COALESCE(AVG(went_to_showdown) * 100, 0) AS DOUBLE), 2) as showdown_frequency,
             0 as consecutive_wins, -- Simplificado temporariamente
             0 as consecutive_losses -- Simplificado temporariamente
         FROM hand_metrics
