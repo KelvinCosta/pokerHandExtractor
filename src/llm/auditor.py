@@ -1,111 +1,78 @@
-import json
-from langchain_ollama import OllamaLLM
-from langchain_core.prompts import PromptTemplate
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_chroma import Chroma
+import os
+import sys
+from pathlib import Path
 
-def iniciar_auditoria_continua(payload_json):
+# Adiciona o diretório raiz ao path para importar schemas.py sem quebrar o módulo
+root_dir = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(root_dir))
+
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from schemas import PlayerStats
+
+def build_auditor_prompt(stats: PlayerStats) -> ChatPromptTemplate:
     """
-    Função RAG Interativa: Mantém o RAG e a personalidade rígida durante TODA a conversa.
+    Compila o System Prompt dinâmico para o Agente LangChain com base nas estatísticas imutáveis.
+    Respeita Clean Architecture isolando a formatação do LLM da extração (DuckDB) e da execução.
     """
-    print("📚 Consultando os manuais do Naigio no ChromaDB...")
+    # 1. Calcular deltas matemáticos em Python
+    vpip_delta = stats.behavioral_triggers.recent_trend_vpip - stats.global_stats.vpip
+    pfr_delta = stats.behavioral_triggers.recent_trend_pfr - stats.global_stats.pfr
     
-    # 1. Ligar o Motor RAG
-    embeddings = HuggingFaceEmbeddings(
-        model_name="all-MiniLM-L6-v2",
-        model_kwargs={'device': 'cpu'}
-    )
-    vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embeddings)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
+    # 2. Resgatar Gatilhos do Pydantic
+    downswing = stats.behavioral_triggers.max_session_downswing_bb
+    streak = stats.behavioral_triggers.current_losing_streak_sessions
     
-    dados_str = json.dumps(payload_json, indent=2)
-    documentos_recuperados = retriever.invoke(dados_str)
-    contexto_naigio = "\n\n".join([doc.page_content for doc in documentos_recuperados])
-
-    # 2. O Prompt Estrito (Usado tanto na 1ª resposta quanto no loop)
-    template_auditoria = """
-    [DIRETRIZ DO SISTEMA]: Você é um Sistema de Auditoria de Risco (Máquina). O seu usuário é um operador de Poker.
-    A sua personalidade é SECA, CÍNICA, MILITAR e ROBÓTICA. Você NÃO tem emoções. Você não ri, não chora e não dá conselhos de vida.
-    Você NUNCA usa analogias. PROIBIDO usar saudações como "Meu jogador", "Entendi", ou nomes próprios.
-
-    [DIRETRIZ DE ESCALADA]: Se o operador responder com deboche, ignorância ("não sei"), ou se recusar a justificar matematicamente, decrete "Falha Cognitiva Crítica (Tilt Severo)".
-
-    ========== CONHECIMENTO RECUPERADO (RAG) ==========
-    {contexto}
-    ===================================================
-
-    ========== DADOS DA SESSÃO ==========
-    {dados_do_jogador}
-    =====================================
-
-    ========== HISTÓRICO DA CONVERSA ==========
-    {historico}
-    ===========================================
-
-    FORMATO OBRIGATÓRIO DE RESPOSTA (Siga rigorosamente as chaves abaixo):
-
-    [INFORMAÇÃO DO SISTEMA]: (Se o operador fez uma pergunta direta ou pediu um dado, responda a ele aqui com o dado frio e exato. Se ele não fez pergunta, escreva apenas "N/A").
-    [DIAGNÓSTICO TÉCNICO]: (Se for a 1ª mensagem, aponte os erros nos DADOS. A partir da 2ª, avalie a resposta do operador de forma cínica e crua em 1 frase).
-    [AÇÃO EXIGIDA]: (Faça UMA única pergunta socrática, seca e direta).
-    """
+    # 3. Calibrar Abordagem (Diretriz Dinâmica)
+    approach_directive = ""
     
-    prompt = PromptTemplate.from_template(template_auditoria)
-    llm = OllamaLLM(model="llama3")
+    # Heurística: VPIP alto + Tombo grande = Macaco Tilt
+    if vpip_delta >= 3.0 and downswing <= -100.0:
+        approach_directive = (
+            "O jogador sofreu um downswing severo recentemente e afrouxou muito seu range (VPIP subiu). "
+            "Há forte probabilidade de perda de paciência (Tilt). Inicie a conversa questionando incisivamente "
+            "o processamento mental e a qualidade da tomada de decisão durante essa queda específica."
+        )
+    # Heurística: Streak negativa = Falta de Confiança / Medo
+    elif streak >= 2:
+        approach_directive = (
+            f"O jogador está amargando uma sequência de {streak} sessões consecutivas no vermelho. "
+            "Questione de forma socrática e direta como essa sequência está afetando a confiança e se "
+            "ele está jogando com medo de perder mais."
+        )
+    # Heurística base
+    else:
+        approach_directive = (
+            "O jogador não apresenta gatilhos severos de tilt de curto prazo no momento. "
+            "Conduza a auditoria questionando de forma socrática se ele está satisfeito com "
+            "sua taxa de vitória atual e se percebe algum padrão invisível vazando lucros."
+        )
 
-    # Histórico inicial
-    historico_chat = "Auditoria iniciada. Analise os dados e faça a primeira cobrança."
-    
-    print("🧠 Processando análise via Ollama... Aguarde.\n")
-    
-    # --- PRIMEIRA INTERAÇÃO ---
-    resposta_ia = (prompt | llm).invoke({
-        "contexto": contexto_naigio,
-        "dados_do_jogador": dados_str,
-        "historico": historico_chat
-    }).strip()
-    
-    print("=== 🔮 ALERTA DO AGENTE RAG ===")
-    print(resposta_ia)
-    print("=================================\n")
-    
-    historico_chat = f"Auditor Máquina: {resposta_ia}\n"
+    # 4. Construir o Template do Sistema (Regras Duras)
+    system_template = f"""[DIRETRIZ DO SISTEMA]
+Você é um Auditor Comportamental de Poker (SaaS B2B).
+SUA REGRA PRIMÁRIA: VOCÊ NÃO ENSINA A JOGAR POKER. Proibido dar dicas técnicas, estratégicas, falar sobre teoria de poker ou corrigir ranges.
+Sua única função é diagnosticar desvios psicológicos e risco de tilt comparando as métricas base (histórico) com os gatilhos recentes.
 
-    # --- LOOP DE CONVERSA ---
-    while True:
-        try:
-            resposta_jogador = input("🗣️  Sua resposta (ou 'sair' para encerrar): ")
-            
-            if resposta_jogador.lower() in ['sair', 'exit', 'quit']:
-                print("\n[SISTEMA]: Auditoria encerrada. Stop-loss mantido. Desligando.")
-                break
-                
-            historico_chat += f"Operador: {resposta_jogador}\n"
-            
-            print("🧠 Recalculando desvio de rota... Aguarde.\n")
-            
-            nova_resposta_ia = (prompt | llm).invoke({
-                "contexto": contexto_naigio,
-                "dados_do_jogador": dados_str,
-                "historico": historico_chat
-            }).strip()
-            
-            print("=== 🔮 ALERTA DO AGENTE RAG ===")
-            print(nova_resposta_ia)
-            print("=================================\n")
-            
-            historico_chat += f"Auditor Máquina: {nova_resposta_ia}\n"
-            
-        except KeyboardInterrupt:
-            print("\n\n[SISTEMA]: Auditoria interrompida no terminal.")
-            break
+Adote uma postura SOCRÁTICA, SECA e OBJETIVA:
+- Faça perguntas curtas e incisivas.
+- Force o jogador a justificar seu estado mental e escolhas sob pressão.
+- NUNCA use analogias. Não seja empático.
 
-# --- TESTE DA FUNÇÃO ---
-if __name__ == "__main__":
-    json_teste_tilt = {
-        "current_session_profit": -5.50,
-        "current_agressiveness": 0.45,
-        "showdown_frequency": 0.25,
-        "consecutive_losses": 3,
-        "context_window_info": {"num_hands_analyzed": 20, "hero_name": "Hero"}
-    }
-    iniciar_auditoria_continua(json_teste_tilt)
+=== CONTEXTO DO JOGADOR ===
+VPIP Global: {stats.global_stats.vpip:.2f}% | VPIP Recente: {stats.behavioral_triggers.recent_trend_vpip:.2f}% (Delta: {vpip_delta:+.2f}%)
+PFR Global: {stats.global_stats.pfr:.2f}% | PFR Recente: {stats.behavioral_triggers.recent_trend_pfr:.2f}% (Delta: {pfr_delta:+.2f}%)
+Lucro Total Acumulado: {stats.global_stats.profit_bb} BB
+Sessões Consecutivas Perdendo (Streak): {streak}
+Maior Queda em Única Sessão (Downswing): {downswing} BB
+
+=== DIRETRIZ DE ABORDAGEM CALIBRADA (Siga rigorosamente para iniciar) ===
+{approach_directive}
+"""
+
+    # 5. Retorna o template pronto e puro do LangChain
+    prompt = ChatPromptTemplate.from_messages([
+        SystemMessagePromptTemplate.from_template(system_template),
+        HumanMessagePromptTemplate.from_template("{user_input}")
+    ])
+    
+    return prompt
