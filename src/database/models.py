@@ -28,6 +28,8 @@ class PokerStatsSnapshot(Base):
     profit_bb = Column(Float)
     max_session_downswing_bb = Column(Float)
     current_losing_streak_sessions = Column(Integer)
+    
+    raw_state_json = Column(Text, nullable=True) # Payload completo extraído do DuckDB
 
     player = relationship("Player", back_populates="snapshots")
 
@@ -41,6 +43,7 @@ class AuditSession(Base):
     
     status_variancia = Column(String)
     nivel_gravidade = Column(Integer)
+    raw_diagnostic_json = Column(Text, nullable=True) # Payload completo do Agente 1 (Red flags etc)
     
     admitiu_erro = Column(Boolean, nullable=True)
     nivel_negacao = Column(Integer, nullable=True)
@@ -107,7 +110,8 @@ def create_audit_session(player_id, initial_diagnostic, stats=None):
             pfr=stats.global_stats.pfr,
             profit_bb=stats.global_stats.profit_bb,
             max_session_downswing_bb=stats.behavioral_triggers.max_session_downswing_bb,
-            current_losing_streak_sessions=stats.behavioral_triggers.current_losing_streak_sessions
+            current_losing_streak_sessions=stats.behavioral_triggers.current_losing_streak_sessions,
+            raw_state_json=stats.model_dump_json() # Salva o payload completo
         )
         db.add(snapshot)
         
@@ -115,7 +119,8 @@ def create_audit_session(player_id, initial_diagnostic, stats=None):
     audit_session = AuditSession(
         player_id=player_id,
         status_variancia=initial_diagnostic.status_variancia,
-        nivel_gravidade=initial_diagnostic.nivel_gravidade
+        nivel_gravidade=initial_diagnostic.nivel_gravidade,
+        raw_diagnostic_json=initial_diagnostic.model_dump_json() # Salva o payload completo
     )
     db.add(audit_session)
     db.commit()

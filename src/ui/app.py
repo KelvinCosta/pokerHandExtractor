@@ -32,18 +32,36 @@ if "langgraph_state" not in st.session_state:
 if "final_report" not in st.session_state:
     st.session_state["final_report"] = None
 
+from src.dashboard.config import DATALAKE_SILVER
+from src.db.warehouse import DuckDBWarehouse
+from src.llm.state_builder import SessionStateCalculator
+
 # ==========================================
 # BARRA LATERAL (SIDEBAR)
 # ==========================================
 with st.sidebar:
     st.title("⚙️ Ingestão de Dados")
     
+    st.markdown("### 1. Extração DuckDB")
+    hero_name = st.text_input("Nome do Herói", value="Hero")
+    num_hands = st.slider("Janela de Análise", min_value=5, max_value=100, value=20, step=5)
+    
+    gerar_duckdb = st.button("🚀 Extrair Estado Atual (DuckDB)")
+    
+    st.divider()
+    st.markdown("### 2. Upload Manual")
     uploaded_file = st.file_uploader("Carregar Histórico (JSON)", type=["json"])
     
-    if uploaded_file is not None and st.session_state["audit_session_id"] is None:
+    if (gerar_duckdb or uploaded_file is not None) and st.session_state["audit_session_id"] is None:
         try:
-            # "Extração" (carregamento do ficheiro JSON simulando o DuckDB)
-            data = json.load(uploaded_file)
+            if gerar_duckdb:
+                with st.spinner("Consultando Camada Silver no DuckDB..."):
+                    warehouse = DuckDBWarehouse(silver_dir=str(DATALAKE_SILVER))
+                    calculator = SessionStateCalculator(warehouse)
+                    data = calculator.get_current_state(hero_name=hero_name, num_hands=num_hands)
+            else:
+                data = json.load(uploaded_file)
+                
             stats = PlayerStats(**data)
             
             with st.spinner("Motor Analítico a gerar o diagnóstico inicial..."):
