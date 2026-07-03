@@ -12,4 +12,5 @@ notas_maos.json
 chroma_db/
 current_state.json
 diagnostic_Hero.json
-final_report_*.json
+final_report*.json
+diagnostic_Hero*.json
