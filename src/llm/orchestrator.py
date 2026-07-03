@@ -33,8 +33,10 @@ def node_diagnostician(state: AuditorState):
     report = run_diagnostician(state["player_stats"])
     
     # Persiste o laudo de diagnóstico no disco para auditoria da plataforma B2B
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     player_id = state["player_stats"].player_id
-    audit_path = root_dir / f"diagnostic_{player_id}.json"
+    audit_path = root_dir / f"diagnostic_{player_id}_{timestamp}.json"
     with open(audit_path, "w", encoding="utf-8") as f:
         f.write(report.model_dump_json(indent=4))
     print(f"💾 Laudo inicial (Motor Analítico) salvo em: {audit_path}")
