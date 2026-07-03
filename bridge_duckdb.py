@@ -10,7 +10,7 @@ from schemas import PlayerStats, TimeWindow
 
 load_dotenv()
 
-def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, parquet_path: str = None) -> PlayerStats:
+def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, game_type: str, parquet_path: str = None) -> PlayerStats:
     """
     Conecta ao DuckDB, executa a query analítica sobre os arquivos Parquet 
     da Camada Silver e retorna as estatísticas validadas do jogador.
@@ -37,6 +37,7 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
                 UNNEST(actions) as act
             FROM read_parquet('{parquet_path}')
             WHERE ABS(stake_level - {stake_level}) < 0.001
+              AND game_type = '{game_type}'
               AND date >= '{start_date_str}'
         ),
         unnested_actions AS (
@@ -79,7 +80,9 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
         
         # O DuckDB retorna (player_id, None, None) se não houver mãos agregadas
         if not result or result[1] is None:
-            raise ValueError(f"Nenhum jogo encontrado para '{player_id}' no stake {stake_level}")
+            available_games = duckdb.query(f"SELECT DISTINCT game_type FROM read_parquet('{parquet_path}')").fetchall()
+            options_str = ", ".join(f"'{row[0]}'" for row in available_games if row[0])
+            raise ValueError(f"Nenhum jogo encontrado para '{player_id}' no stake {stake_level} com game_type '{game_type}'.\nOpções válidas na sua base: {options_str}")
 
         stats = PlayerStats(
             player_id=result[0],
@@ -103,14 +106,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Extrai estatísticas determinísticas de Poker via DuckDB.")
     parser.add_argument("--player-id", type=str, required=True, help="ID do jogador a ser analisado.")
     parser.add_argument("--days", type=int, default=30, help="Janela de tempo em dias (padrão: 30).")
-    parser.add_argument("--stake-level", type=float, required=True, help="Nível de aposta predominante (ex: 2.0 para NL2, 10.0 para NL10).")
+    parser.add_argument("--stake-level", type=float, required=True, help="Nível de aposta predominante (ex: 0.02 para NL2, 0.10 para NL10).")
+    parser.add_argument("--game-type", type=str, required=True, help="Tipo de jogo a ser auditado (ex: 'Regular Cash', 'Rush & Cash', 'Tournament').")
     parser.add_argument("--out", type=str, default="current_state.json", help="Caminho do arquivo JSON de saída.")
     
     args = parser.parse_args()
     
     try:
         # Executa a extração matemática
-        stats = extract_player_metrics(args.player_id, args.days, args.stake_level)
+        stats = extract_player_metrics(args.player_id, args.days, args.stake_level, args.game_type)
         
         # Exporta o resultado utilizando Pydantic para serialização nativa
         output_path = Path(args.out)
