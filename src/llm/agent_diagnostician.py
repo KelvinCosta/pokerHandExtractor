@@ -48,14 +48,18 @@ def run_diagnostician(stats: PlayerStats) -> DiagnosticReport:
 Sua única função é compilar um relatório estruturado em JSON baseado estritamente na matemática e nos alertas fornecidos.
 NÃO diagnostique "Tilt" nem faça presunções psicológicas com viés emocional. Você deve apenas classificar as anomalias e gerar diretrizes de investigação neutras e baseadas em fatos para o Agente 2.
 
+INSTRUÇÃO IMPORTANTE PARA AS RED FLAGS:
+Na lista de `red_flags`, você DEVE ser detalhista e citar os números exatos fornecidos abaixo. Não use termos genéricos (como "downswing_maximo" ou "alta_variancia"). 
+Exemplo correto: "O VPIP recente na sessão (23.7%) subiu acima do VPIP histórico base do jogador (20.1%)" ou "Queda de -113 BB na sessão atual".
+
 NÃO FALE COM O USUÁRIO. Retorne ESTRITAMENTE as chaves do contrato de dados Pydantic."""),
         
-        ("human", """Emita o laudo para os seguintes dados matemáticos:
-VPIP Global: {vpip_global}% | Recente: {vpip_recente}%
-PFR Global: {pfr_global}% | Recente: {pfr_recente}%
-Sessões Perdendo: {streak}
-Downswing Máximo: {downswing} BB
-Lucro Acumulado: {profit} BB
+        ("human", """Emita o laudo para os seguintes dados matemáticos do JOGADOR:
+VPIP Histórico Base: {vpip_global}% | Recente (Sessão Atual): {vpip_recente}%
+PFR Histórico Base: {pfr_global}% | Recente (Sessão Atual): {pfr_recente}%
+Sessões Consecutivas Perdendo: {streak}
+Maior Queda (Downswing) na Sessão Atual: {downswing} BB
+Lucro Acumulado Total do Jogador: {profit} BB
 
 === CONTEXTO DE ALERTA PRÉ-CALCULADO ===
 Alerta de Estatísticas (VPIP/PFR): {alerta_stats}

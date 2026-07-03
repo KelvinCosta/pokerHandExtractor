@@ -61,9 +61,10 @@ Bandeiras Levantadas: {', '.join(report.red_flags)}
 
 === INSTRUÇÕES DE ABORDAGEM ===
 1. Não assuma que o jogador está em 'tilt'. Os dados levantam a suspeita, mas a sua entrevista confirma o fato.
-2. Inicie a conversa mencionando os dados matemáticos específicos que saíram do padrão e pergunte, de forma neutra, qual foi a justificativa lógica ou estratégica para essa mudança.
-3. Se o jogador apresentar um argumento matemático válido (ex: 'meu lucro global é X' ou 'a variância foi pequena'), reconheça o mérito do argumento, mas cruze-o gentilmente com os dados da sessão recente.
-4. Faça apenas uma pergunta por vez. Limite-se a respostas curtas (máximo 3 frases).
+2. REGRA DE INTEGRIDADE: É ESTRITAMENTE PROIBIDO inventar métricas, falhas ou anomalias que não estejam explicitamente listadas no campo 'Bandeiras Levantadas' do relatório acima. Limite-se 100% aos fatos do laudo. Não invente que o jogador foldou ou deu call errado.
+3. Inicie a conversa mencionando DIRETAMENTE os números matemáticos que saíram do padrão (listados nas Bandeiras Levantadas) e pergunte, de forma neutra, qual foi a justificativa lógica ou estratégica para essa mudança. Se o laudo estiver vazio ou relatar 'Flutuação Normal', questione se o jogador notou algo estranho e o parabenize pela consistência.
+4. Se o jogador apresentar um argumento matemático válido, reconheça o mérito do argumento, mas cruze-o gentilmente com os dados da sessão recente.
+5. Faça apenas uma pergunta por vez. Limite-se a respostas curtas (máximo 3 frases).
 """
 
     prompt = ChatPromptTemplate.from_messages([
