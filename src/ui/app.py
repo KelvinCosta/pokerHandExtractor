@@ -61,7 +61,16 @@ with st.sidebar:
     st.markdown("### 2. Upload Manual")
     uploaded_file = st.file_uploader("Carregar Histórico (JSON)", type=["json"])
     
-    if (gerar_duckdb or uploaded_file is not None) and st.session_state["audit_session_id"] is None:
+    trigger_upload = uploaded_file is not None and st.session_state["audit_session_id"] is None
+    
+    if gerar_duckdb or trigger_upload:
+        if gerar_duckdb:
+            # Reseta a sessão caso o usuário queira gerar uma nova auditoria forçadamente
+            st.session_state["audit_session_id"] = None
+            st.session_state["chat_history"] = []
+            st.session_state["langgraph_state"] = None
+            st.session_state["final_report"] = None
+            
         try:
             if gerar_duckdb:
                 with st.spinner("Consultando Camada Silver e Agrupando via DuckDB..."):
@@ -140,6 +149,14 @@ if st.session_state["final_report"] is not None:
         st.write(report.conclusao_entrevista)
         st.subheader("Recomendação do Coach")
         st.write(report.recomendacao_coach)
+        
+    st.divider()
+    if st.button("🔄 Começar Nova Auditoria", use_container_width=True):
+        st.session_state["audit_session_id"] = None
+        st.session_state["chat_history"] = []
+        st.session_state["langgraph_state"] = None
+        st.session_state["final_report"] = None
+        st.rerun()
 
 elif st.session_state["audit_session_id"] is not None:
     # Renderiza histórico
