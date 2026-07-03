@@ -31,6 +31,14 @@ class AuditorState(TypedDict):
 def node_diagnostician(state: AuditorState):
     """Agente 1: Analisa dados e gera relatório estruturado."""
     report = run_diagnostician(state["player_stats"])
+    
+    # Persiste o laudo de diagnóstico no disco para auditoria da plataforma B2B
+    player_id = state["player_stats"].player_id
+    audit_path = root_dir / f"diagnostic_{player_id}.json"
+    with open(audit_path, "w", encoding="utf-8") as f:
+        f.write(report.model_dump_json(indent=4))
+    print(f"💾 Laudo inicial (Motor Analítico) salvo em: {audit_path}")
+        
     return {"diagnostic_report": report}
 
 def node_inquisitor(state: AuditorState):
@@ -78,6 +86,14 @@ def node_final_reporter(state: AuditorState):
     chain = prompt | llm
     print("\n🧠 [Agente 2] Consolidando histórico e emitindo laudo comportamental...")
     report = chain.invoke({"history": state["chat_history"]})
+    
+    # Persiste o laudo final no disco para auditoria da plataforma B2B
+    player_id = state["player_stats"].player_id
+    audit_path = root_dir / f"final_report_{player_id}.json"
+    with open(audit_path, "w", encoding="utf-8") as f:
+        f.write(report.model_dump_json(indent=4))
+    print(f"💾 Laudo final comportamental salvo em: {audit_path}")
+        
     return {"final_report": report}
 
 # ==========================================
