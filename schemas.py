@@ -32,3 +32,17 @@ class PlayerStats(BaseModel):
     time_window: TimeWindow = Field(..., description="Metadados da janela de tempo")
     global_stats: GlobalStats = Field(..., description="Estatísticas gerais de performance (Longo Prazo)")
     behavioral_triggers: BehavioralTriggers = Field(..., description="Gatilhos críticos de curto prazo para detecção de Tilt")
+
+from typing import List
+
+class DiagnosticReport(BaseModel):
+    estado_comportamental: str = Field(..., description="Resumo do estado mental detectado (ex: 'Tilt de Raiva', 'Medo de Perder', 'Sólido')")
+    nivel_gravidade: int = Field(..., ge=1, le=5, description="Nível de gravidade do tilt de 1 a 5 (1 = Normal, 5 = Tilt Severo)")
+    red_flags: List[str] = Field(..., description="Lista de anomalias detectadas nos dados (ex: 'VPIP aumentou 4%', 'Downswing de 150bb')")
+    diretriz_inquisidor: str = Field(..., description="Diretriz para o Agente 2 conduzir a entrevista socrática (ex: 'Questione o motivo do VPIP ter subido logo após a queda')")
+
+class FinalBehavioralReport(BaseModel):
+    admitiu_erro: bool = Field(..., description="O jogador reconheceu as falhas apontadas?")
+    nivel_negacao: int = Field(..., ge=1, le=5, description="Nível de negação ou resistência do jogador (1 a 5)")
+    conclusao_entrevista: str = Field(..., description="Resumo da justificativa dada pelo jogador durante o chat")
+    recomendacao_coach: str = Field(..., description="Recomendação de ação para o jogador (ex: 'Pausar o jogo por 2 dias')")
