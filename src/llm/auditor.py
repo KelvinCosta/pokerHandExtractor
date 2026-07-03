@@ -76,3 +76,26 @@ Maior Queda em Única Sessão (Downswing): {downswing} BB
     ])
     
     return prompt
+
+if __name__ == "__main__":
+    import json
+    
+    # Carrega o JSON gerado pelo DuckDB
+    json_path = root_dir / "current_state.json"
+    if not json_path.exists():
+        print("Erro: current_state.json não encontrado. Rode o bridge_duckdb.py primeiro.")
+        sys.exit(1)
+        
+    with open(json_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+        
+    # Inicializa o contrato imutável
+    stats = PlayerStats(**data)
+    
+    # Compila o prompt
+    prompt = build_auditor_prompt(stats)
+    
+    # Exibe no terminal para debug
+    print("=== PROMPT DO SISTEMA COMPILADO ===")
+    print(prompt.messages[0].prompt.template)
+    print("===================================")
