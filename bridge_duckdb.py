@@ -6,7 +6,7 @@ from pathlib import Path
 from pydantic import ValidationError
 from dotenv import load_dotenv
 
-from schemas import PlayerStats, TimeWindow
+from schemas import PlayerStats, TimeWindow, RecentTrend
 
 load_dotenv()
 
@@ -94,7 +94,9 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
                 CASE WHEN (COALESCE(coletado, 0) - COALESCE(investido, 0)) < 0 THEN 1 ELSE 0 END as is_loss,
                 ROW_NUMBER() OVER(ORDER BY hand_timestamp) as rn_total,
                 ROW_NUMBER() OVER(PARTITION BY CASE WHEN (COALESCE(coletado, 0) - COALESCE(investido, 0)) > 0 THEN 1 ELSE 0 END ORDER BY hand_timestamp) as rn_win,
-                ROW_NUMBER() OVER(PARTITION BY CASE WHEN (COALESCE(coletado, 0) - COALESCE(investido, 0)) < 0 THEN 1 ELSE 0 END ORDER BY hand_timestamp) as rn_loss
+                ROW_NUMBER() OVER(PARTITION BY CASE WHEN (COALESCE(coletado, 0) - COALESCE(investido, 0)) < 0 THEN 1 ELSE 0 END ORDER BY hand_timestamp) as rn_loss,
+                COUNT(*) OVER() as total_hands,
+                ROW_NUMBER() OVER(ORDER BY hand_timestamp DESC) as rn_desc
             FROM hand_metrics
         ),
         streak_groups AS (
@@ -117,7 +119,15 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
             ROUND(CAST(COALESCE(SUM(agg_actions) / NULLIF(SUM(call_actions), 0), 0) AS DOUBLE), 2) as aggressiveness_factor,
             ROUND(CAST(COALESCE(AVG(went_to_showdown) * 100, 0) AS DOUBLE), 2) as showdown_frequency,
             CAST(COALESCE((SELECT MAX(win_len) FROM (SELECT SUM(is_win) as win_len FROM streak_groups WHERE is_win = 1 GROUP BY win_streak_id)), 0) AS INTEGER) as consecutive_wins,
-            CAST(COALESCE((SELECT MAX(loss_len) FROM (SELECT SUM(is_loss) as loss_len FROM streak_groups WHERE is_loss = 1 GROUP BY loss_streak_id)), 0) AS INTEGER) as consecutive_losses
+            CAST(COALESCE((SELECT MAX(loss_len) FROM (SELECT SUM(is_loss) as loss_len FROM streak_groups WHERE is_loss = 1 GROUP BY loss_streak_id)), 0) AS INTEGER) as consecutive_losses,
+            
+            -- Recorte de Tendência Recente (Últimos 25%)
+            CAST(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN 1 ELSE 0 END) AS INTEGER) as recent_hands_analyzed,
+            ROUND(CAST(COALESCE(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN profit ELSE 0 END) / {stake_level}, 0) AS DOUBLE), 2) as recent_profit_bb,
+            ROUND(CAST(COALESCE((SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN profit ELSE 0 END) / {stake_level} / NULLIF(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN 1 ELSE 0 END), 0)) * 100, 0) AS DOUBLE), 2) as recent_win_rate_bb100,
+            ROUND(CAST(COALESCE(AVG(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN vpip_flag ELSE NULL END) * 100, 0) AS DOUBLE), 2) as recent_vpip,
+            ROUND(CAST(COALESCE(AVG(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN pfr_flag ELSE NULL END) * 100, 0) AS DOUBLE), 2) as recent_pfr,
+            ROUND(CAST(COALESCE(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN agg_actions ELSE 0 END) / NULLIF(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN call_actions ELSE 0 END), 0), 0) AS DOUBLE), 2) as recent_aggressiveness_factor
         FROM streak_groups
     """
     
@@ -149,6 +159,14 @@ def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, 
                 start_date=start_date,
                 end_date=end_date,
                 stake_level=stake_level
+            ),
+            recent_trend=RecentTrend(
+                hands_analyzed=result[13],
+                profit_bb=result[14],
+                win_rate_bb100=result[15],
+                vpip=result[16],
+                pfr=result[17],
+                aggressiveness_factor=result[18]
             )
         )
         return stats
