@@ -1,40 +1,76 @@
 import argparse
 import duckdb
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 from pydantic import ValidationError
+from dotenv import load_dotenv
 
 from schemas import PlayerStats, TimeWindow
 
-def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, parquet_path: str = "hands_mock.parquet") -> PlayerStats:
+load_dotenv()
+
+def extract_player_metrics(player_id: str, days_limit: int, stake_level: float, parquet_path: str = None) -> PlayerStats:
     """
-    Conecta ao DuckDB, executa a query analítica sobre o arquivo Parquet 
-    e retorna as estatísticas validadas do jogador.
+    Conecta ao DuckDB, executa a query analítica sobre os arquivos Parquet 
+    da Camada Silver e retorna as estatísticas validadas do jogador.
     """
+    if not parquet_path or parquet_path == "hands_mock.parquet":
+        silver_dir = Path(os.getenv("DATALAKE_SILVER", "datalake/silver"))
+        parquet_path = str(silver_dir / "hands_part_*.parquet")
+        
+        # Verifica se o Datalake possui arquivos antes de acionar o motor
+        if not list(silver_dir.glob("hands_part_*.parquet")):
+            raise ValueError(f"O Datalake em '{silver_dir}' está vazio. Rode o extractor.py primeiro!")
+
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days_limit)
     
-    # Query analítica (agregando dados da sessão)
+    # Query analítica real: Desempacota o array de structs 'actions' para calcular o comportamento.
     query = f"""
+        WITH unnested_actions AS (
+            SELECT 
+                hand_id,
+                date as hand_timestamp,
+                stake_level,
+                a.player,
+                a.action_type,
+                a.invested_amount,
+                a.amount,
+                a.street
+            FROM read_parquet('{parquet_path}'), UNNEST(actions) as a
+            WHERE stake_level = {stake_level}
+              AND date >= '{start_date.isoformat()}'
+        ),
+        hand_metrics AS (
+            SELECT 
+                hand_id,
+                MAX(stake_level) as stake_level,
+                SUM(invested_amount) FILTER (WHERE player = '{player_id}' AND action_type NOT IN ('COLLECT', 'FOLD', 'CHECK')) as investido,
+                SUM(amount) FILTER (WHERE player = '{player_id}' AND action_type = 'COLLECT') as coletado,
+                COUNT(*) FILTER (WHERE player = '{player_id}' AND action_type IN ('BET', 'RAISE')) as agg_actions,
+                COUNT(*) FILTER (WHERE player = '{player_id}' AND action_type = 'CALL') as call_actions,
+                MAX(CASE WHEN player = '{player_id}' AND street = 'RIVER' THEN 1 ELSE 0 END) as went_to_showdown
+            FROM unnested_actions
+            GROUP BY hand_id
+        )
         SELECT 
             '{player_id}' as player_id,
-            CAST(COALESCE(SUM(profit_bb), 0) AS DOUBLE) as profit_bb,
-            CAST(COALESCE(AVG(aggressiveness), 0) AS DOUBLE) as aggressiveness_factor,
+            CAST(COALESCE(SUM(COALESCE(coletado, 0) - COALESCE(investido, 0)) / {stake_level}, 0) AS DOUBLE) as profit_bb,
+            CAST(COALESCE(SUM(agg_actions) / NULLIF(SUM(call_actions), 0), 0) AS DOUBLE) as aggressiveness_factor,
             CAST(COALESCE(AVG(went_to_showdown) * 100, 0) AS DOUBLE) as showdown_frequency,
-            CAST(COALESCE(MAX(streak_wins), 0) AS INTEGER) as consecutive_wins,
-            CAST(COALESCE(MAX(streak_losses), 0) AS INTEGER) as consecutive_losses
-        FROM read_parquet('{parquet_path}')
-        WHERE player_id = '{player_id}' 
-          AND hand_timestamp >= '{start_date.isoformat()}'
-          AND stake_level = {stake_level}
+            0 as consecutive_wins, -- Simplificado temporariamente
+            0 as consecutive_losses -- Simplificado temporariamente
+        FROM hand_metrics
     """
     
     try:
-        # Mock do resultado do DuckDB (Exemplo com 25.5 Big Blinds de lucro)
-        result = (player_id, 25.5, 2.8, 26.5, 4, 0)
+        # AQUI É REAL: Acionando o motor colunar do DuckDB
+        result = duckdb.query(query).fetchone()
         
-        if not result:
-            raise ValueError(f"Nenhum dado encontrado para o jogador {player_id}")
+        # O DuckDB retorna (player_id, None, None) se não houver mãos agregadas
+        if not result or result[1] is None:
+            raise ValueError(f"Nenhum jogo encontrado para '{player_id}' no stake {stake_level}")
 
         stats = PlayerStats(
             player_id=result[0],
