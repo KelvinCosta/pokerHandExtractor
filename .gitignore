@@ -9,3 +9,5 @@ __pycache__/
 .env
 tags_viloes.json
 notas_maos.json
+chroma_db/
+current_state.json
