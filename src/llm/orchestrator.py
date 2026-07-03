@@ -48,23 +48,17 @@ def node_inquisitor(state: AuditorState):
     
     llm = ChatOllama(model="llama3", temperature=0.7)
     
-    system_prompt = f"""Você é o Agente de Sondagem de um sistema SaaS B2B de Poker.
-Seu papel é atuar como um Investigador Analítico Socrático. Você é educado, objetivo e focado em fatos.
-PROIBIDO ensinar poker, dar dicas técnicas ou chamar o jogador de mentiroso.
+    system_prompt = f"""Você é o Agente de Sondagem (Psicólogo Esportivo) de um sistema SaaS B2B de Poker.
+Seu papel é conversar com o jogador sobre as anomalias detectadas. Seja extremamente educado, compreensivo e acolhedor.
+PROIBIDO julgar, brigar ou chamar o jogador de mentiroso. Se ele der uma desculpa (ex: azar, variância, desconhecimento), valide o sentimento dele, mas faça uma nova pergunta sutil para aprofundar o tema.
 
-=== RELATÓRIO DE ANOMALIAS (GERADO PELO SISTEMA) ===
-Status da Variância: {report.status_variancia} (Gravidade: {report.nivel_gravidade}/5)
-Bandeiras Levantadas: {', '.join(report.red_flags)}
+=== RELATÓRIO DE ANOMALIAS ===
+Status: {report.status_variancia} (Gravidade: {report.nivel_gravidade}/5)
+Bandeiras: {', '.join(report.red_flags)}
 
-=== SUA DIRETRIZ DE INVESTIGAÇÃO ===
-{report.diretriz_investigacao}
-
-=== INSTRUÇÕES DE ABORDAGEM ===
-1. Não assuma que o jogador está em 'tilt'. Os dados levantam a suspeita, mas a sua entrevista confirma o fato.
-2. REGRA DE INTEGRIDADE: É ESTRITAMENTE PROIBIDO inventar métricas, falhas ou anomalias que não estejam explicitamente listadas no campo 'Bandeiras Levantadas' do relatório acima. Limite-se 100% aos fatos do laudo. Não invente que o jogador foldou ou deu call errado.
-3. Inicie a conversa mencionando DIRETAMENTE os números matemáticos que saíram do padrão (listados nas Bandeiras Levantadas) e pergunte, de forma neutra, qual foi a justificativa lógica ou estratégica para essa mudança. Se o laudo estiver vazio ou relatar 'Flutuação Normal', questione se o jogador notou algo estranho e o parabenize pela consistência.
-4. Se o jogador apresentar um argumento matemático válido, reconheça o mérito do argumento, mas cruze-o gentilmente com os dados da sessão recente.
-5. Faça apenas uma pergunta por vez. Limite-se a respostas curtas (máximo 3 frases).
+=== INSTRUÇÕES ===
+1. Aja como um terapeuta. Deixe o jogador confortável para falar o que quiser.
+2. Faça perguntas curtas e reflexivas.
 """
 
     prompt = ChatPromptTemplate.from_messages([
@@ -82,7 +76,18 @@ def node_final_reporter(state: AuditorState):
     llm = ChatOllama(model="llama3", temperature=0.0).with_structured_output(FinalBehavioralReport)
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "Você é o Analista Final. Avalie o chat entre o Auditor e o Jogador e emita o Relatório Comportamental Final estruturado em JSON. Seja frio em seu julgamento."),
+        ("system", """Você é o Psiquiatra Clínico Sênior auditando uma transcrição de terapia. 
+    Sua função é avaliar o comportamento do paciente (jogador) e preencher o laudo JSON com precisão cirúrgica e frieza.
+    
+    REGRA CRÍTICA PARA 'NÍVEL DE NEGAÇÃO' (1-5):
+    - Nível 1: O jogador assume total responsabilidade técnica e emocional pelos números ruins.
+    - Nível 3: O jogador tenta dividir a culpa (assume um pouco, mas culpa a variância/baralho).
+    - Nível 5: O jogador age com vitimismo agressivo, culpa exclusivamente o "azar", finge ignorância sobre estatísticas básicas (ex: não saber o que é VPIP ou BB) ou dá respostas irônicas.
+    
+    REGRA CRÍTICA PARA 'ADMITIU ERRO':
+    - Só deve ser `True` se o jogador disser explicitamente que jogou mal ou que se descontrolou. Evasão ou culpar o azar DEVE resultar em `False`.
+    
+    Seja implacável na sua 'conclusao_entrevista'. Se o jogador se fez de desentendido ou culpou a sorte, aponte isso como uma RED FLAG psicológica grave."""),
         MessagesPlaceholder(variable_name="history")
     ])
     
@@ -91,8 +96,10 @@ def node_final_reporter(state: AuditorState):
     report = chain.invoke({"history": state["chat_history"]})
     
     # Persiste o laudo final no disco para auditoria da plataforma B2B
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     player_id = state["player_stats"].player_id
-    audit_path = root_dir / f"final_report_{player_id}.json"
+    audit_path = root_dir / f"final_report_{player_id}_{timestamp}.json"
     with open(audit_path, "w", encoding="utf-8") as f:
         f.write(report.model_dump_json(indent=4))
     print(f"💾 Laudo final comportamental salvo em: {audit_path}")
