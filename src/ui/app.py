@@ -33,8 +33,15 @@ if "final_report" not in st.session_state:
     st.session_state["final_report"] = None
 
 from src.dashboard.config import DATALAKE_SILVER
-from src.db.warehouse import DuckDBWarehouse
-from src.llm.state_builder import SessionStateCalculator
+import sys
+from pathlib import Path
+
+# Adiciona o diretório raiz ao PYTHONPATH para importar bridge_duckdb
+root_dir = Path(__file__).resolve().parent.parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
+
+from bridge_duckdb import extract_player_metrics
 
 # ==========================================
 # BARRA LATERAL (SIDEBAR)
@@ -42,9 +49,11 @@ from src.llm.state_builder import SessionStateCalculator
 with st.sidebar:
     st.title("⚙️ Ingestão de Dados")
     
-    st.markdown("### 1. Extração DuckDB")
+    st.markdown("### 1. Extração Completa (DuckDB)")
     hero_name = st.text_input("Nome do Herói", value="Hero")
-    num_hands = st.slider("Janela de Análise", min_value=5, max_value=100, value=20, step=5)
+    game_type = st.selectbox("Tipo de Jogo", ["Regular Cash", "Rush & Cash", "Tournament"])
+    stake_level = st.number_input("Nível de Aposta (Stake)", value=0.05, step=0.01)
+    days_limit = st.slider("Janela Histórica (Dias)", min_value=1, max_value=365, value=30, step=1)
     
     gerar_duckdb = st.button("🚀 Extrair Estado Atual (DuckDB)")
     
@@ -55,14 +64,18 @@ with st.sidebar:
     if (gerar_duckdb or uploaded_file is not None) and st.session_state["audit_session_id"] is None:
         try:
             if gerar_duckdb:
-                with st.spinner("Consultando Camada Silver no DuckDB..."):
-                    warehouse = DuckDBWarehouse(silver_dir=str(DATALAKE_SILVER))
-                    calculator = SessionStateCalculator(warehouse)
-                    data = calculator.get_current_state(hero_name=hero_name, num_hands=num_hands)
+                with st.spinner("Consultando Camada Silver e Agrupando via DuckDB..."):
+                    parquet_path = str(DATALAKE_SILVER / "hands_part_*.parquet")
+                    stats = extract_player_metrics(
+                        parquet_path=parquet_path,
+                        player_id=hero_name,
+                        days_limit=days_limit,
+                        stake_level=stake_level,
+                        game_type=game_type
+                    )
             else:
                 data = json.load(uploaded_file)
-                
-            stats = PlayerStats(**data)
+                stats = PlayerStats(**data)
             
             with st.spinner("Motor Analítico a gerar o diagnóstico inicial..."):
                 initial_state = {
