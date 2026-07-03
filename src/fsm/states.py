@@ -134,6 +134,7 @@ class InitState(State):
         if isinstance(token, HandStartEvent):
             data_capturada = getattr(token, "timestamp", "")
             game_info = getattr(token, "game_info", "")
-            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada, game_info=game_info)
+            stake_level = getattr(token, "stake_level", 0.0)
+            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada, game_info=game_info, stake_level=stake_level)
             return PreFlopState(), new_context
         return self, context

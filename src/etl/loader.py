@@ -47,7 +47,9 @@ class HandLoader:
                     "source_file": hand.source_file,
                     "game_info": hand.game_info,
                     "game_type": self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id),
+                    "stake_level": hand.stake_level,
                     "current_pot": hand.current_pot, 
+
                     "total_pot_final": hand.total_pot,
                     "rake": hand.rake,
                     "jackpot": hand.jackpot,

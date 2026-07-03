@@ -6,6 +6,7 @@ class HandStartEvent(BaseModel):
     hand_id: str
     timestamp: str = ""
     game_info: str = ""
+    stake_level: float = 0.0
 
 class StreetChangeEvent(BaseModel):
     street_name: str 
@@ -48,7 +49,16 @@ class GGPokerTokenizer:
 
         match_start = self.re_hand_start.search(line)
         if match_start:
-            return HandStartEvent(hand_id=match_start.group(1), game_info=match_start.group(2).strip(), timestamp=match_start.group(3))
+            game_info_str = match_start.group(2).strip()
+            stake_level = 0.0
+            # Ex: "Hold'em No Limit ($0.05/$0.10)" ou "$1/$2"
+            stake_match = re.search(r"\$([0-9.]+)/\$\$?([0-9.]+)", game_info_str)
+            if not stake_match:
+                stake_match = re.search(r"\$?([0-9.]+)/\$?([0-9.]+)", game_info_str)
+            if stake_match:
+                stake_level = float(stake_match.group(2))
+            
+            return HandStartEvent(hand_id=match_start.group(1), game_info=game_info_str, timestamp=match_start.group(3), stake_level=stake_level)
 
         match_street = self.re_street.search(line)
         if match_street:
