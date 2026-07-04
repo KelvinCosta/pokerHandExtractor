@@ -27,20 +27,35 @@ async def upload_and_process(
 
     user_id = current_user.id
     
-    bronze_dir = Path(os.getenv("DATALAKE_BRONZE", "./datalake/bronze")) / user_id
-    silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
+    bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
     
-    bronze_dir.mkdir(parents=True, exist_ok=True)
+    # Garantir que o bucket existe (para ambiente local)
+    from src.core.storage import ensure_bucket_exists, upload_file_stream_to_s3
+    ensure_bucket_exists(bronze_bucket)
+
+    silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
     silver_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Usaremos uma pasta temporária para processamento local imediato (o arquivo final ficará no S3)
+    import tempfile
+    temp_dir = Path(tempfile.mkdtemp())
     
     saved_files = []
     
-    # 1. Salvar na camada Bronze
+    # 1. Salvar na camada Bronze (S3) e no temp (Processamento)
     for file in files:
-        file_path = bronze_dir / file.filename
-        with open(file_path, "wb") as buffer:
+        # Primeiro, envia o arquivo para o S3 (Cloud/MinIO)
+        object_name = f"{user_id}/{file.filename}"
+        
+        # Como o FastAPI recebe em stream, vamos salvar no temp primeiro e depois subir
+        temp_file_path = temp_dir / file.filename
+        with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        saved_files.append(file_path)
+            
+        with open(temp_file_path, "rb") as f_up:
+            upload_file_stream_to_s3(f_up, bronze_bucket, object_name)
+            
+        saved_files.append(temp_file_path)
         
     # 2. Configurar ETL Incremental
     processed_log_path = silver_dir / "processed_files.json"
@@ -84,6 +99,9 @@ async def upload_and_process(
     
     if processed_count > 0 or summaries_to_save:
         repo.mark_as_processed([f.name for f in new_txt_files])
+        
+    # 3. Limpeza do disco local (Tudo já está no S3 / Parquets no Silver)
+    shutil.rmtree(temp_dir, ignore_errors=True)
         
     return {
         "message": "ETL concluído com sucesso",
