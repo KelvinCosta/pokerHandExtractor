@@ -4,7 +4,6 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Cell,
   XAxis,
   YAxis,
 } from "recharts"
@@ -22,22 +21,104 @@ import {
   stakeBreakdown,
 } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
+import { useDashboard } from "@/hooks/useDashboard"
+import { AlertTriangle, Loader2 } from "lucide-react"
+import type { DashboardFilters } from "@/lib/api.types"
 
 const chartConfig = {
   profit: { label: "Actual", color: "var(--chart-1)" },
   ev: { label: "All-in Adj (EV)", color: "var(--chart-2)" },
 } satisfies ChartConfig
 
-export function OverviewView() {
+// ─── Helpers to map API data → KpiCard props ──────────────────────────────────
+function buildLiveKpis(
+  health: { total_hands: number; profit_usd: number; bb_100: number } | null,
+  preflop: { vpip_pct: number; pfr_pct: number } | null,
+) {
+  if (!health && !preflop) return null
+  return [
+    {
+      id: "profit",
+      label: "Net Profit",
+      value: health ? `$${health.profit_usd.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "—",
+      raw: health?.profit_usd ?? 0,
+      delta: "",
+      trend: (health?.profit_usd ?? 0) >= 0 ? ("up" as const) : ("down" as const),
+      hint: "Live — all tracked hands",
+    },
+    {
+      id: "winrate",
+      label: "Win Rate",
+      value: health ? `${health.bb_100.toFixed(1)} bb/100` : "—",
+      raw: health?.bb_100 ?? 0,
+      delta: "",
+      trend: (health?.bb_100 ?? 0) >= 0 ? ("up" as const) : ("down" as const),
+      hint: "Big blinds per 100 hands",
+    },
+    {
+      id: "hands",
+      label: "Hands Played",
+      value: health ? health.total_hands.toLocaleString("en-US") : "—",
+      raw: health?.total_hands ?? 0,
+      delta: "",
+      trend: "up" as const,
+      hint: "Total tracked hands (live)",
+    },
+    {
+      id: "vpip_pfr",
+      label: "VPIP / PFR",
+      value: preflop ? `${preflop.vpip_pct} / ${preflop.pfr_pct}` : "—",
+      raw: preflop?.vpip_pct ?? 0,
+      delta: preflop ? `Gap: ${(preflop.vpip_pct - preflop.pfr_pct).toFixed(1)}` : "",
+      trend: "flat" as const,
+      hint: "Pre-flop stats (live)",
+    },
+  ]
+}
+
+export function OverviewView({ filters }: { filters?: DashboardFilters }) {
+  const { health, preflop, loading, error } = useDashboard(filters ?? {})
   const maxProfit = Math.max(...stakeBreakdown.map((s) => s.profit))
+
+  // Build live KPI cards when data is available, else fall back to mock
+  const liveKpis = buildLiveKpis(health, preflop)
+  const displayKpis = liveKpis
+    ? [...liveKpis, ...healthKpis.slice(liveKpis.length)]   // live first, mock fills the rest
+    : healthKpis
+
+
 
   return (
     <div className="flex flex-col gap-4">
+      {/* ── Live API status ──────────────────────────────────────────────── */}
+      {error && (
+        <div className="flex items-center gap-2 rounded-lg border border-[#FF3B3B]/20 bg-[#FF3B3B]/8 px-3 py-2 text-xs text-[#FF3B3B]">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          <span>Backend unreachable — showing mock data. ({error})</span>
+        </div>
+      )}
+
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        {healthKpis.map((k) => (
-          <KpiCard key={k.id} kpi={k} />
-        ))}
+        {loading && !liveKpis ? (
+          // Skeleton placeholders while the first fetch is in flight
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-lg border border-border bg-card" />
+          ))
+        ) : (
+          displayKpis.map((k) => (
+            <div key={k.id} className="relative">
+              <KpiCard kpi={k} />
+              {/* Live data badge — only on live KPI cards */}
+              {liveKpis?.some((lk) => lk.id === k.id) && (
+                <span className="absolute right-2 top-2 rounded-full bg-[#10B981]/15 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wide text-[#10B981]">
+                  live
+                </span>
+              )}
+            </div>
+          ))
+        )}
       </section>
+
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="rounded-lg border border-border bg-card p-4 xl:col-span-2">

@@ -14,7 +14,7 @@ import {
   BrainCircuit,
 } from "lucide-react"
 
-export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population"
+export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population" | "audit"
 
 
 const nav: {
@@ -30,6 +30,12 @@ const nav: {
       { id: "villains",   label: "Villain Mapping",         icon: Users     },
       { id: "bigpots",    label: "Big Pots & River",        icon: Target    },
       { id: "population", label: "Population (MDA)",        icon: Radar     },
+    ],
+  },
+  {
+    group: "Audit",
+    items: [
+      { id: "audit", label: "AI Auditor", icon: BrainCircuit, badge: "AI" },
     ],
   },
 ]

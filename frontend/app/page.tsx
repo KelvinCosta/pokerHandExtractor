@@ -3,45 +3,55 @@
 import { useState } from "react"
 import { Sidebar, type ViewId } from "@/components/dashboard/sidebar"
 import { Topbar } from "@/components/dashboard/topbar"
+import { FilterBar } from "@/components/dashboard/filter-bar"
 import { OverviewView } from "@/components/dashboard/views/overview-view"
 import { AnalyticsView } from "@/components/dashboard/views/analytics-view"
 import { EnginesView } from "@/components/dashboard/views/engines-view"
 import { VillainsView } from "@/components/dashboard/views/villains-view"
 import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 import { PopulationView } from "@/components/dashboard/views/population-view"
+import { AuditView } from "@/components/dashboard/views/audit-view"
 import { cn } from "@/lib/utils"
-import { Activity, BarChart2, Layers, Radar, Spade, Target, Users } from "lucide-react"
+import type { DashboardFilters } from "@/lib/api.types"
+import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users } from "lucide-react"
 
-
-const meta: Record<ViewId, { title: string; subtitle: string }> = {
-  overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution" },
-  analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals" },
-  engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics" },
-  villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads" },
-  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions" },
-  population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field" },
+// ─── View metadata ─────────────────────────────────────────────────────────────
+const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolean }> = {
+  overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution", hasFilters: true  },
+  analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: false },
+  engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: false },
+  villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: false },
+  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: false },
+  population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
+  audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
 }
 
-
+// ─── Mobile nav items ──────────────────────────────────────────────────────────
 const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
-  { id: "overview",   label: "Health",    icon: Activity  },
-  { id: "analytics", label: "Analytics", icon: BarChart2  },
-  { id: "engines",   label: "Engines",   icon: Layers     },
-  { id: "villains",  label: "Villains",  icon: Users      },
-  { id: "bigpots",   label: "Big Pots",  icon: Target     },
-  { id: "population",label: "MDA",       icon: Radar      },
+  { id: "overview",   label: "Health",    icon: Activity   },
+  { id: "analytics",  label: "Analytics", icon: BarChart2  },
+  { id: "engines",    label: "Engines",   icon: Layers     },
+  { id: "villains",   label: "Villains",  icon: Users      },
+  { id: "bigpots",    label: "Big Pots",  icon: Target     },
+  { id: "population", label: "MDA",       icon: Radar      },
+  { id: "audit",      label: "Audit",     icon: Brain      },
 ]
 
-
+// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Page() {
   const [view, setView] = useState<ViewId>("overview")
+
+  // Global dashboard filters — shared across API-connected views
+  const [filters, setFilters] = useState<DashboardFilters>({})
+
+  const currentMeta = meta[view]
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       <Sidebar active={view} onSelect={setView} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={meta[view].title} subtitle={meta[view].subtitle} />
+        <Topbar title={currentMeta.title} subtitle={currentMeta.subtitle} />
 
         {/* Mobile brand + nav */}
         <div className="lg:hidden">
@@ -72,15 +82,22 @@ export default function Page() {
           </div>
         </div>
 
+        {/* Global filter bar — shown only for views that support live API data */}
+        {currentMeta.hasFilters && (
+          <div className="border-b border-border px-4 py-2 md:px-6">
+            <FilterBar filters={filters} onChange={setFilters} />
+          </div>
+        )}
+
         <main className="flex-1 overflow-y-auto p-4 scrollbar-thin md:p-6">
-          {view === "overview"   && <OverviewView />}
+          {view === "overview"   && <OverviewView filters={filters} />}
           {view === "analytics"  && <AnalyticsView />}
           {view === "engines"    && <EnginesView />}
           {view === "villains"   && <VillainsView />}
           {view === "bigpots"    && <BigPotsView />}
           {view === "population" && <PopulationView />}
+          {view === "audit"      && <AuditView />}
         </main>
-
       </div>
     </div>
   )
