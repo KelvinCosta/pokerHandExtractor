@@ -130,11 +130,22 @@ class PreFlopState(BaseStreetState):
         return super().process(token, context)
 
 class InitState(State):
+    def __init__(self, platform: str = "", hero_name: str = ""):
+        self.platform = platform
+        self.hero_name = hero_name
+
     def process(self, token: Token, context: Optional[HandContext]) -> Tuple[State, Optional[HandContext]]:
         if isinstance(token, HandStartEvent):
             data_capturada = getattr(token, "timestamp", "")
             game_info = getattr(token, "game_info", "")
             stake_level = getattr(token, "stake_level", 0.0)
-            new_context = HandContext(hand_id=token.hand_id, timestamp=data_capturada, game_info=game_info, stake_level=stake_level)
+            new_context = HandContext(
+                hand_id=token.hand_id, 
+                timestamp=data_capturada, 
+                game_info=game_info, 
+                stake_level=stake_level,
+                platform=self.platform,
+                player_nickname=self.hero_name
+            )
             return PreFlopState(), new_context
         return self, context

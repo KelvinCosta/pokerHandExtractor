@@ -5,12 +5,13 @@ from typing import Iterator, Iterable
 import json
 from dataclasses import replace
 
-from src.parser.tokenizer import GGPokerTokenizer, HandStartEvent
+from src.parser.tokenizer import TokenizerFactory, HandStartEvent
 from src.fsm.states import InitState, TerminalState, State
 from src.domain.models import HandContext
 from src.etl.loader import HandLoader
 from src.etl.repository import JsonProcessedHandsRepository
 from src.parser.summary_parser import SummaryParser
+import argparse
 
 def process_stream(stream: Iterable[str], source_name: str, tokenizer, initial_state: State) -> Iterator[HandContext]:
     current_state = initial_state
@@ -37,6 +38,10 @@ def process_stream(stream: Iterable[str], source_name: str, tokenizer, initial_s
 
 load_dotenv()
 def main():
+    parser = argparse.ArgumentParser(description="Processador ETL de Históricos de Mãos de Poker")
+    parser.add_argument("--platform", required=True, help="Plataforma de origem (ex: ggpoker)")
+    parser.add_argument("--hero_name", required=True, help="Nickname real do jogador dono do histórico")
+    args = parser.parse_args()
     
     bronze_dir = Path(os.getenv("DATALAKE_BRONZE"))
     silver_dir = Path(os.getenv("DATALAKE_SILVER"))
@@ -61,9 +66,10 @@ def main():
         return
 
     print(f"🚀 Iniciando Processamento Stream ({len(new_txt_files)} novos arquivos encontrados)...\n")
+    print(f"👤 Jogador logado: {args.hero_name} | 🌐 Plataforma: {args.platform}")
     
-    tokenizer = GGPokerTokenizer()
-    initial_state = InitState()
+    tokenizer = TokenizerFactory.get_tokenizer(args.platform, hero_name=args.hero_name)
+    initial_state = InitState(platform=args.platform, hero_name=args.hero_name)
     summary_parser = SummaryParser()
     
     summaries_to_save = []

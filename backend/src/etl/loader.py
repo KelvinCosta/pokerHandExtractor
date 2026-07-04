@@ -48,6 +48,8 @@ class HandLoader:
                     "game_info": hand.game_info,
                     "game_type": self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id),
                     "stake_level": hand.stake_level,
+                    "platform": hand.platform,
+                    "player_nickname": hand.player_nickname,
                     "current_pot": hand.current_pot, 
 
                     "total_pot_final": hand.total_pot,
@@ -71,12 +73,12 @@ class HandLoader:
                     "board_cards": list(hand.board_cards),
                     "board_str": " ".join(hand.board_cards),
                     "player_cards": [{"player": p, "cards": c} for p, c in hand.player_cards.items()],
-                    "hero_cards": hand.player_cards.get("Hero", ""),
+                    "hero_cards": hand.player_cards.get(hand.player_nickname, ""),
                     "lista_vencedores": [a.player for a in hand.actions if a.action_type == ActionType.COLLECT],
-                    "hero_ganhou": any(a.player == "Hero" and a.action_type == ActionType.COLLECT for a in hand.actions),
-                    "hero_flop_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "FLOP" or str(a.street) == "FLOP")] + [0.0]),
-                    "hero_turn_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "TURN" or str(a.street) == "TURN")] + [0.0]),
-                    "hero_river_pot_odds": max([a.pot_odds for a in hand.actions if a.player == "Hero" and (hasattr(a.street, "name") and a.street.name == "RIVER" or str(a.street) == "RIVER")] + [0.0])
+                    "hero_ganhou": any(a.player == hand.player_nickname and a.action_type == ActionType.COLLECT for a in hand.actions),
+                    "hero_flop_pot_odds": max([a.pot_odds for a in hand.actions if a.player == hand.player_nickname and (hasattr(a.street, "name") and a.street.name == "FLOP" or str(a.street) == "FLOP")] + [0.0]),
+                    "hero_turn_pot_odds": max([a.pot_odds for a in hand.actions if a.player == hand.player_nickname and (hasattr(a.street, "name") and a.street.name == "TURN" or str(a.street) == "TURN")] + [0.0]),
+                    "hero_river_pot_odds": max([a.pot_odds for a in hand.actions if a.player == hand.player_nickname and (hasattr(a.street, "name") and a.street.name == "RIVER" or str(a.street) == "RIVER")] + [0.0])
                 })
             
             df = pl.DataFrame(dict_batch)

@@ -43,5 +43,9 @@ def get_filtered_df(filters: DashboardFilters):
     if filters.stake is not None and "stake_level" in df.columns:
         # Tolerância matemática para floats
         df = df.filter((pl.col("stake_level") - filters.stake).abs() < 0.001)
+        
+    # Filtro de Plataforma (Novo)
+    if filters.platforms and "platform" in df.columns:
+        df = df.filter(pl.col("platform").is_in(filters.platforms))
 
     return df

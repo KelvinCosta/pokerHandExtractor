@@ -37,6 +37,8 @@ class HandContext:
     board_cards: Tuple[str, ...] = field(default_factory=tuple)
     player_cards: Mapping[str, str] = field(default_factory=dict)
     source_file: str = ""
+    platform: str = ""
+    player_nickname: str = ""
     total_pot: float = 0.0
     rake: float = 0.0
     jackpot: float = 0.0

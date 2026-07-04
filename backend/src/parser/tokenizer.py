@@ -33,7 +33,8 @@ class PotSummaryEvent(BaseModel):
 Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent]
 
 class GGPokerTokenizer:
-    def __init__(self):
+    def __init__(self, hero_name: str = "Hero"):
+        self.hero_name = hero_name
         self.re_hand_start = re.compile(r"^Poker Hand #([a-zA-Z0-9]+):\s*(.*?)\s*-\s*(\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2})")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
         self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(.*)")
@@ -69,6 +70,8 @@ class GGPokerTokenizer:
         match_action = self.re_action.search(line)
         if match_action:
             player = match_action.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
             raw_action = match_action.group(2).lower()
 
             if "posts" in raw_action:
@@ -95,19 +98,30 @@ class GGPokerTokenizer:
             
         match_dealt = self.re_dealt.search(line)
         if match_dealt:
-            return CardsRevealedEvent(player=match_dealt.group(1).strip(), cards=match_dealt.group(2))
+            player = match_dealt.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
+            return CardsRevealedEvent(player=player, cards=match_dealt.group(2))
 
         match_shows = self.re_shows.search(line)
         if match_shows:
-            return CardsRevealedEvent(player=match_shows.group(1).strip(), cards=match_shows.group(2))
+            player = match_shows.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
+            return CardsRevealedEvent(player=player, cards=match_shows.group(2))
 
         match_mucks = self.re_mucks.search(line)
         if match_mucks:
-            return CardsRevealedEvent(player=match_mucks.group(1).strip(), cards=match_mucks.group(2))
+            player = match_mucks.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
+            return CardsRevealedEvent(player=player, cards=match_mucks.group(2))
         
         match_collect = self.re_collect.search(line)
         if match_collect:
             player = match_collect.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
             amount = float(match_collect.group(2))
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
 
@@ -116,6 +130,8 @@ class GGPokerTokenizer:
         if match_uncalled:
             amount = float(match_uncalled.group(1))
             player = match_uncalled.group(2).strip()
+            if player == "Hero":
+                player = self.hero_name
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
 
         if line.startswith("Total pot $"):
@@ -130,3 +146,12 @@ class GGPokerTokenizer:
                 return PotSummaryEvent(total_pot=total_pot, rake=rake, jackpot=jackpot, bingo=bingo, fortune=fortune, tax=tax)
 
         return None
+
+class TokenizerFactory:
+    @staticmethod
+    def get_tokenizer(platform: str, hero_name: str = "Hero"):
+        platform_lower = platform.lower()
+        if platform_lower in ["ggpoker", "gg"]:
+            return GGPokerTokenizer(hero_name=hero_name)
+        else:
+            raise ValueError(f"Plataforma de poker não suportada: {platform}")
