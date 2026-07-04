@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 import polars as pl
 from typing import Any, Dict
-from ..dependencies import get_filtered_df
+from ..dependencies import get_filtered_df, get_current_user
 from ..schemas.filters import DashboardFilters
+from src.database.models import User
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 
 @router.post("/health")
-def get_health_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
+def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
             "total_hands": 0,
@@ -60,7 +62,8 @@ def get_health_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get
     }
 
 @router.post("/preflop")
-def get_preflop_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
+def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
             "total_hands": 0,

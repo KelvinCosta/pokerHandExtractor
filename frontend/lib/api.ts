@@ -43,9 +43,18 @@ async function apiPost<TBody, TResponse>(
 ): Promise<TResponse> {
   const url = `${BASE_URL}${path}`
 
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+  }
+
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
     signal,
   })

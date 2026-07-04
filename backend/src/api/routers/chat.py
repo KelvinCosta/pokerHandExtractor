@@ -1,5 +1,7 @@
 import uuid
-from fastapi import APIRouter, HTTPException
+from src.api.dependencies import get_current_user
+from src.database.models import User
+from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any
 
 from langchain_core.messages import HumanMessage, AIMessage
@@ -16,7 +18,7 @@ router = APIRouter(prefix="/api/audit", tags=["AI Auditor"])
 ACTIVE_SESSIONS: Dict[str, AuditorState] = {}
 
 @router.post("/start")
-def start_audit(request: AuditStartRequest):
+def start_audit(request: AuditStartRequest, current_user: User = Depends(get_current_user)):
     """
     Inicia uma nova sessão de auditoria para um jogador específico.
     Aciona o Agente 1 (Motor Analítico) para gerar o laudo inicial
@@ -65,37 +67,35 @@ def start_audit(request: AuditStartRequest):
         "diagnostic_summary": final_state["diagnostic_report"].red_flags if final_state["diagnostic_report"] else []
     }
 
-@router.post("/message")
-def chat_message(request: ChatMessageRequest):
+@router.post("/chat")
+def send_chat_message(request: ChatMessageRequest, current_user: User = Depends(get_current_user)):
     """
-    Envia a resposta do jogador para o Inquisidor (Agente 2).
+    Recebe uma mensagem do usuário, envia para a sessão ativa do LangGraph
+    e retorna a resposta da IA.
     """
-    session_id = request.session_id
-    if session_id not in ACTIVE_SESSIONS:
-        raise HTTPException(status_code=404, detail="Sessão não encontrada ou expirada.")
+    if request.session_id not in ACTIVE_SESSIONS:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
         
-    state = ACTIVE_SESSIONS[session_id]
+    state = ACTIVE_SESSIONS[request.session_id]
     
-    # Adiciona a mensagem do usuário ao histórico local
+    # Adiciona a mensagem do usuário ao histórico
     state["chat_history"].append(HumanMessage(content=request.message))
     
-    # Invoca apenas o nó do Inquisidor (já que o MotorAnalítico não precisa rodar de novo)
-    from src.llm.orchestrator import node_inquisitor
-    new_state = node_inquisitor(state)
+    # Executa apenas o Inquisidor novamente
+    from src.llm.orchestrator import inquisitor_node
     
-    # Atualiza o estado
-    state["chat_history"] = new_state["chat_history"]
-    ACTIVE_SESSIONS[session_id] = state
+    # Simula a chamada do nó Inquisidor diretamente (já que o grafo pode ser complexo de reentrar no meio)
+    # Em produção com LangGraph, usaríamos graph.stream com thread_id
+    new_state = inquisitor_node(state)
     
-    last_ai_message = state["chat_history"][-1].content
+    ACTIVE_SESSIONS[request.session_id] = new_state
     
-    return {
-        "session_id": session_id,
-        "message": last_ai_message
-    }
+    ai_response = new_state["chat_history"][-1].content
+    return {"response": ai_response}
+
 
 @router.post("/complete")
-def complete_audit(request: AuditCompleteRequest):
+def complete_audit(request: AuditCompleteRequest, current_user: User = Depends(get_current_user)):
     """
     Encerra a conversa e aciona o Agente 3 (Laudo Final) para gerar o relatório comportamental.
     """

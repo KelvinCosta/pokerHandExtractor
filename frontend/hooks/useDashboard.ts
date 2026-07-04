@@ -61,8 +61,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
 
       try {
         // Parallel fetch — both requests share the same filter payload and signal
-        // Hardcoded user_id for Milestone 2:
-        const payload = { ...filters, user_id: "1234" }
+        const payload = { ...filters }
         
         const [healthData, preflopData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),

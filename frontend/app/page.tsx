@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 import { Sidebar, type ViewId } from "@/components/dashboard/sidebar"
 import { Topbar } from "@/components/dashboard/topbar"
 import { FilterBar } from "@/components/dashboard/filter-bar"
@@ -39,12 +40,28 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Page() {
+  const { isAuthenticated, logout } = useAuth()
   const [view, setView] = useState<ViewId>("overview")
 
   // Global dashboard filters — shared across API-connected views
   const [filters, setFilters] = useState<DashboardFilters>({})
 
   const currentMeta = meta[view]
+
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 text-muted-foreground">
+          <Spade className="size-8 animate-pulse text-primary" />
+          <p className="text-sm font-medium">Validando credenciais...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAuthenticated === false) {
+    return null // O useEffect do useAuth vai redirecionar
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background text-foreground">

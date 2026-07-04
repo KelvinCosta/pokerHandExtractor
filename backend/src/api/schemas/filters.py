@@ -11,4 +11,3 @@ class DashboardFilters(BaseModel):
     stake: Optional[float] = Field(None, description="Filtro específico por nível de aposta")
     hero_name: Optional[str] = Field("Hero", description="Nome do jogador base")
     platforms: Optional[List[str]] = Field(None, description="Lista de plataformas para filtrar (ex: ['ggpoker'])")
-    user_id: str = Field("default_user", description="ID do usuário para Datalake multilocatário")
