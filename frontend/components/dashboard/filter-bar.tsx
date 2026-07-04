@@ -21,13 +21,14 @@ import { cn } from "@/lib/utils"
 // ─── Preset stake levels matching the backend dataset ─────────────────────────
 const STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: "All",     value: undefined },
-  { label: "NL5",    value: 0.02 },
-  { label: "NL10",   value: 0.05 },
-  { label: "NL25",   value: 0.10 },
-  { label: "NL50",   value: 0.25 },
-  { label: "NL100",  value: 0.50 },
-  { label: "NL200",  value: 1.00 },
-  { label: "NL500",  value: 2.50 },
+  { label: "NL2",    value: 0.02 },
+  { label: "NL5",    value: 0.05 },
+  { label: "NL10",   value: 0.10 },
+  { label: "NL25",   value: 0.25 },
+  { label: "NL50",   value: 0.50 },
+  { label: "NL100",  value: 1.00 },
+  { label: "NL200",  value: 2.00 },
+  { label: "NL500",  value: 5.00 },
 ]
 
 const GAME_TYPE_OPTIONS = ["Rush & Cash", "Zone Poker", "Regular"]
