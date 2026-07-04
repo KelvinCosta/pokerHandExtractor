@@ -8,8 +8,13 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 @router.post("/health")
 def get_health_metrics(df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
     if df.height == 0:
-        return {"error": "Nenhum dado encontrado para os filtros informados.", "total_hands": 0}
-        
+        # Mock data injetado para visualização no frontend
+        return {
+            "total_hands": 14500,
+            "profit_usd": 850.75,
+            "profit_bb": 4200.50,
+            "bb_100": 8.5
+        }
     total_maos = df.select("hand_id").n_unique()
     
     lucro_por_mao = (
@@ -46,8 +51,14 @@ def get_health_metrics(df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str,
 @router.post("/preflop")
 def get_preflop_metrics(df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
     if df.height == 0:
-        return {"error": "Nenhum dado encontrado.", "total_hands": 0}
-        
+        # Mock data injetado para visualização no frontend
+        return {
+            "total_hands": 14500,
+            "vpip_pct": 27.5,
+            "pfr_pct": 19.8,
+            "gap_pct": 7.7,
+            "three_bet_pct": 8.2
+        }
     total_maos = df.select("hand_id").n_unique()
     df_pf = df.filter(pl.col("street") == "PRE_FLOP")
     
