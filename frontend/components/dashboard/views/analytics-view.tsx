@@ -110,8 +110,13 @@ function AnalyticsKpiCard({
   )
 }
 
-// ─── Sub-component: EV Bar Chart (pure CSS/flex — no recharts) ────────────────
+// ─── Sub-component: EV Bar Chart (pure CSS — absolute px positioning) ────────
 function EvBarChart() {
+  // Total px height of the chart canvas (must match the style below)
+  const CHART_H = 220
+  // Each half (pos / neg zone) gets this many usable pixels
+  const HALF_H  = 96
+
   const maxVal = Math.max(...evBarSeries.flatMap((p) => [Math.abs(p.actual), Math.abs(p.ev)]))
 
   return (
@@ -137,73 +142,71 @@ function EvBarChart() {
         </div>
       </div>
 
-      {/* Chart area */}
-      <div className="relative">
-        {/* Zero baseline label */}
-        <div className="absolute left-0 top-1/2 z-10 -translate-y-1/2">
-          <span className="font-mono text-[9px] text-muted-foreground/60">0</span>
-        </div>
+      {/* Chart canvas — relative anchor for absolute bars */}
+      <div className="relative w-full overflow-hidden" style={{ height: CHART_H }}>
 
-        {/* Zero line */}
-        <div className="absolute inset-x-6 top-1/2 h-px bg-border" />
+        {/* Zero-line + label */}
+        <div
+          className="absolute inset-x-0 h-px bg-border"
+          style={{ top: HALF_H + 12 }}   // 12 px top padding
+        />
+        <span
+          className="absolute left-0 font-mono text-[9px] text-muted-foreground/50"
+          style={{ top: HALF_H + 12 - 7 }}
+        >
+          0
+        </span>
 
-        {/* Bars container */}
-        <div className="flex items-end justify-around gap-1 pl-6" style={{ height: 220 }}>
+        {/* Column grid — flex distributes columns evenly */}
+        <div className="absolute inset-0 flex gap-1 px-1 pt-3">
           {evBarSeries.map((pt) => {
-            const actualPct = (Math.abs(pt.actual) / maxVal) * 46 // 46% of half-height
-            const evPct     = (Math.abs(pt.ev)     / maxVal) * 46
-            const actualPos = pt.actual >= 0
-            const evPos     = pt.ev     >= 0
+            const actualPx = Math.max(2, Math.round((Math.abs(pt.actual) / maxVal) * HALF_H))
+            const evPx     = Math.max(2, Math.round((Math.abs(pt.ev)     / maxVal) * HALF_H))
+            const aPos     = pt.actual >= 0
+            const ePos     = pt.ev     >= 0
+            // Zero-line sits at top = HALF_H + 12 (accounting for pt-3 = 12px)
+            const zeroY    = HALF_H   // relative to the column div's top (pt-3 absorbed)
 
             return (
-              <div key={pt.week} className="group/bar flex flex-1 flex-col items-center gap-0.5">
-                {/* Positive zone (top half) */}
-                <div className="flex w-full flex-col items-center justify-end" style={{ height: "50%" }}>
-                  <div className="flex w-full items-end justify-center gap-0.5">
-                    {actualPos && (
-                      <div
-                        className="w-[42%] rounded-t-sm bg-[#10B981]/80 transition-all group-hover/bar:bg-[#10B981]"
-                        style={{ height: `${actualPct}%` }}
-                        title={`Actual: $${pt.actual.toLocaleString()}`}
-                      />
-                    )}
-                    {evPos && (
-                      <div
-                        className="w-[42%] rounded-t-sm bg-[#6366F1]/60 transition-all group-hover/bar:bg-[#6366F1]/80"
-                        style={{ height: `${evPct}%` }}
-                        title={`EV: $${pt.ev.toLocaleString()}`}
-                      />
-                    )}
-                    {/* Spacers for negative bars so columns stay aligned */}
-                    {!actualPos && <div className="w-[42%]" />}
-                    {!evPos     && <div className="w-[42%]" />}
-                  </div>
-                </div>
+              <div
+                key={pt.week}
+                className="group/bar relative flex-1"
+                style={{ height: CHART_H - 12 }}
+              >
+                {/* Actual bar — green (pos) or red (neg) */}
+                <div
+                  className={[
+                    "absolute w-[44%] transition-all duration-200",
+                    aPos
+                      ? "rounded-t-sm bg-[#10B981]/80 group-hover/bar:bg-[#10B981]"
+                      : "rounded-b-sm bg-[#FF3B3B]/70 group-hover/bar:bg-[#FF3B3B]/90",
+                  ].join(" ")}
+                  style={
+                    aPos
+                      ? { bottom: CHART_H - 12 - zeroY, height: actualPx, left: "4%" }
+                      : { top:    zeroY + 1,             height: actualPx, left: "4%" }
+                  }
+                  title={`Actual: ${pt.actual >= 0 ? "" : "-"}$${Math.abs(pt.actual).toLocaleString()}`}
+                />
 
-                {/* Negative zone (bottom half) */}
-                <div className="flex w-full flex-col items-center justify-start" style={{ height: "50%" }}>
-                  <div className="flex w-full items-start justify-center gap-0.5">
-                    {!actualPos && (
-                      <div
-                        className="w-[42%] rounded-b-sm bg-[#FF3B3B]/70 transition-all group-hover/bar:bg-[#FF3B3B]/90"
-                        style={{ height: `${actualPct}%` }}
-                        title={`Actual: -$${Math.abs(pt.actual).toLocaleString()}`}
-                      />
-                    )}
-                    {!evPos && (
-                      <div
-                        className="w-[42%] rounded-b-sm bg-[#F59E0B]/50 transition-all group-hover/bar:bg-[#F59E0B]/70"
-                        style={{ height: `${evPct}%` }}
-                        title={`EV: -$${Math.abs(pt.ev).toLocaleString()}`}
-                      />
-                    )}
-                    {actualPos && <div className="w-[42%]" />}
-                    {evPos     && <div className="w-[42%]" />}
-                  </div>
-                </div>
+                {/* EV bar — indigo (pos) or amber (neg) */}
+                <div
+                  className={[
+                    "absolute w-[44%] transition-all duration-200",
+                    ePos
+                      ? "rounded-t-sm bg-[#6366F1]/60 group-hover/bar:bg-[#6366F1]/80"
+                      : "rounded-b-sm bg-[#F59E0B]/50 group-hover/bar:bg-[#F59E0B]/70",
+                  ].join(" ")}
+                  style={
+                    ePos
+                      ? { bottom: CHART_H - 12 - zeroY, height: evPx, right: "4%" }
+                      : { top:    zeroY + 1,             height: evPx, right: "4%" }
+                  }
+                  title={`EV: ${pt.ev >= 0 ? "" : "-"}$${Math.abs(pt.ev).toLocaleString()}`}
+                />
 
                 {/* Week label */}
-                <span className="mt-1 font-mono text-[9px] text-muted-foreground/70">
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 font-mono text-[9px] text-muted-foreground/60">
                   {pt.week}
                 </span>
               </div>
@@ -212,9 +215,8 @@ function EvBarChart() {
         </div>
       </div>
 
-      {/* Y-axis hint */}
-      <p className="mt-3 text-right font-mono text-[9px] text-muted-foreground/50">
-        USD / session week
+      <p className="mt-2 text-right font-mono text-[9px] text-muted-foreground/40">
+        USD / session week · hover for tooltip
       </p>
     </div>
   )
