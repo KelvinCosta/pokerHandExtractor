@@ -16,7 +16,9 @@ def get_filtered_df(filters: DashboardFilters):
         return pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
         
     try:
-        df = pl.scan_parquet(str(silver_dir / "*.parquet")).collect()
+        df = pl.scan_parquet(str(silver_dir / "hands_part_*.parquet")).collect()
+        df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
+        df = df.explode("actions").unnest("actions")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake: {e}")
 
