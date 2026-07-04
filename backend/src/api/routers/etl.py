@@ -44,11 +44,15 @@ async def upload_and_process(
     
     # 1. Salvar na camada Bronze (S3) e no temp (Processamento)
     for file in files:
+        # Quando o usuário sobe um diretório (webkitdirectory), o filename contém a rota relativa (ex: pasta/arquivo.txt)
+        # Precisamos apenas do nome final do arquivo para não quebrar a criação local no temp
+        basename = Path(file.filename).name
+        
         # Primeiro, envia o arquivo para o S3 (Cloud/MinIO)
-        object_name = f"{user_id}/{file.filename}"
+        object_name = f"{user_id}/{basename}"
         
         # Como o FastAPI recebe em stream, vamos salvar no temp primeiro e depois subir
-        temp_file_path = temp_dir / file.filename
+        temp_file_path = temp_dir / basename
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
