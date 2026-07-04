@@ -26,13 +26,9 @@ class HandLoader:
 
     def process_and_save(self, hands_iterator: Iterator[HandContext], batch_size: int = 10000) -> int:
         total_processed = 0
-        
-        existing_files = [f for f in os.listdir(self.output_dir) if f.startswith("hands_part_") and f.endswith(".parquet")]
-        if existing_files:
-            last_index = max([int(f.split("_")[2].split(".")[0]) for f in existing_files])
-            batch_index = last_index + 1
-        else:
-            batch_index = 1
+        import time
+        run_id = int(time.time() * 1000)
+        batch_index = 1
         
         while True:
             batch = list(islice(hands_iterator, batch_size))
@@ -122,11 +118,9 @@ class HandLoader:
                 .alias("flop_pair_type")
             )
             
-            filename = f"hands_part_{batch_index:04d}.parquet"
-            file_path = os.path.join(self.output_dir, filename)
-            
-            df.write_parquet(file_path, compression="zstd")
-            print(f"✅ Partição {batch_index:04d} salva: {filename} ({df.height} mãos)")
+            output_file = os.path.join(self.output_dir, f"hands_part_{run_id}_{batch_index}.parquet")
+            df.write_parquet(output_file, compression="zstd")
+            print(f"✅ Partição {batch_index:04d} salva: {output_file} ({df.height} mãos)")
             
             total_processed += df.height
             batch_index += 1

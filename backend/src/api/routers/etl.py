@@ -28,30 +28,26 @@ async def upload_and_process(
     user_id = current_user.id
     
     bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
+    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
     
     # Garantir que o bucket existe (para ambiente local)
-    from src.core.storage import ensure_bucket_exists, upload_file_stream_to_s3
+    from src.core.storage import ensure_bucket_exists, upload_file_stream_to_s3, download_file_from_s3, upload_local_file_to_s3
     ensure_bucket_exists(bronze_bucket)
+    ensure_bucket_exists(silver_bucket)
 
-    silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
-    silver_dir.mkdir(parents=True, exist_ok=True)
-    
     # Usaremos uma pasta temporária para processamento local imediato (o arquivo final ficará no S3)
     import tempfile
     temp_dir = Path(tempfile.mkdtemp())
+    silver_dir = temp_dir / "silver"
+    silver_dir.mkdir(parents=True, exist_ok=True)
     
     saved_files = []
     
     # 1. Salvar na camada Bronze (S3) e no temp (Processamento)
     for file in files:
-        # Quando o usuário sobe um diretório (webkitdirectory), o filename contém a rota relativa (ex: pasta/arquivo.txt)
-        # Precisamos apenas do nome final do arquivo para não quebrar a criação local no temp
         basename = Path(file.filename).name
-        
-        # Primeiro, envia o arquivo para o S3 (Cloud/MinIO)
         object_name = f"{user_id}/{basename}"
         
-        # Como o FastAPI recebe em stream, vamos salvar no temp primeiro e depois subir
         temp_file_path = temp_dir / basename
         with open(temp_file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -61,14 +57,17 @@ async def upload_and_process(
             
         saved_files.append(temp_file_path)
         
-    # 2. Configurar ETL Incremental
+    # 2. Configurar ETL Incremental (Baixando histórico anterior do S3)
     processed_log_path = silver_dir / "processed_files.json"
+    download_file_from_s3(silver_bucket, f"{user_id}/processed_files.json", str(processed_log_path))
+    
     repo = JsonProcessedHandsRepository(processed_log_path)
     processed_files = repo.get_processed_sources()
     
     new_txt_files = [f for f in saved_files if f.name not in processed_files]
     
     if not new_txt_files:
+        shutil.rmtree(temp_dir, ignore_errors=True)
         return {"message": "Arquivos já foram processados anteriormente", "processed": 0}
         
     tokenizer = TokenizerFactory.get_tokenizer(platform, hero_name=hero_name)
@@ -86,7 +85,6 @@ async def upload_and_process(
         else:
             hands_files_to_process.append(file_path)
 
-    # Função geradora
     def hand_stream_pipeline():
         for file_path in hands_files_to_process:
             with open(file_path, 'r', encoding='utf-8-sig') as f:
@@ -103,6 +101,11 @@ async def upload_and_process(
     
     if processed_count > 0 or summaries_to_save:
         repo.mark_as_processed([f.name for f in new_txt_files])
+        
+        # Fazendo Upload da Camada Silver atualizada para o S3
+        for silver_file in silver_dir.iterdir():
+            if silver_file.is_file():
+                upload_local_file_to_s3(str(silver_file), silver_bucket, f"{user_id}/{silver_file.name}")
         
         # Invalida o cache em memória do usuário para forçar recarga no próximo request do Dashboard
         from src.api.dependencies import invalidate_cache

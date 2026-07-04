@@ -46,23 +46,38 @@ def get_filtered_df(filters: DashboardFilters, user: User):
     Carrega o Datalake do usuário sob demanda (usando Cache Global) e aplica os filtros.
     """
     user_id = user.id
-    silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
+    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
     
-    if not silver_dir.exists():
-        # Se não há pasta pro usuário, retorna um DF vazio com esquema base
-        return pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
-        
     # Usar Cache em Memória (Evita I/O e Explode massivo a cada request)
     if user_id in _DATALAKE_CACHE:
         df = _DATALAKE_CACHE[user_id]["df"]
     else:
         try:
-            df = pl.scan_parquet(str(silver_dir / "hands_part_*.parquet")).collect()
+            # Opções de conexão com MinIO / S3 Compatível
+            storage_options = {
+                "endpoint_url": os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
+                "aws_access_key_id": os.getenv("S3_ACCESS_KEY", "admin"),
+                "aws_secret_access_key": os.getenv("S3_SECRET_KEY", "password123"),
+                "aws_region": "us-east-1"
+            }
+            
+            s3_path = f"s3://{silver_bucket}/{user_id}/hands_part_*.parquet"
+            
+            # Testa se há arquivos no S3 para aquele usuário antes de escanear (evita erro se não houver dados)
+            from src.core.storage import get_s3_client
+            s3 = get_s3_client()
+            response = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/hands_part_")
+            
+            if "Contents" not in response:
+                # Se não há parquets, retorna um DF vazio com esquema base
+                return pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
+
+            df = pl.scan_parquet(s3_path, storage_options=storage_options).collect()
             df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
             df = df.explode("actions").unnest("actions")
             _DATALAKE_CACHE[user_id] = {"df": df, "timestamp": time.time()}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake: {e}")
+            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake do S3: {e}")
 
     # Verifica se há coluna de data
     nome_coluna_data = "date" if "date" in df.columns else "timestamp" if "timestamp" in df.columns else None

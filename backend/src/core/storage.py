@@ -43,6 +43,15 @@ def upload_file_stream_to_s3(file_obj, bucket: str, object_name: str) -> bool:
         print(f"Erro ao fazer upload para o S3: {e}")
         return False
 
+def upload_local_file_to_s3(local_path: str, bucket: str, object_name: str) -> bool:
+    s3 = get_s3_client()
+    try:
+        s3.upload_file(local_path, bucket, object_name)
+        return True
+    except ClientError as e:
+        print(f"Erro ao fazer upload local para o S3: {e}")
+        return False
+
 def download_file_from_s3(bucket: str, object_name: str, file_path: str) -> bool:
     """
     Faz o download do arquivo do S3 para o disco local temporário.
@@ -52,5 +61,5 @@ def download_file_from_s3(bucket: str, object_name: str, file_path: str) -> bool
         s3.download_file(bucket, object_name, file_path)
         return True
     except ClientError as e:
-        print(f"Erro ao fazer download do S3: {e}")
+        # Se não existe, não é um erro fatal no nosso fluxo, apenas retorna False
         return False
