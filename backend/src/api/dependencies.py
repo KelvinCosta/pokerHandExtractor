@@ -45,8 +45,24 @@ def get_filtered_df(filters: DashboardFilters):
         if "game_type" in df.columns:
             df = df.filter(pl.col("game_type").is_in(filters.game_types))
         else:
-            # Compatibilidade com parquets antigos sem game_type (Rush & Cash hardcoded)
-            df = df.filter(pl.col("hand_id").str.starts_with("RC"))
+            # Fallback provisório baseado no prefixo do hand_id
+            exprs = []
+            if "Rush & Cash" in filters.game_types:
+                exprs.append(pl.col("hand_id").str.starts_with("RC"))
+            if "Tournaments" in filters.game_types:
+                exprs.append(pl.col("hand_id").str.starts_with("SG") | pl.col("hand_id").str.starts_with("TM"))
+            if "Regular" in filters.game_types:
+                exprs.append(pl.col("hand_id").str.starts_with("HD"))
+            
+            if exprs:
+                # Faz um OR entre todas as expressões válidas
+                combined_expr = exprs[0]
+                for e in exprs[1:]:
+                    combined_expr = combined_expr | e
+                df = df.filter(combined_expr)
+            else:
+                # Se mandou um tipo não suportado pelo fallback, zera o df
+                df = df.filter(pl.lit(False))
             
     # Filtro de Nível de Aposta (Stake)
     if filters.stake is not None and "stake_level" in df.columns:
