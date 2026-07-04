@@ -4,7 +4,7 @@
  * /api/dashboard/health and /api/dashboard/preflop in parallel.
  *
  * Usage:
- *   const { filters, setFilters, health, preflop, loading, error, refetch } = useDashboard()
+ *   const { health, preflop, loading, error, refetch } = useDashboard(filters)
  *
  * The hook re-fetches automatically whenever `filters` changes.
  * It also cleans up in-flight requests on unmount (AbortController).
@@ -16,9 +16,8 @@ import { fetchHealthMetrics, fetchPreflopMetrics } from "@/lib/api"
 import type { DashboardFilters, HealthMetrics, PreflopMetrics } from "@/lib/api.types"
 
 export interface DashboardState {
-  /** Current filter values — change these to trigger a re-fetch */
+  /** Current filter values */
   filters: DashboardFilters
-  setFilters: (f: DashboardFilters) => void
 
   /** Data returned by /api/dashboard/health */
   health: HealthMetrics | null
@@ -35,8 +34,7 @@ export interface DashboardState {
 /** Initial filter state — empty means "all data" */
 const DEFAULT_FILTERS: DashboardFilters = {}
 
-export function useDashboard(initialFilters: DashboardFilters = DEFAULT_FILTERS): DashboardState {
-  const [filters, setFilters] = useState<DashboardFilters>(initialFilters)
+export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): DashboardState {
   const [health, setHealth] = useState<HealthMetrics | null>(null)
   const [preflop, setPreflop] = useState<PreflopMetrics | null>(null)
   const [loading, setLoading] = useState(false)
@@ -91,5 +89,5 @@ export function useDashboard(initialFilters: DashboardFilters = DEFAULT_FILTERS)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, tick])
 
-  return { filters, setFilters, health, preflop, loading, error, refetch }
+  return { filters, health, preflop, loading, error, refetch }
 }
