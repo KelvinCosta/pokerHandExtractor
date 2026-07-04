@@ -6,8 +6,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 # Dependências locais do LangGraph e esquemas
 from src.llm.orchestrator import app as langgraph_app, AuditorState, node_final_reporter
-from src.llm.schemas import PlayerStats
-from .schemas.chat import AuditStartRequest, ChatMessageRequest, AuditCompleteRequest
+from schemas import PlayerStats
+from src.api.schemas.chat import AuditStartRequest, ChatMessageRequest, AuditCompleteRequest
 
 router = APIRouter(prefix="/api/audit", tags=["AI Auditor"])
 
