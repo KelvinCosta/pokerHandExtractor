@@ -21,6 +21,39 @@ Neste momento ignoramos usuários e equipes. O foco é apenas fazer o backend e 
 
 ---
 
+### 🚩 Milestone 1.5: Extrator Agnóstico e Tratamento de Identidade
+Antes de criarmos o Banco de Dados com usuários, precisamos preparar a fundação dos dados para aceitar múltiplas plataformas e associar as mãos processadas ao nome real do dono do arquivo, garantindo a integridade e segurança analítica.
+
+#### User Review Required
+> [!IMPORTANT]
+> **Identidade do Hero:** Como a conversão de "Hero" para o `nickname` real será no momento da extração dos TXT para JSON/Parquet, e o `extractor.py` atualmente varre a pasta global `bronze`, precisaremos passar o "Nickname do Usuário Dono da Pasta" para o Extrator. Como não temos o banco de dados ainda, testaremos via terminal passando um parâmetro no Python (ex: `python extractor.py --user_id KelvinCosta --platform ggpoker`). Tudo bem testarmos assim por enquanto?
+
+## Proposed Changes
+
+### `backend/extractor.py` e `backend/src/parser/`
+- Refatorar `extractor.py` para receber argumentos: `player_nickname` e `platform`.
+- Criar a camada agnóstica de `Tokenizer`: Utilizar o padrão Factory para selecionar o Tokenizer com base na `platform` (atualmente com a classe `GGPokerTokenizer`).
+- Modificar o fluxo de conversão e parseamento para injetar o `player_nickname` em todas as ações listadas como "Hero", garantindo a despoluição dos dados.
+- Adicionar o campo `platform` e `player_nickname` em todas as entidades persistidas no JSON.
+
+### `backend/bridge_duckdb.py`
+- Adicionar a nova dimensão de análise `platform` na tabela e salvar no arquivo Parquet.
+
+### `backend/src/api/`
+#### [MODIFY] [filters.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/api/schemas/filters.py)
+- Adicionar `platforms: Optional[List[str]] = None` no modelo Pydantic.
+
+#### [MODIFY] [dependencies.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/api/dependencies.py)
+- Ler a propriedade `platforms` e aplicar um filtro adicional no Polars, garantindo o agrupamento por plataforma solicitado.
+
+## Verification Plan
+
+### Testes Manuais
+- Rodar o extrator no terminal com o parâmetro `--player_nickname "Kelvin"` e validar se os JSON/Parquet gerados substituíram "Hero" e incluíram a coluna `platform`.
+- Bater na rota `/api/dashboard/health` enviando `{"hero_name": "Kelvin", "platforms": ["ggpoker"]}` e verificar o retorno dos dados reais.
+
+---
+
 ### 🚩 Milestone 2: Infraestrutura Multilocatário (Banco de Dados)
 Começaremos a preparar o terreno (ainda invisível pro usuário final) para suportar múltiplas pessoas.
 - [ ] Criar no SQLAlchemy as tabelas centrais: `User`, `Team`, `TeamMember` e `Invitation`.
