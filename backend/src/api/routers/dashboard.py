@@ -9,7 +9,12 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 @router.post("/health")
 def get_health_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
     if df.height == 0:
-        return {"error": "Nenhum dado encontrado para os filtros informados.", "total_hands": 0}
+        return {
+            "total_hands": 0,
+            "profit_usd": 0.0,
+            "profit_bb": 0.0,
+            "bb_100": 0.0
+        }
         
     hero = filters.hero_name
     total_maos = df.select("hand_id").n_unique()
@@ -48,7 +53,13 @@ def get_health_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get
 @router.post("/preflop")
 def get_preflop_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str, Any]:
     if df.height == 0:
-        return {"error": "Nenhum dado encontrado.", "total_hands": 0}
+        return {
+            "total_hands": 0,
+            "vpip_pct": 0.0,
+            "pfr_pct": 0.0,
+            "gap_pct": 0.0,
+            "three_bet_pct": 0.0
+        }
         
     hero = filters.hero_name
     total_maos = df.select("hand_id").n_unique()
