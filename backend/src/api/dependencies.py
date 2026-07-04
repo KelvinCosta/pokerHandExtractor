@@ -1,17 +1,24 @@
+import os
+from pathlib import Path
 from fastapi import HTTPException
 import polars as pl
 from .schemas.filters import DashboardFilters
-from .main import AppState
 
 def get_filtered_df(filters: DashboardFilters):
     """
-    Função injetada nas rotas para retornar o DataFrame filtrado 
-    (Substitui o papel do render_sidebar do Streamlit).
+    Carrega o Datalake do usuário sob demanda e aplica os filtros.
     """
-    df = AppState.df_hands
+    user_id = filters.user_id
+    silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
     
-    if df is None:
-        raise HTTPException(status_code=503, detail="Datalake não carregado em memória.")
+    if not silver_dir.exists():
+        # Se não há pasta pro usuário, retorna um DF vazio com esquema base
+        return pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
+        
+    try:
+        df = pl.scan_parquet(str(silver_dir / "*.parquet")).collect()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake: {e}")
 
     # Verifica se há coluna de data
     nome_coluna_data = "date" if "date" in df.columns else "timestamp" if "timestamp" in df.columns else None

@@ -5,11 +5,58 @@ from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 Base = declarative_base()
 
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(String, primary_key=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    players = relationship("Player", back_populates="user")
+    teams = relationship("TeamMember", back_populates="user")
+    invitations = relationship("Invitation", back_populates="invitee", foreign_keys="[Invitation.invitee_id]")
+
+class Team(Base):
+    __tablename__ = 'teams'
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    owner_id = Column(String, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    owner = relationship("User", foreign_keys=[owner_id])
+    members = relationship("TeamMember", back_populates="team")
+    invitations = relationship("Invitation", back_populates="team")
+
+class TeamMember(Base):
+    __tablename__ = 'team_members'
+    id = Column(String, primary_key=True)
+    team_id = Column(String, ForeignKey("teams.id"))
+    user_id = Column(String, ForeignKey("users.id"))
+    role = Column(String) # "admin", "player"
+    joined_at = Column(DateTime, default=datetime.utcnow)
+    
+    team = relationship("Team", back_populates="members")
+    user = relationship("User", back_populates="teams")
+
+class Invitation(Base):
+    __tablename__ = 'invitations'
+    id = Column(String, primary_key=True)
+    team_id = Column(String, ForeignKey("teams.id"))
+    invitee_id = Column(String, ForeignKey("users.id"))
+    status = Column(String, default="pending") # pending, accepted, declined
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    team = relationship("Team", back_populates="invitations")
+    invitee = relationship("User", back_populates="invitations", foreign_keys=[invitee_id])
+
 class Player(Base):
     __tablename__ = 'player'
     id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey('users.id'), nullable=True)
     name = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="players")
 
     snapshots = relationship("PokerStatsSnapshot", back_populates="player")
     sessions = relationship("AuditSession", back_populates="player")

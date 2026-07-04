@@ -54,11 +54,35 @@ Antes de criarmos o Banco de Dados com usuários, precisamos preparar a fundaç�
 
 ---
 
-### 🚩 Milestone 2: Infraestrutura Multilocatário (Banco de Dados)
-Começaremos a preparar o terreno (ainda invisível pro usuário final) para suportar múltiplas pessoas.
-- [ ] Criar no SQLAlchemy as tabelas centrais: `User`, `Team`, `TeamMember` e `Invitation`.
-- [ ] Refatorar a lógica do Datalake para deixar de ser uma pasta global (`/silver/*.parquet`) e suportar injeção dinâmica de caminhos (`/silver/{user_id}/*.parquet`).
-- **Validação:** O banco de dados consegue salvar relações entre times e o DuckDB não quebra ao ler pastas dinâmicas.
+### 🚩 Milestone 2: Infraestrutura Multilocatário (Banco de Dados e Datalake Dinâmico)
+Nesta fase, prepararemos o terreno (ainda invisível para o usuário final no React) para suportar múltiplas pessoas e equipes no mesmo sistema.
+
+#### User Review Required
+> [!IMPORTANT]
+> **Simulação de Autenticação:** Como ainda não implementamos JWT (Milestone 3), precisaremos simular a identidade do usuário na API. Propomos adicionar um campo `user_id: str = "default_user"` nas requisições da API para que o backend saiba de qual pasta `/silver/{user_id}` deve puxar o Datalake. Você concorda com esse mock temporário?
+
+## Proposed Changes
+
+### 1. `backend/src/database/` (Camada Relacional - SQLite)
+- **`models.py`**: Criar as tabelas `User`, `Team`, `TeamMember`, e `Invitation`. Manteremos a tabela `Player` anterior mas ela será refatorada para integrar ao `User` ou atuará como alias.
+- **`session.py` (Novo)**: Criar a configuração do SQLAlchemy (`create_engine`, `sessionmaker`, `get_db()`) apontando para um SQLite local (`app.db`).
+
+### 2. Datalake e ETL Multilocatário
+#### [MODIFY] [extractor.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/extractor.py) e [loader.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/etl/loader.py)
+- Alterar a lógica de salvamento. Em vez de salvar em `/silver/hands_*.parquet`, salvaremos em `/silver/{user_id}/hands_*.parquet`. O extrator passará a receber `--user_id` via linha de comando.
+
+### 3. FastAPI (Leitura Dinâmica)
+#### [MODIFY] [dependencies.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/api/dependencies.py) e [data_loader.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/dashboard/data_loader.py)
+- Remover o carregamento estático e global do `AppState.df_hands` no startup (`main.py`).
+- Refatorar `get_filtered_df` para usar `pl.scan_parquet(f"{DATALAKE_SILVER}/{user_id}/*.parquet")`. Isso garante que a API só carregue para a memória os dados do usuário que fez a requisição.
+
+#### [MODIFY] [filters.py](file:///c:/Desenvolvimento/DataScience/pokerHandExtractor/backend/src/api/schemas/filters.py)
+- Adicionar `user_id: str = "default_user"` no payload.
+
+## Verification Plan
+1. Rodar `extractor.py --platform ggpoker --hero_name Kelvin --user_id 123` e verificar se a pasta `/silver/123/` foi criada.
+2. Fazer um request POST para `/api/dashboard/health` passando `{"user_id": "123", "hero_name": "Kelvin", "platforms": ["ggpoker"]}` e garantir que os dados de Kelvin retornaram com sucesso e que a performance via `scan_parquet` se manteve instantânea.
+3. Inspecionar o arquivo `app.db` com DBeaver/SQLiteViewer para garantir que as tabelas do SQLAlchemy foram geradas corretamente.
 
 ---
 

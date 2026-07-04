@@ -41,10 +41,11 @@ def main():
     parser = argparse.ArgumentParser(description="Processador ETL de Históricos de Mãos de Poker")
     parser.add_argument("--platform", required=True, help="Plataforma de origem (ex: ggpoker)")
     parser.add_argument("--hero_name", required=True, help="Nickname real do jogador dono do histórico")
+    parser.add_argument("--user_id", required=True, help="ID do Usuário para salvar no Datalake Multilocatário")
     args = parser.parse_args()
     
     bronze_dir = Path(os.getenv("DATALAKE_BRONZE"))
-    silver_dir = Path(os.getenv("DATALAKE_SILVER"))
+    silver_dir = Path(os.getenv("DATALAKE_SILVER")) / args.user_id
     
     bronze_dir.mkdir(parents=True, exist_ok=True)
     silver_dir.mkdir(parents=True, exist_ok=True)
