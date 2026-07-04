@@ -31,35 +31,55 @@ const chartConfig = {
 } satisfies ChartConfig
 
 // ─── Helpers to map API data → KpiCard props ──────────────────────────────────
-function buildLiveKpis(
-  health: { total_hands: number; profit_usd: number; bb_100: number } | null,
-  preflop: { vpip_pct: number; pfr_pct: number } | null,
-) {
-  if (!health && !preflop) return null
+// Guard: the backend can return a partial error object { error: "...", total_hands: 0 }
+// that passes the `!= null` check but is missing bb_100/profit_usd.
+// We treat any response without the numeric fields as "no data".
+function isValidHealth(h: unknown): h is { total_hands: number; profit_usd: number; bb_100: number } {
+  if (!h || typeof h !== "object") return false
+  const obj = h as Record<string, unknown>
+  return (
+    typeof obj.total_hands === "number" &&
+    typeof obj.profit_usd  === "number" &&
+    typeof obj.bb_100      === "number"
+  )
+}
+
+function isValidPreflop(p: unknown): p is { vpip_pct: number; pfr_pct: number } {
+  if (!p || typeof p !== "object") return false
+  const obj = p as Record<string, unknown>
+  return typeof obj.vpip_pct === "number" && typeof obj.pfr_pct === "number"
+}
+
+function buildLiveKpis(health: unknown, preflop: unknown) {
+  const h = isValidHealth(health)  ? health  : null
+  const p = isValidPreflop(preflop) ? preflop : null
+
+  if (!h && !p) return null
+
   return [
     {
       id: "profit",
       label: "Net Profit",
-      value: health ? `$${health.profit_usd.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "—",
-      raw: health?.profit_usd ?? 0,
+      value: h ? `$${h.profit_usd.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "—",
+      raw: h?.profit_usd ?? 0,
       delta: "",
-      trend: (health?.profit_usd ?? 0) >= 0 ? ("up" as const) : ("down" as const),
+      trend: (h?.profit_usd ?? 0) >= 0 ? ("up" as const) : ("down" as const),
       hint: "Live — all tracked hands",
     },
     {
       id: "winrate",
       label: "Win Rate",
-      value: health ? `${health.bb_100.toFixed(1)} bb/100` : "—",
-      raw: health?.bb_100 ?? 0,
+      value: h ? `${h.bb_100.toFixed(2)} bb/100` : "—",
+      raw: h?.bb_100 ?? 0,
       delta: "",
-      trend: (health?.bb_100 ?? 0) >= 0 ? ("up" as const) : ("down" as const),
+      trend: (h?.bb_100 ?? 0) >= 0 ? ("up" as const) : ("down" as const),
       hint: "Big blinds per 100 hands",
     },
     {
       id: "hands",
       label: "Hands Played",
-      value: health ? health.total_hands.toLocaleString("en-US") : "—",
-      raw: health?.total_hands ?? 0,
+      value: h ? h.total_hands.toLocaleString("en-US") : "—",
+      raw: h?.total_hands ?? 0,
       delta: "",
       trend: "up" as const,
       hint: "Total tracked hands (live)",
@@ -67,9 +87,9 @@ function buildLiveKpis(
     {
       id: "vpip_pfr",
       label: "VPIP / PFR",
-      value: preflop ? `${preflop.vpip_pct} / ${preflop.pfr_pct}` : "—",
-      raw: preflop?.vpip_pct ?? 0,
-      delta: preflop ? `Gap: ${(preflop.vpip_pct - preflop.pfr_pct).toFixed(1)}` : "",
+      value: p ? `${p.vpip_pct} / ${p.pfr_pct}` : "—",
+      raw: p?.vpip_pct ?? 0,
+      delta: p ? `Gap: ${(p.vpip_pct - p.pfr_pct).toFixed(1)}` : "",
       trend: "flat" as const,
       hint: "Pre-flop stats (live)",
     },
