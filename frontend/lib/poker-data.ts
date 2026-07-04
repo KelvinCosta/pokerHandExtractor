@@ -230,3 +230,101 @@ export const popFoldToSteal = [
 
 export const currency = (n: number) =>
   (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US")
+
+// ──────────────────────────────────────────────────────────────
+// Analytics / Telemetry Dashboard — Phase 2 mock data
+// ──────────────────────────────────────────────────────────────
+
+/** 4 hero KPIs shown at the top of the Analytics Bento Box */
+export const analyticsKpis = [
+  {
+    id: "total_profit",
+    label: "Total Profit",
+    value: "$184,920",
+    raw: 184920,
+    delta: "+12.4%",
+    trend: "up" as Trend,
+    hint: "All-time tracked winnings",
+    accent: "#10B981", // neon green
+  },
+  {
+    id: "winrate",
+    label: "Winrate",
+    value: "6.8 bb/100",
+    raw: 6.8,
+    delta: "+0.9",
+    trend: "up" as Trend,
+    hint: "Big blinds per 100 hands",
+    accent: "#10B981",
+  },
+  {
+    id: "hands_played",
+    label: "Hands Played",
+    value: "1.42M",
+    raw: 1420000,
+    delta: "+38.2k",
+    trend: "up" as Trend,
+    hint: "Total tracked hands",
+    accent: "#6366F1",
+  },
+  {
+    id: "vpip_pfr",
+    label: "VPIP / PFR",
+    value: "24 / 20",
+    raw: 24,
+    delta: "Gap: 4",
+    trend: "flat" as Trend,
+    hint: "Pre-flop range tightness",
+    accent: "#F59E0B",
+  },
+] as const
+
+/** Weekly EV bars: actual profit vs all-in EV per session week (last 12 weeks) */
+export interface EvBarPoint {
+  week: string
+  actual: number
+  ev: number
+}
+
+export const evBarSeries: EvBarPoint[] = [
+  { week: "W1",  actual:  2100, ev:  2600 },
+  { week: "W2",  actual: -1400, ev: -800  },
+  { week: "W3",  actual:  3800, ev:  3200 },
+  { week: "W4",  actual:  1200, ev:  1900 },
+  { week: "W5",  actual: -2200, ev: -1500 },
+  { week: "W6",  actual:  4600, ev:  4100 },
+  { week: "W7",  actual:  3100, ev:  3800 },
+  { week: "W8",  actual: -800,  ev:  400  },
+  { week: "W9",  actual:  5200, ev:  4800 },
+  { week: "W10", actual:  1700, ev:  2200 },
+  { week: "W11", actual: -1100, ev: -600  },
+  { week: "W12", actual:  6400, ev:  5900 },
+]
+
+/** Top leaks: spots where the hero loses the most EV */
+export interface Leak {
+  id: string
+  spot: string
+  street: string
+  lostEv: number   // bb/100 lost vs optimal
+  hands: number    // sample size
+  severity: "critical" | "major" | "minor"
+}
+
+export const topLeaks: Leak[] = [
+  { id: "l1", spot: "3-Bet Pot, OOP, Check-Fold River",  street: "River",   lostEv: -0.48, hands: 1840, severity: "critical" },
+  { id: "l2", spot: "Single-Raised Pot, BTN vs BB, Overbet Bluff Catch", street: "River", lostEv: -0.31, hands: 2110, severity: "critical" },
+  { id: "l3", spot: "3-Bet Pot IP, Flop X/R vs C-Bet",  street: "Flop",    lostEv: -0.24, hands: 980,  severity: "major" },
+  { id: "l4", spot: "SRP BB defense, Turn donk-bet",     street: "Turn",    lostEv: -0.19, hands: 1570, severity: "major" },
+  { id: "l5", spot: "BTN open vs SB 3-Bet, fold too wide", street: "Preflop", lostEv: -0.14, hands: 3240, severity: "minor" },
+  { id: "l6", spot: "CO vs BTN, Flop C-Bet size too large", street: "Flop",  lostEv: -0.11, hands: 2890, severity: "minor" },
+]
+
+/** Biggest rivals sorted by net loss vs hero */
+export const biggestRivals = [
+  { alias: "GTO_Slayer",    net: -14280, style: "TAG",    hands: 8420 },
+  { alias: "riverRat88",    net: -9840,  style: "Fish",   hands: 6110 },
+  { alias: "PolishHammer",  net: -7620,  style: "LAG",    hands: 5230 },
+  { alias: "eu_grinder",    net: -5320,  style: "TAG",    hands: 5610 },
+] as const
+

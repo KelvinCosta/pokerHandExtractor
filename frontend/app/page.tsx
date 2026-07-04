@@ -4,28 +4,34 @@ import { useState } from "react"
 import { Sidebar, type ViewId } from "@/components/dashboard/sidebar"
 import { Topbar } from "@/components/dashboard/topbar"
 import { OverviewView } from "@/components/dashboard/views/overview-view"
+import { AnalyticsView } from "@/components/dashboard/views/analytics-view"
 import { EnginesView } from "@/components/dashboard/views/engines-view"
 import { VillainsView } from "@/components/dashboard/views/villains-view"
 import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 import { PopulationView } from "@/components/dashboard/views/population-view"
 import { cn } from "@/lib/utils"
-import { Activity, Layers, Radar, Spade, Target, Users } from "lucide-react"
+import { Activity, BarChart2, Layers, Radar, Spade, Target, Users } from "lucide-react"
+
 
 const meta: Record<ViewId, { title: string; subtitle: string }> = {
-  overview: { title: "General Health", subtitle: "Global KPIs, profit trend & edge distribution" },
-  engines: { title: "Pre / Post-Flop Engines", subtitle: "Aggression, continuation & showdown metrics" },
-  villains: { title: "Villain Mapping", subtitle: "Opponent pool, rivalry board & reads" },
-  bigpots: { title: "Big Pots & River Audit", subtitle: "High-value hands & final-street decisions" },
-  population: { title: "Population (MDA)", subtitle: "Mass data analysis across the field" },
+  overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution" },
+  analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals" },
+  engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics" },
+  villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads" },
+  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions" },
+  population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field" },
 }
 
+
 const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
-  { id: "overview", label: "Health", icon: Activity },
-  { id: "engines", label: "Engines", icon: Layers },
-  { id: "villains", label: "Villains", icon: Users },
-  { id: "bigpots", label: "Big Pots", icon: Target },
-  { id: "population", label: "MDA", icon: Radar },
+  { id: "overview",   label: "Health",    icon: Activity  },
+  { id: "analytics", label: "Analytics", icon: BarChart2  },
+  { id: "engines",   label: "Engines",   icon: Layers     },
+  { id: "villains",  label: "Villains",  icon: Users      },
+  { id: "bigpots",   label: "Big Pots",  icon: Target     },
+  { id: "population",label: "MDA",       icon: Radar      },
 ]
+
 
 export default function Page() {
   const [view, setView] = useState<ViewId>("overview")
@@ -67,12 +73,14 @@ export default function Page() {
         </div>
 
         <main className="flex-1 overflow-y-auto p-4 scrollbar-thin md:p-6">
-          {view === "overview" && <OverviewView />}
-          {view === "engines" && <EnginesView />}
-          {view === "villains" && <VillainsView />}
-          {view === "bigpots" && <BigPotsView />}
+          {view === "overview"   && <OverviewView />}
+          {view === "analytics"  && <AnalyticsView />}
+          {view === "engines"    && <EnginesView />}
+          {view === "villains"   && <VillainsView />}
+          {view === "bigpots"    && <BigPotsView />}
           {view === "population" && <PopulationView />}
         </main>
+
       </div>
     </div>
   )

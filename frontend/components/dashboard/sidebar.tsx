@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils"
 import {
   Activity,
+  BarChart2,
   Crosshair,
   Layers,
   Radar,
@@ -13,7 +14,8 @@ import {
   BrainCircuit,
 } from "lucide-react"
 
-export type ViewId = "overview" | "engines" | "villains" | "bigpots" | "population"
+export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population"
+
 
 const nav: {
   group: string
@@ -22,14 +24,16 @@ const nav: {
   {
     group: "Telemetry",
     items: [
-      { id: "overview", label: "General Health", icon: Activity },
-      { id: "engines", label: "Pre / Post-Flop Engines", icon: Layers },
-      { id: "villains", label: "Villain Mapping", icon: Users },
-      { id: "bigpots", label: "Big Pots & River", icon: Target },
-      { id: "population", label: "Population (MDA)", icon: Radar },
+      { id: "overview",   label: "General Health",         icon: Activity  },
+      { id: "analytics",  label: "Analytics Dashboard",    icon: BarChart2, badge: "NEW" },
+      { id: "engines",    label: "Pre / Post-Flop Engines", icon: Layers    },
+      { id: "villains",   label: "Villain Mapping",         icon: Users     },
+      { id: "bigpots",    label: "Big Pots & River",        icon: Target    },
+      { id: "population", label: "Population (MDA)",        icon: Radar     },
     ],
   },
 ]
+
 
 export function Sidebar({
   active,
@@ -79,11 +83,17 @@ export function Sidebar({
                           isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground",
                         )}
                       />
-                      <span className="truncate text-left">{item.label}</span>
+                      <span className="truncate text-left flex-1">{item.label}</span>
+                      {item.badge && (
+                        <span className="rounded-full bg-primary/15 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-primary">
+                          {item.badge}
+                        </span>
+                      )}
                     </button>
                   </li>
                 )
               })}
+
             </ul>
           </div>
         ))}
