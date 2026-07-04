@@ -60,7 +60,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
     {
       id: "profit",
       label: "Net Profit",
-      value: h ? `$${h.profit_usd.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "—",
+      value: h ? `$${h.profit_usd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—",
       raw: h?.profit_usd ?? 0,
       delta: "",
       trend: (h?.profit_usd ?? 0) >= 0 ? ("up" as const) : ("down" as const),
