@@ -14,8 +14,7 @@ import {
   BrainCircuit,
 } from "lucide-react"
 
-export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population" | "audit"
-
+export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population" | "audit" | "import"
 
 const nav: {
   group: string
@@ -36,6 +35,12 @@ const nav: {
     group: "Audit",
     items: [
       { id: "audit", label: "AI Auditor", icon: BrainCircuit, badge: "AI" },
+    ],
+  },
+  {
+    group: "ETL",
+    items: [
+      { id: "import", label: "Import Data", icon: Waves },
     ],
   },
 ]

@@ -160,3 +160,47 @@ export async function completeAudit(
     signal,
   )
 }
+
+/**
+ * Upload helper for multipart/form-data.
+ */
+export async function apiUpload(
+  path: string,
+  formData: FormData,
+  signal?: AbortSignal,
+): Promise<any> {
+  const url = `${BASE_URL}${path}`
+
+  const headers: Record<string, string> = {}
+  
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: formData,
+    signal,
+  })
+
+  if (!res.ok) {
+    let message = `HTTP ${res.status} — ${res.statusText}`
+    try {
+      const err: ApiError = await res.json()
+      if (typeof err.detail === "string") {
+        message = err.detail
+      } else if (Array.isArray(err.detail)) {
+        message = err.detail.map((d) => d.msg).join(", ")
+      }
+    } catch {
+      // no JSON or bad format
+    }
+    throw new Error(message)
+  }
+
+  return res.json()
+}

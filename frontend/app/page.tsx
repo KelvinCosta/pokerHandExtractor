@@ -12,9 +12,10 @@ import { VillainsView } from "@/components/dashboard/views/villains-view"
 import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 import { PopulationView } from "@/components/dashboard/views/population-view"
 import { AuditView } from "@/components/dashboard/views/audit-view"
+import { ImportView } from "@/components/dashboard/views/import-view"
 import { cn } from "@/lib/utils"
 import type { DashboardFilters } from "@/lib/api.types"
-import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users } from "lucide-react"
+import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users, Waves } from "lucide-react"
 
 // ─── View metadata ─────────────────────────────────────────────────────────────
 const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolean }> = {
@@ -25,6 +26,7 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
   bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: false },
   population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
   audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
+  import:     { title: "Import Data (ETL)",        subtitle: "Upload raw poker hand histories for processing",hasFilters: false },
 }
 
 // ─── Mobile nav items ──────────────────────────────────────────────────────────
@@ -36,6 +38,7 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "bigpots",    label: "Big Pots",  icon: Target     },
   { id: "population", label: "MDA",       icon: Radar      },
   { id: "audit",      label: "Audit",     icon: Brain      },
+  { id: "import",     label: "Import",    icon: Waves      },
 ]
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -114,6 +117,7 @@ export default function Page() {
           {view === "bigpots"    && <BigPotsView />}
           {view === "population" && <PopulationView />}
           {view === "audit"      && <AuditView />}
+          {view === "import"     && <ImportView />}
         </main>
       </div>
     </div>
