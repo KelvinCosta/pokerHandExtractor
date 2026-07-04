@@ -17,6 +17,7 @@ export interface DashboardFilters {
   game_types?: string[]      // e.g. ["Rush & Cash"]
   stake?: number             // float, e.g. 0.05
   hero_name?: string         // default "Hero" on the backend
+  user_id?: string           // hardcoded user ID for Milestone 2 testing
 }
 
 // ─── Dashboard Response Types ─────────────────────────────────────────────────

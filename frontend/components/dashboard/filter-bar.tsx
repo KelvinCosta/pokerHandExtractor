@@ -31,7 +31,7 @@ const STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: "NL500",  value: 5.00 },
 ]
 
-const GAME_TYPE_OPTIONS = ["Rush & Cash", "Zone Poker", "Regular"]
+const GAME_TYPE_OPTIONS = ["Rush & Cash", "Tournaments", "Regular"]
 
 const EMPTY_FILTERS: DashboardFilters = {}
 
