@@ -104,6 +104,10 @@ async def upload_and_process(
     if processed_count > 0 or summaries_to_save:
         repo.mark_as_processed([f.name for f in new_txt_files])
         
+        # Invalida o cache em memória do usuário para forçar recarga no próximo request do Dashboard
+        from src.api.dependencies import invalidate_cache
+        invalidate_cache(user_id)
+        
     # 3. Limpeza do disco local (Tudo já está no S3 / Parquets no Silver)
     shutil.rmtree(temp_dir, ignore_errors=True)
         

@@ -32,24 +32,37 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
+import time
+
+_DATALAKE_CACHE = {}  # { user_id: {"df": pl.DataFrame, "timestamp": float} }
+
+def invalidate_cache(user_id: str):
+    """Limpa o cache do Datalake em memória para o usuário (chamado após o ETL)"""
+    if user_id in _DATALAKE_CACHE:
+        del _DATALAKE_CACHE[user_id]
+
 def get_filtered_df(filters: DashboardFilters, user: User):
     """
-    Carrega o Datalake do usuário sob demanda e aplica os filtros.
+    Carrega o Datalake do usuário sob demanda (usando Cache Global) e aplica os filtros.
     """
     user_id = user.id
     silver_dir = Path(os.getenv("DATALAKE_SILVER", "./datalake/silver")) / user_id
-
     
     if not silver_dir.exists():
         # Se não há pasta pro usuário, retorna um DF vazio com esquema base
         return pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
         
-    try:
-        df = pl.scan_parquet(str(silver_dir / "hands_part_*.parquet")).collect()
-        df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
-        df = df.explode("actions").unnest("actions")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake: {e}")
+    # Usar Cache em Memória (Evita I/O e Explode massivo a cada request)
+    if user_id in _DATALAKE_CACHE:
+        df = _DATALAKE_CACHE[user_id]["df"]
+    else:
+        try:
+            df = pl.scan_parquet(str(silver_dir / "hands_part_*.parquet")).collect()
+            df = df.unique(subset=["hand_id"], keep="last", maintain_order=True)
+            df = df.explode("actions").unnest("actions")
+            _DATALAKE_CACHE[user_id] = {"df": df, "timestamp": time.time()}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake: {e}")
 
     # Verifica se há coluna de data
     nome_coluna_data = "date" if "date" in df.columns else "timestamp" if "timestamp" in df.columns else None
