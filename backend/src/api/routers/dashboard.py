@@ -42,12 +42,21 @@ def get_health_metrics(filters: DashboardFilters, df: pl.DataFrame = Depends(get
     val_lucro_bb = float(lucro_total_bb) if lucro_total_bb is not None else 0.0
     
     bb100 = (val_lucro_bb / total_maos) * 100 if total_maos > 0 else 0.0
+    
+    # Standard Deviation (bb/100) = std(lucro_bb_por_mao) * sqrt(100)
+    std_dev_hand = lucro_por_mao.select(pl.col("lucro_bb").std()).item()
+    std_dev_bb100 = float(std_dev_hand * 10) if std_dev_hand is not None else 0.0
+    
+    # Sessions (Dias Jogados)
+    total_sessions = df.select("data_limpa").n_unique() if "data_limpa" in df.columns else 1
 
     return {
         "total_hands": total_maos,
         "profit_usd": round(val_lucro_total, 2),
         "profit_bb": round(val_lucro_bb, 2),
-        "bb_100": round(bb100, 2)
+        "bb_100": round(bb100, 2),
+        "std_dev_bb100": round(std_dev_bb100, 2),
+        "total_sessions": total_sessions
     }
 
 @router.post("/preflop")
