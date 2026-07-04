@@ -1,6 +1,9 @@
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 root_dir = Path(__file__).resolve().parent.parent.parent
 if str(root_dir) not in sys.path:
