@@ -22,7 +22,7 @@ import {
 } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { useDashboard } from "@/hooks/useDashboard"
-import { AlertTriangle, Loader2 } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 import type { DashboardFilters } from "@/lib/api.types"
 
 const chartConfig = {
@@ -32,9 +32,14 @@ const chartConfig = {
 
 // ─── Helpers to map API data → KpiCard props ──────────────────────────────────
 // Guard: the backend can return a partial error object { error: "...", total_hands: 0 }
-// that passes the `!= null` check but is missing bb_100/profit_usd.
-// We treat any response without the numeric fields as "no data".
-function isValidHealth(h: unknown): h is { total_hands: number; profit_usd: number; bb_100: number } {
+// that passes the `!= null` check but is missing critical numeric fields.
+function isValidHealth(h: unknown): h is {
+  total_hands: number
+  profit_usd: number
+  bb_100: number
+  std_dev_bb100?: number
+  total_sessions?: number
+} {
   if (!h || typeof h !== "object") return false
   const obj = h as Record<string, unknown>
   return (
@@ -57,6 +62,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
   if (!h && !p) return null
 
   return [
+    // ── Row 1: from /health ───────────────────────────────────────────────
     {
       id: "profit",
       label: "Net Profit",
@@ -64,7 +70,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
       raw: h?.profit_usd ?? 0,
       delta: "",
       trend: (h?.profit_usd ?? 0) >= 0 ? ("up" as const) : ("down" as const),
-      hint: "Live — all tracked hands",
+      hint: "Net profit in USD · all tracked hands",
     },
     {
       id: "winrate",
@@ -73,7 +79,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
       raw: h?.bb_100 ?? 0,
       delta: "",
       trend: (h?.bb_100 ?? 0) >= 0 ? ("up" as const) : ("down" as const),
-      hint: "Big blinds per 100 hands",
+      hint: "Big blinds won per 100 hands",
     },
     {
       id: "hands",
@@ -82,8 +88,9 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
       raw: h?.total_hands ?? 0,
       delta: "",
       trend: "up" as const,
-      hint: "Total tracked hands (live)",
+      hint: "Total tracked hands",
     },
+    // ── Row 2: VPIP/PFR from /preflop ────────────────────────────────────
     {
       id: "vpip_pfr",
       label: "VPIP / PFR",
@@ -91,7 +98,26 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
       raw: p?.vpip_pct ?? 0,
       delta: p ? `Gap: ${(p.vpip_pct - p.pfr_pct).toFixed(1)}` : "",
       trend: "flat" as const,
-      hint: "Pre-flop stats (live)",
+      hint: "Pre-flop aggression profile",
+    },
+    // ── Row 3: std_dev + sessions from /health ────────────────────────────
+    {
+      id: "std_dev",
+      label: "Std Dev",
+      value: h?.std_dev_bb100 != null ? `${h.std_dev_bb100.toFixed(1)} bb/100` : "—",
+      raw: h?.std_dev_bb100 ?? 0,
+      delta: "",
+      trend: "flat" as const,
+      hint: "Variance in bb/100 — lower is more consistent",
+    },
+    {
+      id: "sessions",
+      label: "Sessions",
+      value: h?.total_sessions != null ? h.total_sessions.toLocaleString("en-US") : "—",
+      raw: h?.total_sessions ?? 0,
+      delta: "",
+      trend: "up" as const,
+      hint: "Distinct session days tracked",
     },
   ]
 }

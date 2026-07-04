@@ -25,6 +25,8 @@ export interface HealthMetrics {
   profit_usd: number
   profit_bb: number
   bb_100: number
+  std_dev_bb100?: number    // added in backend Milestone 1+
+  total_sessions?: number   // added in backend Milestone 1+
   /** Populated only when the backend returns an error but 200 status */
   error?: string
 }
