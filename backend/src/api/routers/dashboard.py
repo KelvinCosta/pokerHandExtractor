@@ -30,12 +30,16 @@ def get_health_metrics(df: pl.DataFrame = Depends(get_filtered_df)) -> Dict[str,
     
     lucro_total = lucro_por_mao.select(pl.col("lucro_bruto").sum()).item()
     lucro_total_bb = lucro_por_mao.select(pl.col("lucro_bb").sum()).item()
-    bb100 = (lucro_total_bb / total_maos) * 100 if total_maos > 0 else 0
+    
+    val_lucro_total = float(lucro_total) if lucro_total is not None else 0.0
+    val_lucro_bb = float(lucro_total_bb) if lucro_total_bb is not None else 0.0
+    
+    bb100 = (val_lucro_bb / total_maos) * 100 if total_maos > 0 else 0.0
 
     return {
         "total_hands": total_maos,
-        "profit_usd": round(lucro_total, 2) if lucro_total else 0.0,
-        "profit_bb": round(lucro_total_bb, 2) if lucro_total_bb else 0.0,
+        "profit_usd": round(val_lucro_total, 2),
+        "profit_bb": round(val_lucro_bb, 2),
         "bb_100": round(bb100, 2)
     }
 

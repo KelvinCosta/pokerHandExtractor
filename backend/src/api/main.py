@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     AppState.df_hands = None
     AppState.df_tournaments = None
 
-from src.api.routers import dashboard
+from src.api.routers import dashboard, chat
 
 app = FastAPI(
     title="Poker Analytics API",
@@ -53,6 +53,7 @@ app.add_middleware(
 )
 
 app.include_router(dashboard.router)
+app.include_router(chat.router)
 
 @app.get("/")
 def health_check():

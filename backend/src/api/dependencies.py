@@ -19,7 +19,10 @@ def get_filtered_df(filters: DashboardFilters):
     if nome_coluna_data:
         # Tenta padronizar os nomes de colunas como o Streamlit fazia
         df = df.with_columns(
-            pl.col(nome_coluna_data).cast(pl.Date).alias("data_limpa")
+            pl.col(nome_coluna_data)
+            .str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False)
+            .dt.date()
+            .alias("data_limpa")
         )
         
         # Filtro de Data
