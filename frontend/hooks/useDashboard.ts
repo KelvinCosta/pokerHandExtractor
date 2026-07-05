@@ -21,29 +21,6 @@ export interface DashboardState {
 
   /** Data returned by /api/dashboard/health */
   health: HealthMetrics | null
-/**
- * useDashboard.ts
- * React hook that owns the dashboard filter state and fetches
- * /api/dashboard/health and /api/dashboard/preflop in parallel.
- *
- * Usage:
- *   const { health, preflop, loading, error, refetch } = useDashboard(filters)
- *
- * The hook re-fetches automatically whenever `filters` changes.
- * It also cleans up in-flight requests on unmount (AbortController).
- */
-"use client"
-
-import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchActionDistribution, fetchBiggestRivals } from "@/lib/api"
-import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics, BigPotHand } from "@/lib/api.types"
-
-export interface DashboardState {
-  /** Current filter values */
-  filters: DashboardFilters
-
-  /** Data returned by /api/dashboard/health */
-  health: HealthMetrics | null
   /** Data returned by /api/dashboard/preflop */
   preflop: PreflopMetrics | null
   /** Data returned by /api/dashboard/profit-trend */
@@ -144,10 +121,5 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, tick])
 
-  return { filters, health, preflop, profitTrend,    analytics,
-    postflop,
-    actionDistribution,
-    bigPots,
-    biggestRivals,
-    loading, error, refetch }
+  return { filters, health, preflop, profitTrend, analytics, postflop, actionDistribution, bigPots, biggestRivals, loading, error, refetch }
 }
