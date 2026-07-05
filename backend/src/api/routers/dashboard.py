@@ -267,3 +267,36 @@ def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_cur
         "pot_in_bb",
         "net_profit"
     ]).to_dicts()
+
+@router.post("/biggest-rivals")
+def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return []
+
+    df_villain_hands = (
+        df.filter((pl.col("player") != filters.hero_name) & pl.col("player").is_not_null())
+        .select(["hand_id", "player", "hero_net_profit"])
+        .unique()
+    )
+
+    df_rivals = (
+        df_villain_hands.group_by("player")
+        .agg(
+            pl.col("hand_id").count().alias("hands"),
+            pl.col("hero_net_profit").sum().alias("net")
+        )
+        .filter(pl.col("net") < 0)
+        .sort("net")
+        .head(5)
+    )
+
+    result = []
+    for row in df_rivals.iter_rows(named=True):
+        result.append({
+            "alias": row["player"],
+            "hands": row["hands"],
+            "net": round(row["net"], 2),
+            "style": "Reg" 
+        })
+    return result

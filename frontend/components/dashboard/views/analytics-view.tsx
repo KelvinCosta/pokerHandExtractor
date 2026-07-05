@@ -6,7 +6,7 @@ import type { DashboardFilters } from "@/lib/api.types"
 import { cn } from "@/lib/utils"
 import {
   analyticsKpis,
-  biggestRivals,
+  biggestRivals as biggestRivalsMock,
   currency,
   evBarSeries,
   topLeaks,
@@ -302,8 +302,9 @@ function TopLeaksTable() {
 }
 
 // ─── Sub-component: Biggest Rivals ───────────────────────────────────────────
-function BiggestRivals() {
-  const worst = Math.abs(biggestRivals[0].net)
+function BiggestRivals({ rivals }: { rivals: any[] }) {
+  if (!rivals || rivals.length === 0) return null;
+  const worst = Math.abs(rivals[0].net)
 
   const styleBadge: Record<string, string> = {
     TAG:    "border-[#6366F1]/40 text-[#6366F1]",
@@ -327,7 +328,7 @@ function BiggestRivals() {
       </div>
 
       <ul className="flex flex-col gap-0 divide-y divide-border">
-        {biggestRivals.map((rival, i) => (
+        {rivals.map((rival, i) => (
           <li
             key={rival.alias}
             className="group flex flex-col gap-2 px-4 py-3.5 transition-colors hover:bg-muted/30"
@@ -377,7 +378,7 @@ function BiggestRivals() {
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
-  const { analytics, loading, error } = useDashboard(filters ?? {})
+  const { analytics, biggestRivals: liveRivals, loading, error } = useDashboard(filters ?? {})
 
   const liveKpis = analytics ? [
     {
@@ -437,7 +438,7 @@ export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
         {/* TODO: Implementar Machine Learning de Leaks vs GTO Benchmark
         <TopLeaksTable />
         */}
-        <BiggestRivals />
+        <BiggestRivals rivals={liveRivals || biggestRivalsMock} />
       </section>
 
     </div>

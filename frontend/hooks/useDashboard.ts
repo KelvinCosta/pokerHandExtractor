@@ -12,7 +12,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots } from "@/lib/api"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchBiggestRivals } from "@/lib/api"
 import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics, BigPotHand } from "@/lib/api.types"
 
 export interface DashboardState {
@@ -31,6 +31,8 @@ export interface DashboardState {
   postflop: PostflopEngineMetrics | null
   /** Data returned by /api/dashboard/big-pots */
   bigPots: BigPotHand[] | null
+  /** Data returned by /api/dashboard/biggest-rivals */
+  biggestRivals: any[] | null
 
   loading: boolean
   error: string | null
@@ -49,6 +51,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   const [analytics, setAnalytics] = useState<AnalyticsBentoMetrics | null>(null)
   const [postflop, setPostflop] = useState<PostflopEngineMetrics | null>(null)
   const [bigPots, setBigPots] = useState<BigPotHand[] | null>(null)
+  const [biggestRivals, setBiggestRivals] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -75,13 +78,14 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
         // Parallel fetch — all requests share the same filter payload and signal
         const payload = { ...filters }
         
-        const [healthData, preflopData, profitTrendData, analyticsData, postflopData, bigPotsData] = await Promise.all([
+        const [healthData, preflopData, profitTrendData, analyticsData, postflopData, bigPotsData, rivalsData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchPreflopMetrics(payload, controller.signal),
           fetchProfitTrend(payload, controller.signal),
           fetchAnalyticsBento(payload, controller.signal),
           fetchPostflopEngines(payload, controller.signal),
           fetchBigPots(payload, controller.signal),
+          fetchBiggestRivals(payload, controller.signal),
         ])
 
         if (!cancelled) {
@@ -91,6 +95,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
           setAnalytics(analyticsData)
           setPostflop(postflopData)
           setBigPots(bigPotsData)
+          setBiggestRivals(rivalsData)
         }
       } catch (err: unknown) {
         if (cancelled) return
@@ -111,5 +116,9 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, tick])
 
-  return { filters, health, preflop, profitTrend, analytics, postflop, bigPots, loading, error, refetch }
+  return { filters, health, preflop, profitTrend,    analytics,
+    postflop,
+    bigPots,
+    biggestRivals,
+    loading, error, refetch }
 }

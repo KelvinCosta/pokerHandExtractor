@@ -180,6 +180,17 @@ export async function fetchBigPots(
   )
 }
 
+export async function fetchBiggestRivals(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<any[]> {
+  return apiPost<DashboardFilters, any[]>(
+    "/api/dashboard/biggest-rivals",
+    filters,
+    signal,
+  )
+}
+
 // ─── Audit / Chat endpoints ───────────────────────────────────────────────────
 
 /**
