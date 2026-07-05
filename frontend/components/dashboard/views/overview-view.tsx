@@ -140,6 +140,11 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
       }))
     : profitSeries
 
+  // Determinar o pico do gráfico atual (usando valor absoluto para pegar picos negativos tb)
+  const chartMaxProfit = Math.max(
+    ...displayProfitData.map((d) => Math.abs(d.profit))
+  )
+
 
   return (
     <div className="flex flex-col gap-4">
@@ -219,7 +224,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
                 width={48}
                 tickFormatter={(v) => {
                   // Se os valores forem pequenos (ex: 12 USD), não divide por 1000.
-                  if (maxProfit < 100) return `$${v.toFixed(2)}`
+                  if (chartMaxProfit < 100) return `$${v.toFixed(2)}`
                   return `$${(v / 1000).toFixed(0)}k`
                 }}
                 className="font-mono text-[10px]"
