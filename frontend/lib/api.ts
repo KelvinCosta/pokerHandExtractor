@@ -113,6 +113,24 @@ export async function fetchPreflopMetrics(
 }
 
 // ─── Audit / Chat endpoints ───────────────────────────────────────────────────
+import type { ProfitTrendPoint } from "./api.types"
+
+/**
+ * POST /api/dashboard/profit-trend
+ * Returns the chronological evolution of hero_net_profit
+ */
+export async function fetchProfitTrend(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<ProfitTrendPoint[]> {
+  return apiPost<DashboardFilters, ProfitTrendPoint[]>(
+    "/api/dashboard/profit-trend",
+    filters,
+    signal,
+  )
+}
+
+// ─── Audit / Chat endpoints ───────────────────────────────────────────────────
 
 /**
  * POST /api/audit/start

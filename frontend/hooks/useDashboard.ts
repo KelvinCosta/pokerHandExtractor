@@ -12,8 +12,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics } from "@/lib/api"
-import type { DashboardFilters, HealthMetrics, PreflopMetrics } from "@/lib/api.types"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend } from "@/lib/api"
+import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint } from "@/lib/api.types"
 
 export interface DashboardState {
   /** Current filter values */
@@ -23,6 +23,8 @@ export interface DashboardState {
   health: HealthMetrics | null
   /** Data returned by /api/dashboard/preflop */
   preflop: PreflopMetrics | null
+  /** Data returned by /api/dashboard/profit-trend */
+  profitTrend: ProfitTrendPoint[] | null
 
   loading: boolean
   error: string | null
@@ -37,6 +39,7 @@ const DEFAULT_FILTERS: DashboardFilters = {}
 export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): DashboardState {
   const [health, setHealth] = useState<HealthMetrics | null>(null)
   const [preflop, setPreflop] = useState<PreflopMetrics | null>(null)
+  const [profitTrend, setProfitTrend] = useState<ProfitTrendPoint[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,17 +63,19 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
       setError(null)
 
       try {
-        // Parallel fetch — both requests share the same filter payload and signal
+        // Parallel fetch — all requests share the same filter payload and signal
         const payload = { ...filters }
         
-        const [healthData, preflopData] = await Promise.all([
+        const [healthData, preflopData, profitTrendData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchPreflopMetrics(payload, controller.signal),
+          fetchProfitTrend(payload, controller.signal),
         ])
 
         if (!cancelled) {
           setHealth(healthData)
           setPreflop(preflopData)
+          setProfitTrend(profitTrendData)
         }
       } catch (err: unknown) {
         if (cancelled) return

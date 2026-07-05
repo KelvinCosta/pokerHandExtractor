@@ -47,6 +47,12 @@ export interface PreflopMetrics {
   error?: string
 }
 
+export interface ProfitTrendPoint {
+  date: string
+  cumulative_profit: number
+  hero_net_profit: number
+}
+
 // ─── Audit / Chat Request Types ───────────────────────────────────────────────
 export interface AuditStartRequest {
   hero_name: string

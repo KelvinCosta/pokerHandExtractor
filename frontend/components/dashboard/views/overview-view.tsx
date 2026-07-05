@@ -123,7 +123,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
 }
 
 export function OverviewView({ filters }: { filters?: DashboardFilters }) {
-  const { health, preflop, loading, error } = useDashboard(filters ?? {})
+  const { health, preflop, profitTrend, loading, error } = useDashboard(filters ?? {})
   const maxProfit = Math.max(...stakeBreakdown.map((s) => s.profit))
 
   // Build live KPI cards when data is available, else fall back to mock
@@ -132,6 +132,13 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
     ? [...liveKpis, ...healthKpis.slice(liveKpis.length)]   // live first, mock fills the rest
     : healthKpis
 
+  // Map live profitTrend or fall back to mock
+  const displayProfitData = profitTrend && profitTrend.length > 0
+    ? profitTrend.map((pt) => ({
+        week: pt.date.split(" ")[0], // Extract just the date (YYYY/MM/DD)
+        profit: pt.cumulative_profit,
+      }))
+    : profitSeries
 
 
   return (
@@ -183,7 +190,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
             </div>
           </div>
           <ChartContainer config={chartConfig} className="h-[280px] w-full">
-            <AreaChart data={profitSeries} margin={{ left: 4, right: 8, top: 8 }}>
+            <AreaChart data={displayProfitData} margin={{ left: 4, right: 8, top: 8 }}>
               <defs>
                 <linearGradient id="fillProfit" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--color-profit)" stopOpacity={0.35} />
