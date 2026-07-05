@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import polars as pl
 from typing import Any, Dict, List
-from ..dependencies import get_filtered_df, get_current_user
+from ..dependencies import get_filtered_df, get_filtered_hands_df, get_current_user
 from ..schemas.filters import DashboardFilters
 from src.database.models import User
 
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 
 @router.post("/health")
 def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
-    df = get_filtered_df(filters, current_user)
+    df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return {
             "total_hands": 0,
@@ -19,22 +19,10 @@ def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(g
         }
         
     hero = filters.hero_name
-    total_maos = df.select("hand_id").n_unique()
+    total_maos = df.height
     
-    lucro_por_mao = (
-        df
-        .group_by("hand_id")
-        .agg(
-            pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
-            pl.col("hero_net_profit").first(),
-            pl.col("hero_position").first(),
-            pl.col("hero_vpip").first(),
-            pl.col("hero_pfr").first(),
-            pl.col("hero_3bet").first()
-        )
-        .with_columns(
-            (pl.col("hero_net_profit") / pl.col("bb_size")).alias("lucro_bb")
-        )
+    lucro_por_mao = df.with_columns(
+        (pl.col("hero_net_profit") / pl.col("stake_level")).alias("lucro_bb")
     )
     
     lucro_total = lucro_por_mao.select(pl.col("hero_net_profit").sum()).item()
@@ -63,7 +51,7 @@ def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(g
 
 @router.post("/preflop")
 def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
-    df = get_filtered_df(filters, current_user)
+    df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return {
             "total_hands": 0,
@@ -73,14 +61,11 @@ def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(ge
             "three_bet_pct": 0.0
         }
         
-    total_maos = df.select("hand_id").n_unique()
+    total_maos = df.height
     
-    # Pega apenas uma linha por mão
-    unique_hands = df.unique(subset=["hand_id"], keep="first")
-    
-    vpip_maos = unique_hands.filter(pl.col("hero_vpip") == True).height
-    pfr_maos = unique_hands.filter(pl.col("hero_pfr") == True).height
-    three_bet_maos = unique_hands.filter(pl.col("hero_3bet") == True).height
+    vpip_maos = df.filter(pl.col("hero_vpip") == True).height
+    pfr_maos = df.filter(pl.col("hero_pfr") == True).height
+    three_bet_maos = df.filter(pl.col("hero_3bet") == True).height
     
     vpip_pct = (vpip_maos / total_maos) * 100 if total_maos > 0 else 0
     pfr_pct = (pfr_maos / total_maos) * 100 if total_maos > 0 else 0
@@ -96,14 +81,13 @@ def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(ge
     }
 
 @router.post("/profit-trend")
-def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)):
-    df = get_filtered_df(filters, current_user)
+def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return []
         
     unique_hands = (
-        df.unique(subset=["hand_id"], keep="first")
-          .sort("date")
+        df.sort("data_limpa" if "data_limpa" in df.columns else "date")
           .with_columns(
               pl.col("hero_net_profit").cum_sum().alias("cumulative_profit")
           )
