@@ -135,7 +135,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
   // Map live profitTrend or fall back to mock
   const displayProfitData = profitTrend && profitTrend.length > 0
     ? profitTrend.map((pt) => ({
-        week: pt.date.split(" ")[0], // Extract just the date (YYYY/MM/DD)
+        time: pt.date, // Use the full timestamp so each hand is a step in the area chart
         profit: pt.cumulative_profit,
       }))
     : profitSeries
@@ -199,19 +199,29 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
               </defs>
               <CartesianGrid vertical={false} stroke="var(--border)" />
               <XAxis
-                dataKey="week"
+                dataKey={profitTrend && profitTrend.length > 0 ? "time" : "week"}
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 minTickGap={24}
                 className="font-mono text-[10px]"
+                tickFormatter={(value) => {
+                  if (typeof value !== "string") return ""
+                  // Se for mock, mostra "week", se for real, mostra só HH:MM
+                  if (value.includes(" ")) return value.split(" ")[1].slice(0, 5)
+                  return value
+                }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
                 width={48}
-                tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                tickFormatter={(v) => {
+                  // Se os valores forem pequenos (ex: 12 USD), não divide por 1000.
+                  if (maxProfit < 100) return `$${v.toFixed(2)}`
+                  return `$${(v / 1000).toFixed(0)}k`
+                }}
                 className="font-mono text-[10px]"
               />
               <ChartTooltip
