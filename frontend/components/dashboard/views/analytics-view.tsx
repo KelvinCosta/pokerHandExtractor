@@ -1,5 +1,8 @@
 "use client"
 
+import { useDashboard } from "@/hooks/useDashboard"
+import type { DashboardFilters } from "@/lib/api.types"
+
 import { cn } from "@/lib/utils"
 import {
   analyticsKpis,
@@ -372,15 +375,52 @@ function BiggestRivals() {
   )
 }
 
-// ─── Main Analytics View ──────────────────────────────────────────────────────
-export function AnalyticsView() {
+// ─── Main View ────────────────────────────────────────────────────────────────
+export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
+  const { analytics, loading, error } = useDashboard(filters ?? {})
+
+  const liveKpis = analytics ? [
+    {
+      id: "wwsf",
+      label: "WWSF (Won When Saw Flop)",
+      value: `${analytics.wwsf_pct}%`,
+      trend: analytics.wwsf_pct > 45 ? "up" : "down",
+      delta: analytics.wwsf_pct > 45 ? "Good" : "Leak",
+      hint: "Ideal: > 45%",
+    },
+    {
+      id: "wtsd",
+      label: "WTSD (Went to Showdown)",
+      value: `${analytics.wtsd_pct}%`,
+      trend: (analytics.wtsd_pct >= 28 && analytics.wtsd_pct <= 32) ? "up" : "down",
+      delta: (analytics.wtsd_pct >= 28 && analytics.wtsd_pct <= 32) ? "Optimal" : "Leak",
+      hint: "Ideal: 28% - 32%",
+    },
+    {
+      id: "wssd",
+      label: "W$SD (Won $ at Showdown)",
+      value: `${analytics.wssd_pct}%`,
+      trend: analytics.wssd_pct >= 50 ? "up" : "down",
+      delta: analytics.wssd_pct >= 50 ? "Winning" : "Bleeding",
+      hint: "Ideal: > 50%",
+    },
+    {
+      id: "red_line",
+      label: "Red Line (Non-Showdown)",
+      value: `$${analytics.red_line_profit.toFixed(2)}`,
+      trend: analytics.red_line_profit >= 0 ? "up" : "down",
+      delta: analytics.red_line_profit >= 0 ? "Aggressive" : "Passive",
+      hint: "Profit won before SD",
+    }
+  ] : analyticsKpis;
+
   return (
     <div className="flex flex-col gap-5">
 
       {/* ── Row 1: 4 KPI Cards ─────────────────────────────────────────────── */}
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {analyticsKpis.map((kpi) => (
-          <AnalyticsKpiCard key={kpi.id} kpi={kpi} />
+        {liveKpis.map((kpi) => (
+          <AnalyticsKpiCard key={kpi.id} kpi={kpi as any} />
         ))}
       </section>
 

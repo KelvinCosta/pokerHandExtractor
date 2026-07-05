@@ -1,5 +1,8 @@
 "use client"
 
+import { useDashboard } from "@/hooks/useDashboard"
+import type { DashboardFilters } from "@/lib/api.types"
+
 import {
   Table,
   TableBody,
@@ -33,8 +36,11 @@ function Cards({ str }: { str: string }) {
   )
 }
 
-export function BigPotsView() {
+export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
+  const { bigPots, loading, error } = useDashboard(filters ?? {})
   const maxEv = Math.max(...riverDecisions.map((d) => Math.abs(d.evPerBB)))
+  
+  const displayHands = bigPots || []
 
   return (
     <div className="flex flex-col gap-4">
@@ -85,64 +91,50 @@ export function BigPotsView() {
               <p className="text-xs text-muted-foreground">High-value hands (200bb+) &amp; river decisions</p>
             </div>
             <span className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:inline">
-              {bigHands.length} flagged
+              {displayHands.length} flagged
             </span>
           </div>
           <div className="overflow-x-auto scrollbar-thin">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-4">Hand</TableHead>
-                  <TableHead className="hidden md:table-cell">Board</TableHead>
-                  <TableHead>Pot</TableHead>
-                  <TableHead>River</TableHead>
-                  <TableHead className="hidden sm:table-cell">vs</TableHead>
-                  <TableHead className="pr-4 text-right">Result</TableHead>
+                  <TableHead className="pl-4">Hand ID</TableHead>
+                  <TableHead>Timestamp</TableHead>
+                  <TableHead>Pot (BB)</TableHead>
+                  <TableHead className="pr-4 text-right">Result (USD)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bigHands.map((h) => (
-                  <TableRow key={h.id}>
-                    <TableCell className="pl-4">
-                      <Cards str={h.hand} />
-                      <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
-                        {h.position} · {h.stake}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Cards str={h.board} />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
-                      {h.potBB}bb
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px]",
-                          h.riverAction === "Bluff" && "border-warning/40 text-warning",
-                          h.riverAction === "Value Bet" && "border-primary/40 text-primary",
-                        )}
-                      >
-                        {h.riverAction}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden font-mono text-xs text-muted-foreground sm:table-cell">
-                      {h.villain}
-                    </TableCell>
-                    <TableCell className="pr-4 text-right">
-                      <span
-                        className={cn(
-                          "font-mono text-sm font-semibold tabular-nums",
-                          h.result === "won" ? "text-primary" : "text-loss",
-                        )}
-                      >
-                        {h.netUSD < 0 ? "" : "+"}
-                        {currency(h.netUSD)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {displayHands.length === 0 ? (
+                   <TableRow>
+                     <TableCell colSpan={4} className="text-center text-muted-foreground h-24">Nenhuma mão grande encontrada.</TableCell>
+                   </TableRow>
+                ) : (
+                  displayHands.map((h) => (
+                    <TableRow key={h.hand_id}>
+                      <TableCell className="pl-4 font-mono text-xs text-muted-foreground">
+                        {h.hand_id.split("-")[0]}...
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {new Date(h.timestamp).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
+                        {h.pot_in_bb.toFixed(1)}bb
+                      </TableCell>
+                      <TableCell className="pr-4 text-right">
+                        <span
+                          className={cn(
+                            "font-mono text-sm font-semibold tabular-nums",
+                            h.net_profit > 0 ? "text-primary" : "text-loss",
+                          )}
+                        >
+                          {h.net_profit < 0 ? "" : "+"}
+                          {currency(h.net_profit)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

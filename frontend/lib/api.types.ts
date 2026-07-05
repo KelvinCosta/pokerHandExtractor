@@ -54,6 +54,25 @@ export interface ProfitTrendPoint {
 }
 
 // ─── Audit / Chat Request Types ───────────────────────────────────────────────
+export interface AnalyticsBentoMetrics {
+  wwsf_pct: number
+  wtsd_pct: number
+  wssd_pct: number
+  blue_line_profit: number
+  red_line_profit: number
+}
+
+export interface PostflopEngineMetrics {
+  cbet_flop_pct: number
+  fold_to_cbet_flop_pct: number
+}
+
+export interface BigPotHand {
+  hand_id: string
+  timestamp: string
+  pot_in_bb: number
+  net_profit: number
+}
 export interface AuditStartRequest {
   hero_name: string
   start_date?: string

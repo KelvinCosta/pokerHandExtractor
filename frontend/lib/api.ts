@@ -113,7 +113,12 @@ export async function fetchPreflopMetrics(
 }
 
 // ─── Audit / Chat endpoints ───────────────────────────────────────────────────
-import type { ProfitTrendPoint } from "./api.types"
+import type { 
+  ProfitTrendPoint, 
+  AnalyticsBentoMetrics, 
+  PostflopEngineMetrics, 
+  BigPotHand 
+} from "./api.types"
 
 /**
  * POST /api/dashboard/profit-trend
@@ -125,6 +130,51 @@ export async function fetchProfitTrend(
 ): Promise<ProfitTrendPoint[]> {
   return apiPost<DashboardFilters, ProfitTrendPoint[]>(
     "/api/dashboard/profit-trend",
+    filters,
+    signal,
+  )
+}
+
+/**
+ * POST /api/dashboard/analytics
+ * Returns WWSF, WTSD, W$SD and Red/Blue line profit
+ */
+export async function fetchAnalyticsBento(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<AnalyticsBentoMetrics> {
+  return apiPost<DashboardFilters, AnalyticsBentoMetrics>(
+    "/api/dashboard/analytics",
+    filters,
+    signal,
+  )
+}
+
+/**
+ * POST /api/dashboard/engines/postflop
+ * Returns C-Bet and Fold-to-C-Bet stats
+ */
+export async function fetchPostflopEngines(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<PostflopEngineMetrics> {
+  return apiPost<DashboardFilters, PostflopEngineMetrics>(
+    "/api/dashboard/engines/postflop",
+    filters,
+    signal,
+  )
+}
+
+/**
+ * POST /api/dashboard/big-pots
+ * Returns list of >40bb pots
+ */
+export async function fetchBigPots(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<BigPotHand[]> {
+  return apiPost<DashboardFilters, BigPotHand[]>(
+    "/api/dashboard/big-pots",
     filters,
     signal,
   )

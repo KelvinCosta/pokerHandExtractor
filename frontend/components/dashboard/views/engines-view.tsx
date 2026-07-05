@@ -1,5 +1,8 @@
 "use client"
 
+import { useDashboard } from "@/hooks/useDashboard"
+import type { DashboardFilters } from "@/lib/api.types"
+
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
@@ -18,7 +21,20 @@ const distConfig = {
   raise: { label: "Raise", color: "var(--chart-1)" },
 } satisfies ChartConfig
 
-export function EnginesView() {
+export function EnginesView({ filters }: { filters?: DashboardFilters }) {
+  const { preflop, postflop, loading, error } = useDashboard(filters ?? {})
+
+  const livePreflopMetrics = preflop ? [
+    { key: "vpip", label: "VPIP", value: preflop.vpip_pct, unit: "%", trend: "up", delta: "Optimal", hint: "Voluntarily put $ in pot" },
+    { key: "pfr", label: "PFR", value: preflop.pfr_pct, unit: "%", trend: "up", delta: "Good", hint: "Pre-flop raise" },
+    { key: "three_bet", label: "3-Bet", value: preflop.three_bet_pct, unit: "%", trend: "up", delta: "Aggressive", hint: "Re-raise before flop" },
+  ] : preflopMetrics;
+
+  const livePostflopMetrics = postflop ? [
+    { key: "cbet_flop", label: "C-Bet Flop", value: postflop.cbet_flop_pct, unit: "%", trend: "up", delta: "Aggressive", hint: "Bet flop as pre-flop raiser" },
+    { key: "fold_cbet_flop", label: "Fold to Flop C-Bet", value: postflop.fold_to_cbet_flop_pct, unit: "%", trend: "down", delta: "Sticky", hint: "Fold when facing C-Bet" }
+  ] : postflopMetrics;
+
   return (
     <div className="flex flex-col gap-4">
       <section>
@@ -29,8 +45,8 @@ export function EnginesView() {
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {preflopMetrics.map((m) => (
-            <MetricGauge key={m.key} metric={m} scaleMax={m.unit === "%" ? 100 : m.key === "gap" ? 10 : 100} />
+          {livePreflopMetrics.map((m) => (
+            <MetricGauge key={m.key} metric={m as any} scaleMax={m.unit === "%" ? 100 : m.key === "gap" ? 10 : 100} />
           ))}
         </div>
       </section>
@@ -43,8 +59,8 @@ export function EnginesView() {
           </span>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {postflopMetrics.map((m) => (
-            <MetricGauge key={m.key} metric={m} scaleMax={m.unit === "x" ? 5 : 100} />
+          {livePostflopMetrics.map((m) => (
+            <MetricGauge key={m.key} metric={m as any} scaleMax={m.unit === "x" ? 5 : 100} />
           ))}
         </div>
       </section>

@@ -20,10 +20,10 @@ import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users, Waves 
 // ─── View metadata ─────────────────────────────────────────────────────────────
 const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolean }> = {
   overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution", hasFilters: true  },
-  analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: false },
-  engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: false },
+  analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
+  engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
   villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: false },
-  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: false },
+  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: true  },
   population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
   audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
   import:     { title: "Import Data (ETL)",        subtitle: "Upload raw poker hand histories for processing",hasFilters: false },
@@ -111,10 +111,10 @@ export default function Page() {
 
         <main className="flex-1 overflow-y-auto p-4 scrollbar-thin md:p-6">
           {view === "overview"   && <OverviewView filters={filters} />}
-          {view === "analytics"  && <AnalyticsView />}
-          {view === "engines"    && <EnginesView />}
+          {view === "analytics"  && <AnalyticsView filters={filters} />}
+          {view === "engines"    && <EnginesView filters={filters} />}
           {view === "villains"   && <VillainsView />}
-          {view === "bigpots"    && <BigPotsView />}
+          {view === "bigpots"    && <BigPotsView filters={filters} />}
           {view === "population" && <PopulationView />}
           {view === "audit"      && <AuditView />}
           {view === "import"     && <ImportView />}

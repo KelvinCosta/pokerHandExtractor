@@ -123,3 +123,163 @@ def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get
         "cumulative_profit",
         "hero_net_profit"
     ]).to_dicts()
+
+@router.post("/analytics")
+def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return {
+            "wwsf_pct": 0.0,
+            "wtsd_pct": 0.0,
+            "wssd_pct": 0.0,
+            "blue_line_profit": 0.0,
+            "red_line_profit": 0.0
+        }
+
+    # Mãos em que o Hero viu o Flop
+    hands_hero_saw_flop = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        .select("hand_id").unique()
+    )
+    
+    hero_won_money = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
+        .select("hand_id").unique()
+    )
+    
+    # 1. WWSF (Won When Saw Flop)
+    wwsf_opp = hands_hero_saw_flop.height
+    wwsf_success = hands_hero_saw_flop.join(hero_won_money, on="hand_id", how="inner").height
+    wwsf_pct = (wwsf_success / wwsf_opp * 100) if wwsf_opp > 0 else 0.0
+
+    # 2. WTSD (Went to Showdown)
+    showdown_hands = (
+        df.select(["hand_id", "player_cards"]).unique()
+        .filter(pl.col("player_cards").list.len() > 1)
+        .select("hand_id")
+    )
+    hero_folded_any = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "FOLD"))
+        .select("hand_id").unique()
+    )
+    hero_went_to_sd = (
+        showdown_hands
+        .join(hands_hero_saw_flop, on="hand_id", how="inner")
+        .join(hero_folded_any, on="hand_id", how="anti")
+    )
+    wtsd_success = hero_went_to_sd.height
+    wtsd_pct = (wtsd_success / wwsf_opp * 100) if wwsf_opp > 0 else 0.0
+
+    # 3. W$SD (Won Money at Showdown)
+    wssd_success = hero_went_to_sd.join(hero_won_money, on="hand_id", how="inner").height
+    wssd_pct = (wssd_success / wtsd_success * 100) if wtsd_success > 0 else 0.0
+
+    # 4. Linhas Azul (Showdown) e Vermelha (Non-Showdown)
+    df_hero_pnl = df.group_by("hand_id").agg(pl.col("hero_net_profit").first().alias("net_profit"))
+    blue_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="inner")["net_profit"].sum()
+    red_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="anti")["net_profit"].sum()
+
+    return {
+        "wwsf_pct": round(wwsf_pct, 1),
+        "wtsd_pct": round(wtsd_pct, 1),
+        "wssd_pct": round(wssd_pct, 1),
+        "blue_line_profit": round(blue_line_profit, 2),
+        "red_line_profit": round(red_line_profit, 2)
+    }
+
+@router.post("/engines/postflop")
+def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return {
+            "cbet_flop_pct": 0.0,
+            "fold_to_cbet_flop_pct": 0.0
+        }
+
+    hands_hero_saw_flop = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        .select("hand_id").unique()
+    )
+
+    last_preflop_raise = (
+        df.filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "RAISE"))
+        .group_by("hand_id")
+        .agg(pl.col("player").last().alias("last_aggressor"))
+    )
+
+    first_flop_bet = (
+        df.filter((pl.col("street") == "FLOP") & (pl.col("action_type") == "BET"))
+        .group_by("hand_id")
+        .agg(pl.col("player").first().alias("first_bettor"))
+    )
+
+    hero_first_flop_action = (
+        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        .group_by("hand_id")
+        .agg(pl.col("action_type").first().alias("hero_first_action"))
+    )
+
+    flop_situations = (
+        hands_hero_saw_flop
+        .join(last_preflop_raise, on="hand_id", how="left")
+        .join(first_flop_bet, on="hand_id", how="left")
+        .join(hero_first_flop_action, on="hand_id", how="left")
+    )
+
+    # C-Bet Flop
+    cbet_opp_df = flop_situations.filter(
+        (pl.col("last_aggressor") == "Hero") & 
+        (pl.col("hero_first_action").is_in(["BET", "CHECK"]))
+    )
+    cbet_opp_count = cbet_opp_df.height
+    cbet_success_count = cbet_opp_df.filter(pl.col("hero_first_action") == "BET").height
+    cbet_flop_pct = (cbet_success_count / cbet_opp_count * 100) if cbet_opp_count > 0 else 0.0
+
+    # Fold to C-Bet Flop
+    fold_cbet_opp_df = flop_situations.filter(
+        (pl.col("last_aggressor") != "Hero") & 
+        (pl.col("last_aggressor").is_not_null()) &
+        (pl.col("first_bettor") == pl.col("last_aggressor")) &
+        (pl.col("hero_first_action").is_in(["CALL", "FOLD", "RAISE"]))
+    )
+    fold_cbet_opp_count = fold_cbet_opp_df.height
+    fold_cbet_success_count = fold_cbet_opp_df.filter(pl.col("hero_first_action") == "FOLD").height
+    fold_cbet_flop_pct = (fold_cbet_success_count / fold_cbet_opp_count * 100) if fold_cbet_opp_count > 0 else 0.0
+
+    return {
+        "cbet_flop_pct": round(cbet_flop_pct, 1),
+        "fold_to_cbet_flop_pct": round(fold_cbet_flop_pct, 1)
+    }
+
+@router.post("/big-pots")
+def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return []
+
+    # 1. Identificar Potes Grandes
+    df_pot_sizes = (
+        df.group_by("hand_id")
+        .agg(
+            pl.col("total_pot_final").first().alias("pot_size_usd"),
+            pl.col("hero_net_profit").first().alias("net_profit"),
+            pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
+            pl.col("date").first().alias("timestamp")
+        )
+        .with_columns(
+            (pl.col("pot_size_usd") / pl.col("bb_size")).alias("pot_in_bb")
+        )
+        .filter(pl.col("pot_in_bb") >= 40.0)
+        .sort("pot_in_bb", descending=True)
+        .head(50) # Top 50 biggest pots to avoid payload bloat
+    )
+
+    if df_pot_sizes.height == 0:
+        return []
+
+    return df_pot_sizes.select([
+        "hand_id",
+        "timestamp",
+        "pot_in_bb",
+        "net_profit"
+    ]).to_dicts()
