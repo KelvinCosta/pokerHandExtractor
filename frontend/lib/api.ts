@@ -96,6 +96,17 @@ export async function fetchHealthMetrics(
   )
 }
 
+export async function fetchStakeBreakdown(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<any[]> {
+  return apiPost<DashboardFilters, any[]>(
+    "/api/dashboard/health/stake-breakdown",
+    filters,
+    signal,
+  )
+}
+
 /**
  * POST /api/dashboard/preflop
  * Returns pre-flop stats: VPIP, PFR, Gap, 3-Bet.

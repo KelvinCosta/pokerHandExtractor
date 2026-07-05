@@ -49,6 +49,39 @@ def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(g
         "total_sessions": total_sessions
     }
 
+@router.post("/health/stake-breakdown")
+def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    df = get_filtered_hands_df(filters, current_user)
+    if df.height == 0:
+        return []
+
+    # Se a coluna blind_name não existir (ex: parquet antigo), fazemos fallback pro mock
+    if "blind_name" not in df.columns:
+        return []
+
+    breakdown = (
+        df.group_by("blind_name")
+        .agg(
+            pl.col("hand_id").count().alias("hands"),
+            pl.col("hero_net_profit").sum().alias("profit"),
+            pl.col("hero_net_profit_bb").sum().alias("profit_bb")
+        )
+        .with_columns(
+            (pl.col("profit_bb") / pl.col("hands") * 100).alias("winrate")
+        )
+        .sort("profit", descending=True)
+    )
+
+    result = []
+    for row in breakdown.iter_rows(named=True):
+        result.append({
+            "stake": row["blind_name"] if row["blind_name"] else "Unknown",
+            "hands": row["hands"],
+            "profit": round(row["profit"], 2),
+            "winrate": round(row["winrate"], 2)
+        })
+    return result
+
 @router.post("/preflop")
 def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)

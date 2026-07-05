@@ -18,7 +18,7 @@ import {
   currency,
   healthKpis,
   profitSeries,
-  stakeBreakdown,
+  stakeBreakdown as stakeBreakdownMock,
 } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { useDashboard } from "@/hooks/useDashboard"
@@ -123,8 +123,8 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
 }
 
 export function OverviewView({ filters }: { filters?: DashboardFilters }) {
-  const { health, preflop, profitTrend, loading, error } = useDashboard(filters ?? {})
-  const maxProfit = Math.max(...stakeBreakdown.map((s) => s.profit))
+  const { health, preflop, profitTrend, stakeBreakdown: liveStakeBreakdown, loading, error } = useDashboard(filters ?? {})
+  const maxProfit = Math.max(...(liveStakeBreakdown?.length ? liveStakeBreakdown : stakeBreakdownMock).map((s) => s.profit))
 
   // Build live KPI cards when data is available, else fall back to mock
   const liveKpis = buildLiveKpis(health, preflop)
@@ -265,7 +265,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
           <h2 className="text-sm font-semibold">Profit by Stake</h2>
           <p className="mb-4 text-xs text-muted-foreground">Where the edge is coming from</p>
           <ul className="flex flex-col gap-3">
-            {stakeBreakdown.map((s) => (
+            {(liveStakeBreakdown && liveStakeBreakdown.length > 0 ? liveStakeBreakdown : stakeBreakdownMock).map((s) => (
               <li key={s.stake}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="font-mono font-medium">{s.stake}</span>
