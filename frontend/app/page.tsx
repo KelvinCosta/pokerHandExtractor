@@ -22,7 +22,7 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
   overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution", hasFilters: true  },
   analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
   engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
-  villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: false },
+  villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: true },
   bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: true  },
   population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
   audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
@@ -113,7 +113,7 @@ export default function Page() {
           {view === "overview"   && <OverviewView filters={filters} />}
           {view === "analytics"  && <AnalyticsView filters={filters} />}
           {view === "engines"    && <EnginesView filters={filters} />}
-          {view === "villains"   && <VillainsView />}
+          {view === "villains"   && <VillainsView filters={filters} />}
           {view === "bigpots"    && <BigPotsView filters={filters} />}
           {view === "population" && <PopulationView />}
           {view === "audit"      && <AuditView />}

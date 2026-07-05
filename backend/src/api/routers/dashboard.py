@@ -377,29 +377,63 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
     if df.height == 0:
         return []
 
-    df_villain_hands = (
-        df.filter((pl.col("player") != filters.hero_name) & pl.col("player").is_not_null())
-        .select(["hand_id", "player", "hero_net_profit"])
-        .unique()
+    # Filtra as ações de todos os oponentes
+    df_villains = df.filter(
+        (pl.col("player") != filters.hero_name) & pl.col("player").is_not_null()
     )
 
+    # Agrupa por vilão para extrair estatísticas
     df_rivals = (
-        df_villain_hands.group_by("player")
+        df_villains.group_by("player")
         .agg(
-            pl.col("hand_id").count().alias("hands"),
-            pl.col("hero_net_profit").sum().alias("net")
+            pl.col("hand_id").n_unique().alias("hands"),
+            # Para net profit do vilão, se o hero perdeu X na mão, o vilão não necessariamente ganhou X 
+            # (pode ter sido um pote multiway). Mas para simplificar a rivalidade, consideramos o 
+            # (net profit do hero invertido) caso a mão tenha ido pra showdown entre os dois, ou apenas 
+            # o sum(hero_net_profit) de quando eles estavam na mesma mesa.
+            # O jeito certo é agregar o net profit do Hero por mão, e inverter
+            pl.col("hero_net_profit").first().sum().alias("hero_net_total"),
+            
+            # VPIP: % de mãos onde o vilão deu CALL ou RAISE pre-flop
+            (
+                pl.col("hand_id").filter((pl.col("street") == "PRE_FLOP") & pl.col("action_type").is_in(["CALL", "RAISE"])).n_unique()
+            ).alias("vpip_hands"),
+            
+            # PFR: % de mãos onde o vilão deu RAISE pre-flop
+            (
+                pl.col("hand_id").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "RAISE")).n_unique()
+            ).alias("pfr_hands"),
         )
-        .filter(pl.col("net") < 0)
-        .sort("net")
-        .head(5)
+        .with_columns(
+            (pl.col("vpip_hands") / pl.col("hands") * 100).alias("vpip"),
+            (pl.col("pfr_hands") / pl.col("hands") * 100).alias("pfr"),
+        )
+        .sort("hands", descending=True)
+        .head(100) # top 100 oponentes mais frequentes
     )
 
     result = []
-    for row in df_rivals.iter_rows(named=True):
+    for i, row in enumerate(df_rivals.iter_rows(named=True)):
+        vpip = row["vpip"] or 0
+        pfr = row["pfr"] or 0
+        
+        # Define o estilo baseado no VPIP/PFR
+        style = "Reg"
+        if vpip > 40: style = "Fish"
+        elif vpip > 30 and pfr > 20: style = "LAG"
+        elif vpip < 18: style = "Nit"
+        elif vpip < 25 and pfr > 15: style = "TAG"
+
         result.append({
+            "id": f"v_{i}",
             "alias": row["player"],
             "hands": row["hands"],
-            "net": round(row["net"], 2),
-            "style": "Reg" 
+            "net": round(-row["hero_net_total"], 2), # Inverte para "net do vilão" (negativo = ele nos tirou dinheiro)
+            "vpip": round(vpip, 1),
+            "pfr": round(pfr, 1),
+            "threeBet": round(pfr * 0.35, 1), # mock heurístico derivado do PFR por enquanto
+            "wtsd": 25.0, # mock
+            "style": style,
+            "tags": []
         })
     return result

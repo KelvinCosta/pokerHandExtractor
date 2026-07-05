@@ -10,9 +10,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { currency, villains, type Villain } from "@/lib/poker-data"
+import type { Villain } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
+import { useDashboard } from "@/hooks/useDashboard"
+import type { DashboardFilters } from "@/lib/api.types"
 
 type SortKey = keyof Pick<Villain, "hands" | "net" | "vpip" | "pfr" | "threeBet" | "wtsd">
 
@@ -33,18 +35,21 @@ const columns: { key: SortKey; label: string; fmt: (v: Villain) => string }[] = 
   { key: "wtsd", label: "WTSD", fmt: (v) => `${v.wtsd}%` },
 ]
 
-export function VillainsView() {
+export function VillainsView({ filters }: { filters?: DashboardFilters }) {
+  const { biggestRivals, loading } = useDashboard(filters ?? {})
+  const villains = biggestRivals ?? []
+  
   const [sortKey, setSortKey] = useState<SortKey>("net")
   const [asc, setAsc] = useState(true)
 
   const sorted = useMemo(() => {
     return [...villains].sort((a, b) => (asc ? a[sortKey] - b[sortKey] : b[sortKey] - a[sortKey]))
-  }, [sortKey, asc])
+  }, [villains, sortKey, asc])
 
   // Rivalry ranking = villains who took the most money (most negative net)
   const rivals = useMemo(
     () => [...villains].filter((v) => v.net < 0).sort((a, b) => a.net - b.net).slice(0, 4),
-    [],
+    [villains],
   )
   const worst = Math.abs(rivals[0]?.net ?? 1)
 
