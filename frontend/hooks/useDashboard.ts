@@ -96,5 +96,5 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, tick])
 
-  return { filters, health, preflop, loading, error, refetch }
+  return { filters, health, preflop, profitTrend, loading, error, refetch }
 }

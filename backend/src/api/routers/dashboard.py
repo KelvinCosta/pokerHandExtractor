@@ -109,6 +109,15 @@ def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get
           )
     )
     
+    # Downsample para evitar gargalo de renderização no SVG (Recharts)
+    max_points = 150
+    if unique_hands.height > max_points:
+        step = unique_hands.height // max_points
+        # Pegar 1 a cada N pontos, ou se for a última linha (para o lucro final bater exato)
+        unique_hands = unique_hands.filter(
+            (pl.int_range(0, pl.len()) % step == 0) | (pl.int_range(0, pl.len()) == pl.len() - 1)
+        )
+    
     return unique_hands.select([
         "date",
         "cumulative_profit",
