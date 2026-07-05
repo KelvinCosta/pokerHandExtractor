@@ -33,13 +33,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 
 import time
+import threading
 
 _DATALAKE_CACHE = {}  # { user_id: {"df": pl.DataFrame, "timestamp": float} }
+_CACHE_LOCK = threading.Lock()
 
 def invalidate_cache(user_id: str):
     """Limpa o cache do Datalake em memória para o usuário (chamado após o ETL)"""
-    if user_id in _DATALAKE_CACHE:
-        del _DATALAKE_CACHE[user_id]
+    with _CACHE_LOCK:
+        if user_id in _DATALAKE_CACHE:
+            del _DATALAKE_CACHE[user_id]
 
 def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
     # Filtro de Data (já usando a coluna pré-processada pelo cache)
@@ -84,42 +87,50 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
     return df
 
 def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
+    # Fast path sem lock
     if user_id in _DATALAKE_CACHE:
         return _DATALAKE_CACHE[user_id]
         
-    try:
-        storage_options = {
-            "endpoint_url": os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
-            "aws_access_key_id": os.getenv("S3_ACCESS_KEY", "admin"),
-            "aws_secret_access_key": os.getenv("S3_SECRET_KEY", "password123"),
-            "aws_region": "us-east-1"
-        }
-        
-        s3_path = f"s3://{silver_bucket}/{user_id}/hands_part_*.parquet"
-        from src.core.storage import get_s3_client
-        s3 = get_s3_client()
-        response = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/hands_part_")
-        
-        if "Contents" not in response:
-            empty_df = pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
-            return {"df_hands": empty_df, "df_actions": empty_df}
+    with _CACHE_LOCK:
+        # Double-check locking pattern
+        if user_id in _DATALAKE_CACHE:
+            return _DATALAKE_CACHE[user_id]
 
-        df_hands = pl.scan_parquet(s3_path, storage_options=storage_options).collect()
-        df_hands = df_hands.unique(subset=["hand_id"], keep="last", maintain_order=True)
+        try:
+            storage_options = {
+                "endpoint_url": os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
+                "aws_access_key_id": os.getenv("S3_ACCESS_KEY", "admin"),
+                "aws_secret_access_key": os.getenv("S3_SECRET_KEY", "password123"),
+                "aws_region": "us-east-1"
+            }
+            
+            s3_path = f"s3://{silver_bucket}/{user_id}/hands_part_*.parquet"
+            from src.core.storage import get_s3_client
+            s3 = get_s3_client()
+            response = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/hands_part_")
+            
+            if "Contents" not in response:
+                empty_df = pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
+                cache_entry = {"df_hands": empty_df, "df_actions": empty_df, "timestamp": time.time()}
+                _DATALAKE_CACHE[user_id] = cache_entry
+                return cache_entry
 
-        nome_coluna_data = "date" if "date" in df_hands.columns else "timestamp" if "timestamp" in df_hands.columns else None
-        if nome_coluna_data:
-            df_hands = df_hands.with_columns(
-                pl.col(nome_coluna_data).str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False).dt.date().alias("data_limpa")
-            )
+            df_hands = pl.scan_parquet(s3_path, storage_options=storage_options).collect()
+            df_hands = df_hands.unique(subset=["hand_id"], keep="last", maintain_order=True)
 
-        df_actions = df_hands.explode("actions").unnest("actions")
-        
-        cache_entry = {"df_hands": df_hands, "df_actions": df_actions, "timestamp": time.time()}
-        _DATALAKE_CACHE[user_id] = cache_entry
-        return cache_entry
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake do S3: {e}")
+            nome_coluna_data = "date" if "date" in df_hands.columns else "timestamp" if "timestamp" in df_hands.columns else None
+            if nome_coluna_data:
+                df_hands = df_hands.with_columns(
+                    pl.col(nome_coluna_data).str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False).dt.date().alias("data_limpa")
+                )
+
+            df_actions = df_hands.explode("actions").unnest("actions")
+            
+            cache_entry = {"df_hands": df_hands, "df_actions": df_actions, "timestamp": time.time()}
+            _DATALAKE_CACHE[user_id] = cache_entry
+            return cache_entry
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake do S3: {e}")
 
 def get_filtered_df(filters: DashboardFilters, user: User) -> pl.DataFrame:
     """Retorna o Datalake EXPLODIDO no nível da Ação (usado por Analytics/Postflop/BigPots)"""
