@@ -122,12 +122,12 @@ def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(
 
     # Mãos em que o Hero viu o Flop
     hands_hero_saw_flop = (
-        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        df.filter((pl.col("player") == filters.hero_name) & (pl.col("street") == "FLOP"))
         .select("hand_id").unique()
     )
     
     hero_won_money = (
-        df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT"))
+        df.filter((pl.col("player") == filters.hero_name) & (pl.col("action_type") == "COLLECT"))
         .select("hand_id").unique()
     )
     
@@ -143,7 +143,7 @@ def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(
         .select("hand_id")
     )
     hero_folded_any = (
-        df.filter((pl.col("player") == "Hero") & (pl.col("action_type") == "FOLD"))
+        df.filter((pl.col("player") == filters.hero_name) & (pl.col("action_type") == "FOLD"))
         .select("hand_id").unique()
     )
     hero_went_to_sd = (
@@ -181,7 +181,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
         }
 
     hands_hero_saw_flop = (
-        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        df.filter((pl.col("player") == filters.hero_name) & (pl.col("street") == "FLOP"))
         .select("hand_id").unique()
     )
 
@@ -198,7 +198,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
     )
 
     hero_first_flop_action = (
-        df.filter((pl.col("player") == "Hero") & (pl.col("street") == "FLOP"))
+        df.filter((pl.col("player") == filters.hero_name) & (pl.col("street") == "FLOP"))
         .group_by("hand_id")
         .agg(pl.col("action_type").first().alias("hero_first_action"))
     )
@@ -212,7 +212,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
 
     # C-Bet Flop
     cbet_opp_df = flop_situations.filter(
-        (pl.col("last_aggressor") == "Hero") & 
+        (pl.col("last_aggressor") == filters.hero_name) & 
         (pl.col("hero_first_action").is_in(["BET", "CHECK"]))
     )
     cbet_opp_count = cbet_opp_df.height
@@ -221,7 +221,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
 
     # Fold to C-Bet Flop
     fold_cbet_opp_df = flop_situations.filter(
-        (pl.col("last_aggressor") != "Hero") & 
+        (pl.col("last_aggressor") != filters.hero_name) & 
         (pl.col("last_aggressor").is_not_null()) &
         (pl.col("first_bettor") == pl.col("last_aggressor")) &
         (pl.col("hero_first_action").is_in(["CALL", "FOLD", "RAISE"]))
