@@ -180,6 +180,17 @@ export async function fetchBigPots(
   )
 }
 
+export async function fetchActionDistribution(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<any[]> {
+  return apiPost<DashboardFilters, any[]>(
+    "/api/dashboard/engines/action-distribution",
+    filters,
+    signal,
+  )
+}
+
 export async function fetchBiggestRivals(
   filters: DashboardFilters = {},
   signal?: AbortSignal,

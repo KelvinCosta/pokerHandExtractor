@@ -12,7 +12,30 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchBiggestRivals } from "@/lib/api"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchActionDistribution, fetchBiggestRivals } from "@/lib/api"
+import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics, BigPotHand } from "@/lib/api.types"
+
+export interface DashboardState {
+  /** Current filter values */
+  filters: DashboardFilters
+
+  /** Data returned by /api/dashboard/health */
+  health: HealthMetrics | null
+/**
+ * useDashboard.ts
+ * React hook that owns the dashboard filter state and fetches
+ * /api/dashboard/health and /api/dashboard/preflop in parallel.
+ *
+ * Usage:
+ *   const { health, preflop, loading, error, refetch } = useDashboard(filters)
+ *
+ * The hook re-fetches automatically whenever `filters` changes.
+ * It also cleans up in-flight requests on unmount (AbortController).
+ */
+"use client"
+
+import { useState, useEffect, useCallback, useRef } from "react"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchActionDistribution, fetchBiggestRivals } from "@/lib/api"
 import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics, BigPotHand } from "@/lib/api.types"
 
 export interface DashboardState {
@@ -29,6 +52,8 @@ export interface DashboardState {
   analytics: AnalyticsBentoMetrics | null
   /** Data returned by /api/dashboard/engines/postflop */
   postflop: PostflopEngineMetrics | null
+  /** Data returned by /api/dashboard/engines/action-distribution */
+  actionDistribution: any[] | null
   /** Data returned by /api/dashboard/big-pots */
   bigPots: BigPotHand[] | null
   /** Data returned by /api/dashboard/biggest-rivals */
@@ -50,6 +75,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   const [profitTrend, setProfitTrend] = useState<ProfitTrendPoint[] | null>(null)
   const [analytics, setAnalytics] = useState<AnalyticsBentoMetrics | null>(null)
   const [postflop, setPostflop] = useState<PostflopEngineMetrics | null>(null)
+  const [actionDistribution, setActionDistribution] = useState<any[] | null>(null)
   const [bigPots, setBigPots] = useState<BigPotHand[] | null>(null)
   const [biggestRivals, setBiggestRivals] = useState<any[] | null>(null)
   const [loading, setLoading] = useState(false)
@@ -78,12 +104,13 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
         // Parallel fetch — all requests share the same filter payload and signal
         const payload = { ...filters }
         
-        const [healthData, preflopData, profitTrendData, analyticsData, postflopData, bigPotsData, rivalsData] = await Promise.all([
+        const [healthData, preflopData, profitTrendData, analyticsData, postflopData, actionDistData, bigPotsData, rivalsData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchPreflopMetrics(payload, controller.signal),
           fetchProfitTrend(payload, controller.signal),
           fetchAnalyticsBento(payload, controller.signal),
           fetchPostflopEngines(payload, controller.signal),
+          fetchActionDistribution(payload, controller.signal),
           fetchBigPots(payload, controller.signal),
           fetchBiggestRivals(payload, controller.signal),
         ])
@@ -94,6 +121,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
           setProfitTrend(profitTrendData)
           setAnalytics(analyticsData)
           setPostflop(postflopData)
+          setActionDistribution(actionDistData)
           setBigPots(bigPotsData)
           setBiggestRivals(rivalsData)
         }
@@ -118,6 +146,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
 
   return { filters, health, preflop, profitTrend,    analytics,
     postflop,
+    actionDistribution,
     bigPots,
     biggestRivals,
     loading, error, refetch }

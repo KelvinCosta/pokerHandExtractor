@@ -13,7 +13,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { MetricGauge } from "@/components/dashboard/metric-gauge"
-import { actionDistribution, postflopMetrics, preflopMetrics } from "@/lib/poker-data"
+import { actionDistribution as actionDistributionMock, postflopMetrics, preflopMetrics } from "@/lib/poker-data"
 
 const distConfig = {
   fold: { label: "Fold", color: "var(--chart-4)" },
@@ -22,7 +22,7 @@ const distConfig = {
 } satisfies ChartConfig
 
 export function EnginesView({ filters }: { filters?: DashboardFilters }) {
-  const { preflop, postflop, loading, error } = useDashboard(filters ?? {})
+  const { preflop, postflop, actionDistribution, loading, error } = useDashboard(filters ?? {})
 
   const livePreflopMetrics = preflop ? [
     { key: "vpip", label: "VPIP", value: preflop.vpip_pct, unit: "%", trend: "up", delta: "Optimal", hint: "Voluntarily put $ in pot" },
@@ -71,7 +71,7 @@ export function EnginesView({ filters }: { filters?: DashboardFilters }) {
           How the hero distributes fold / call / raise across each betting round
         </p>
         <ChartContainer config={distConfig} className="h-[260px] w-full">
-          <BarChart data={actionDistribution} margin={{ left: 4, right: 8, top: 8 }}>
+          <BarChart data={actionDistribution || actionDistributionMock} margin={{ left: 4, right: 8, top: 8 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="street" tickLine={false} axisLine={false} tickMargin={8} className="font-mono text-[10px]" />
             <YAxis

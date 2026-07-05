@@ -268,6 +268,62 @@ def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_cur
         "net_profit"
     ]).to_dicts()
 
+@router.post("/engines/action-distribution")
+def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return []
+
+    # Conta ações do Hero por Street
+    hero_actions = (
+        df.filter(
+            (pl.col("player") == filters.hero_name) & 
+            (pl.col("action_type").is_in(["FOLD", "CALL", "RAISE"]))
+        )
+        .group_by(["street", "action_type"])
+        .agg(pl.col("hand_id").count().alias("count"))
+    )
+
+    if hero_actions.height == 0:
+        return []
+
+    # Pivot para ter FOLD, CALL, RAISE como colunas
+    pivot_df = hero_actions.pivot(
+        values="count",
+        index="street",
+        on="action_type"
+    ).fill_null(0)
+
+    # Ordem das streets
+    street_order = {"PRE_FLOP": 1, "FLOP": 2, "TURN": 3, "RIVER": 4}
+    street_names = {"PRE_FLOP": "Preflop", "FLOP": "Flop", "TURN": "Turn", "RIVER": "River"}
+
+    result = []
+    for row in pivot_df.iter_rows(named=True):
+        f = row.get("FOLD", 0)
+        c = row.get("CALL", 0)
+        r = row.get("RAISE", 0)
+        total = f + c + r
+        if total > 0:
+            result.append({
+                "street_raw": row["street"],
+                "street": street_names.get(row["street"], row["street"]),
+                "fold": round((f / total) * 100, 1),
+                "call": round((c / total) * 100, 1),
+                "raise": round((r / total) * 100, 1),
+                "_order": street_order.get(row["street"], 99)
+            })
+
+    # Ordena as streets logicamente
+    result.sort(key=lambda x: x["_order"])
+    
+    # Remove colunas de suporte
+    for r in result:
+        del r["_order"]
+        del r["street_raw"]
+
+    return result
+
 @router.post("/biggest-rivals")
 def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
