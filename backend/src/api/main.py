@@ -17,10 +17,10 @@ from src.database.session import init_db
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Inicializa as tabelas do SQLite no boot
-    print("🚀 Inicializando Banco de Dados...")
+    print("[INFO] Inicializando Banco de Dados...")
     init_db()
     yield
-    print("🛑 Servidor encerrado.")
+    print("[INFO] Servidor encerrado.")
 
 from src.api.routers import dashboard, chat, auth, etl, team
 

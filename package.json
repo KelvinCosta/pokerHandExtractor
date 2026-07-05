@@ -1,0 +1,10 @@
+{
+  "name": "poker-hand-extractor",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "concurrently -n \"backend,frontend\" -c \"bgBlue.bold,bgMagenta.bold\" \"cd backend && poker\\Scripts\\uvicorn.exe src.api.main:app --reload\" \"cd frontend && pnpm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
