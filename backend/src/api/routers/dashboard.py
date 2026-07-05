@@ -55,12 +55,12 @@ def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(
     if df.height == 0:
         return []
 
-    # Se a coluna blind_name não existir (ex: parquet antigo), fazemos fallback pro mock
-    if "blind_name" not in df.columns:
+    # Se não tiver a coluna, retorna fallback vazio
+    if "stake_level" not in df.columns:
         return []
 
     breakdown = (
-        df.group_by("blind_name")
+        df.group_by("stake_level")
         .agg(
             pl.col("hand_id").count().alias("hands"),
             pl.col("hero_net_profit").sum().alias("profit"),
@@ -74,8 +74,10 @@ def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(
 
     result = []
     for row in breakdown.iter_rows(named=True):
+        stake_val = row["stake_level"]
+        stake_str = f"NL{int(stake_val * 100)}" if stake_val else "Unknown"
         result.append({
-            "stake": row["blind_name"] if row["blind_name"] else "Unknown",
+            "stake": stake_str,
             "hands": row["hands"],
             "profit": round(row["profit"], 2),
             "winrate": round(row["winrate"], 2)
