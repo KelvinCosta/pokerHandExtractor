@@ -59,6 +59,11 @@ async def get_stake_breakdown(filters: DashboardFilters, current_user: User = De
     if "stake_level" not in df.columns:
         return []
 
+    # Criar a coluna de profit em big blinds antes de agregar
+    df = df.with_columns(
+        (pl.col("hero_net_profit") / pl.col("stake_level")).alias("hero_net_profit_bb")
+    )
+
     breakdown = (
         df.group_by("stake_level")
         .agg(
