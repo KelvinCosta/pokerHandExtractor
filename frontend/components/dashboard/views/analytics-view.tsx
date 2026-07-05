@@ -426,12 +426,17 @@ export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
 
       {/* ── Row 2: EV Bar Chart (full width) ────────────────────────────────── */}
       <section>
+        {/* TODO: Implementar extração de EV real no Parser/Loader ETL 
+            (Atualmente oculto pois usava Mock Data com valores absurdos de EV)
         <EvBarChart />
+        */}
       </section>
 
       {/* ── Row 3: Two-column base ──────────────────────────────────────────── */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* TODO: Implementar Machine Learning de Leaks vs GTO Benchmark
         <TopLeaksTable />
+        */}
         <BiggestRivals />
       </section>
 
