@@ -1,13 +1,16 @@
 /**
  * useDashboard.ts
  * React hook that owns the dashboard filter state and fetches
- * /api/dashboard/health and /api/dashboard/preflop in parallel.
+ * all dashboard endpoints in parallel.
  *
  * Usage:
  *   const { health, preflop, loading, error, refetch } = useDashboard(filters)
  *
- * The hook re-fetches automatically whenever `filters` changes.
- * It also cleans up in-flight requests on unmount (AbortController).
+ * Performance:
+ *   - Filters are JSON-serialized to a stable string to avoid spurious effect
+ *     re-runs caused by new object references with the same values.
+ *   - A 400ms debounce prevents 9 simultaneous requests on every keystroke.
+ *   - AbortController cancels stale requests when filters change mid-flight.
  */
 "use client"
 
@@ -48,6 +51,9 @@ export interface DashboardState {
 /** Initial filter state — empty means "all data" */
 const DEFAULT_FILTERS: DashboardFilters = {}
 
+/** Debounce delay in ms — prevents spamming 9 endpoints per keystroke */
+const DEBOUNCE_MS = 400
+
 export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): DashboardState {
   const [health, setHealth] = useState<HealthMetrics | null>(null)
   const [stakeBreakdown, setStakeBreakdown] = useState<any[] | null>(null)
@@ -68,6 +74,19 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // Track the latest AbortController so we can cancel stale requests
   const abortRef = useRef<AbortController | null>(null)
 
+  // ── Stabilisation: serialize filters to a string so the fetch effect only
+  // re-fires when the VALUES change, not just the object reference.
+  const filtersKey = JSON.stringify(filters)
+
+  // ── Debounce: wait DEBOUNCE_MS after the last filter change before fetching.
+  // This prevents 9 simultaneous API calls on every keystroke.
+  const [debouncedKey, setDebouncedKey] = useState(filtersKey)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedKey(filtersKey), DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [filtersKey])
+
+  // ── Main fetch effect — only fires after the debounce settles ────────────────
   useEffect(() => {
     // Cancel any in-flight request from a previous render
     abortRef.current?.abort()
@@ -80,10 +99,11 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
       setLoading(true)
       setError(null)
 
+      // Re-hydrate filters from the stable string so we always use current values
+      const payload = JSON.parse(debouncedKey) as DashboardFilters
+
       try {
         // Parallel fetch — all requests share the same filter payload and signal
-        const payload = { ...filters }
-        
         const [healthData, stakeData, preflopData, profitTrendData, analyticsData, postflopData, actionDistData, bigPotsData, rivalsData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchStakeBreakdown(payload, controller.signal),
@@ -123,8 +143,9 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
       cancelled = true
       controller.abort()
     }
+  // debouncedKey is a stable string — safe to use as the sole filter dependency
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, tick])
+  }, [debouncedKey, tick])
 
   return { filters, health, stakeBreakdown, preflop, profitTrend, analytics, postflop, actionDistribution, bigPots, biggestRivals, loading, error, refetch }
 }
