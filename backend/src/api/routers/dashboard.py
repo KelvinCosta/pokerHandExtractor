@@ -8,7 +8,7 @@ from src.database.models import User
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 
 @router.post("/health")
-def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return {
@@ -50,7 +50,7 @@ def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(g
     }
 
 @router.post("/health/stake-breakdown")
-def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+async def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return []
@@ -92,7 +92,7 @@ def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(
     return result
 
 @router.post("/preflop")
-def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return {
@@ -123,7 +123,7 @@ def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(ge
     }
 
 @router.post("/profit-trend")
-def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+async def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return []
@@ -151,7 +151,7 @@ def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get
     ]).to_dicts()
 
 @router.post("/analytics")
-def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
@@ -214,7 +214,7 @@ def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(
     }
 
 @router.post("/engines/postflop")
-def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
@@ -278,7 +278,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
     }
 
 @router.post("/big-pots")
-def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> list[Dict[str, Any]]:
+async def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> list[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
@@ -311,7 +311,7 @@ def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_cur
     ]).to_dicts()
 
 @router.post("/engines/action-distribution")
-def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+async def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
@@ -367,7 +367,7 @@ def get_action_distribution(filters: DashboardFilters, current_user: User = Depe
     return result
 
 @router.post("/biggest-rivals")
-def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
