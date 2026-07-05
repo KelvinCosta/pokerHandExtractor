@@ -17,7 +17,7 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     
-    const url = isLogin ? "http://localhost:8000/auth/login" : "http://localhost:8000/auth/register"
+    const url = isLogin ? "http://localhost:8000/api/auth/login" : "http://localhost:8000/api/auth/register"
     
     try {
       const res = await fetch(url, {
