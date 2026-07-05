@@ -26,18 +26,18 @@ def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(g
         .group_by("hand_id")
         .agg(
             pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
-            pl.col("invested_amount").filter((pl.col("player") == hero) & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"]))).sum().fill_null(0.0).alias("investido"),
-            pl.col("amount").filter((pl.col("player") == hero) & (pl.col("action_type") == "COLLECT")).sum().fill_null(0.0).alias("coletado")
+            pl.col("hero_net_profit").first(),
+            pl.col("hero_position").first(),
+            pl.col("hero_vpip").first(),
+            pl.col("hero_pfr").first(),
+            pl.col("hero_3bet").first()
         )
         .with_columns(
-            (pl.col("coletado") - pl.col("investido")).alias("lucro_bruto")
-        )
-        .with_columns(
-            (pl.col("lucro_bruto") / pl.col("bb_size")).alias("lucro_bb")
+            (pl.col("hero_net_profit") / pl.col("bb_size")).alias("lucro_bb")
         )
     )
     
-    lucro_total = lucro_por_mao.select(pl.col("lucro_bruto").sum()).item()
+    lucro_total = lucro_por_mao.select(pl.col("hero_net_profit").sum()).item()
     lucro_total_bb = lucro_por_mao.select(pl.col("lucro_bb").sum()).item()
     
     val_lucro_total = float(lucro_total) if lucro_total is not None else 0.0
@@ -73,18 +73,14 @@ def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(ge
             "three_bet_pct": 0.0
         }
         
-    hero = filters.hero_name
     total_maos = df.select("hand_id").n_unique()
-    df_pf = df.filter(pl.col("street") == "PRE_FLOP")
     
-    # 3-Bet logic
-    df_pf = df_pf.with_columns(
-        pl.col("action_type").eq("RAISE").cum_sum().over("hand_id").alias("raises_so_far")
-    )
+    # Pega apenas uma linha por mão
+    unique_hands = df.unique(subset=["hand_id"], keep="first")
     
-    vpip_maos = df_pf.filter((pl.col("player") == hero) & (pl.col("action_type").is_in(["CALL", "BET", "RAISE"]))).select("hand_id").n_unique()
-    pfr_maos = df_pf.filter((pl.col("player") == hero) & (pl.col("action_type").is_in(["BET", "RAISE"]))).select("hand_id").n_unique()
-    three_bet_maos = df_pf.filter((pl.col("player") == hero) & (pl.col("action_type") == "RAISE") & (pl.col("raises_so_far") >= 2)).select("hand_id").n_unique()
+    vpip_maos = unique_hands.filter(pl.col("hero_vpip") == True).height
+    pfr_maos = unique_hands.filter(pl.col("hero_pfr") == True).height
+    three_bet_maos = unique_hands.filter(pl.col("hero_3bet") == True).height
     
     vpip_pct = (vpip_maos / total_maos) * 100 if total_maos > 0 else 0
     pfr_pct = (pfr_maos / total_maos) * 100 if total_maos > 0 else 0
@@ -98,3 +94,23 @@ def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(ge
         "gap_pct": round(gap, 1),
         "three_bet_pct": round(three_bet_pct, 1)
     }
+
+@router.post("/profit-trend")
+def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)):
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return []
+        
+    unique_hands = (
+        df.unique(subset=["hand_id"], keep="first")
+          .sort("date")
+          .with_columns(
+              pl.col("hero_net_profit").cum_sum().alias("cumulative_profit")
+          )
+    )
+    
+    return unique_hands.select([
+        "date",
+        "cumulative_profit",
+        "hero_net_profit"
+    ]).to_dicts()

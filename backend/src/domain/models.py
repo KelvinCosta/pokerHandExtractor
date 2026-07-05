@@ -46,6 +46,13 @@ class HandContext:
     fortune: float = 0.0
     tax: float = 0.0
 
+    # Analytics properties for dashboard
+    hero_net_profit: float = 0.0
+    hero_position: str = "Unknown"
+    hero_vpip: bool = False
+    hero_pfr: bool = False
+    hero_3bet: bool = False
+
     @property
     def current_pot(self) -> float:
         return sum(action.invested_amount for action in self.actions if action.action_type not in (ActionType.COLLECT, ActionType.FOLD))

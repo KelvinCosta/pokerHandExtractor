@@ -37,6 +37,47 @@ class HandLoader:
                 
             dict_batch = []
             for hand in batch:
+                # 1. Calculando Lucro Líquido do Hero
+                hero_collected = sum(a.amount for a in hand.actions if a.player == hand.player_nickname and a.action_type == ActionType.COLLECT)
+                hero_invested = sum(a.invested_amount for a in hand.actions if a.player == hand.player_nickname and a.action_type not in (ActionType.COLLECT, ActionType.FOLD))
+                hero_net_profit = round(hero_collected - hero_invested, 2)
+                
+                # 2. Extraindo Posição e Flags Pré-Flop
+                preflop_actions = [a for a in hand.actions if (hasattr(a.street, "name") and a.street.name == "PRE_FLOP" or str(a.street) == "PRE_FLOP")]
+                
+                # VPIP, PFR, 3Bet
+                hero_vpip = any(a.player == hand.player_nickname and a.action_type in (ActionType.CALL, ActionType.RAISE) for a in preflop_actions)
+                hero_pfr = any(a.player == hand.player_nickname and a.action_type == ActionType.RAISE for a in preflop_actions)
+                
+                # 3Bet heuristic: Was it the 2nd raise or more on preflop?
+                raises_before_hero = 0
+                hero_3bet = False
+                for a in preflop_actions:
+                    if a.action_type == ActionType.RAISE:
+                        if a.player == hand.player_nickname and raises_before_hero >= 1:
+                            hero_3bet = True
+                            break
+                        if a.player != hand.player_nickname:
+                            raises_before_hero += 1
+
+                # Inferindo posição (Ordem de primeira ação pré-flop)
+                # Ordem esperada: SB, BB, UTG, MP, CO, BTN
+                seen_players = []
+                for a in preflop_actions:
+                    if a.player not in seen_players:
+                        seen_players.append(a.player)
+                
+                hero_position = "Unknown"
+                if hand.player_nickname in seen_players:
+                    idx = seen_players.index(hand.player_nickname)
+                    total_players = len(seen_players)
+                    if idx == 0: hero_position = "SB"
+                    elif idx == 1: hero_position = "BB"
+                    elif idx == total_players - 1: hero_position = "BTN"
+                    elif idx == total_players - 2: hero_position = "CO"
+                    elif idx == 2 and total_players > 4: hero_position = "UTG"
+                    else: hero_position = "MP"
+
                 dict_batch.append({
                     "hand_id": hand.hand_id,
                     "date": hand.timestamp,
@@ -46,6 +87,11 @@ class HandLoader:
                     "stake_level": hand.stake_level,
                     "platform": hand.platform,
                     "player_nickname": hand.player_nickname,
+                    "hero_net_profit": hero_net_profit,
+                    "hero_position": hero_position,
+                    "hero_vpip": hero_vpip,
+                    "hero_pfr": hero_pfr,
+                    "hero_3bet": hero_3bet,
                     "current_pot": hand.current_pot, 
 
                     "total_pot_final": hand.total_pot,
