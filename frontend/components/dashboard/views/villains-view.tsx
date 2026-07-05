@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import type { Villain } from "@/lib/poker-data"
+import { currency, type Villain } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 import { useDashboard } from "@/hooks/useDashboard"
