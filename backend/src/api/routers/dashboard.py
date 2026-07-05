@@ -75,12 +75,19 @@ def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(
     result = []
     for row in breakdown.iter_rows(named=True):
         stake_val = row["stake_level"]
-        stake_str = f"NL{int(stake_val * 100)}" if stake_val else "Unknown"
+        try:
+            stake_str = f"NL{int(float(stake_val) * 100)}" if stake_val is not None else "Unknown"
+        except (ValueError, TypeError):
+            stake_str = "Unknown"
+            
+        profit = row["profit"] if row["profit"] is not None else 0.0
+        winrate = row["winrate"] if row["winrate"] is not None else 0.0
+        
         result.append({
             "stake": stake_str,
-            "hands": row["hands"],
-            "profit": round(row["profit"], 2),
-            "winrate": round(row["winrate"], 2)
+            "hands": row["hands"] or 0,
+            "profit": round(profit, 2),
+            "winrate": round(winrate, 2)
         })
     return result
 
