@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 import polars as pl
-from typing import Any, Dict
+from typing import Any, Dict, List
 from ..dependencies import get_filtered_df, get_current_user
 from ..schemas.filters import DashboardFilters
 from src.database.models import User
@@ -252,7 +252,7 @@ def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends
     }
 
 @router.post("/big-pots")
-def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> list[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
