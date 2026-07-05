@@ -33,7 +33,9 @@ class TeamMember(Base):
     team_id = Column(String, ForeignKey("teams.id"))
     user_id = Column(String, ForeignKey("users.id"))
     role = Column(String) # "admin", "player"
+    status = Column(String, default="active") # "active", "inactive"
     joined_at = Column(DateTime, default=datetime.utcnow)
+    left_at = Column(DateTime, nullable=True)
     
     team = relationship("Team", back_populates="members")
     user = relationship("User", back_populates="teams")

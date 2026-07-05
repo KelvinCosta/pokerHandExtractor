@@ -44,6 +44,7 @@ app.include_router(auth.router)
 app.include_router(etl.router)
 app.include_router(dashboard.router)
 app.include_router(chat.router)
+app.include_router(team.router)
 
 @app.get("/")
 def health_check():
