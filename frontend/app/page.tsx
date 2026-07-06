@@ -36,8 +36,10 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "engines",    label: "Engines",   icon: Layers     },
   { id: "villains",   label: "Villains",  icon: Users      },
   { id: "bigpots",    label: "Big Pots",  icon: Target     },
-  { id: "population", label: "MDA",       icon: Radar      },
-  { id: "audit",      label: "Audit",     icon: Brain      },
+  // TODO: Habilitar quando o Job de ETL estiver pronto no Milestone 6
+  // { id: "population", label: "MDA",       icon: Radar      },
+  // TODO: Habilitar quando o LangGraph AI for implementado
+  // { id: "audit",      label: "Audit",     icon: Brain      },
   { id: "import",     label: "Import",    icon: Waves      },
 ]
 
@@ -71,7 +73,12 @@ export default function Page() {
       <Sidebar active={view} onSelect={setView} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar title={currentMeta.title} subtitle={currentMeta.subtitle} />
+        <Topbar 
+          title={currentMeta.title} 
+          subtitle={currentMeta.subtitle} 
+          searchQuery={filters.search_query}
+          onSearchChange={(q) => setFilters({ ...filters, search_query: q })}
+        />
 
         {/* Mobile brand + nav */}
         <div className="lg:hidden">
@@ -115,8 +122,10 @@ export default function Page() {
           {view === "engines"    && <EnginesView filters={filters} />}
           {view === "villains"   && <VillainsView filters={filters} />}
           {view === "bigpots"    && <BigPotsView filters={filters} />}
+          {/* TODO: Reabilitar as abas no futuro
           {view === "population" && <PopulationView />}
           {view === "audit"      && <AuditView />}
+          */}
           {view === "import"     && <ImportView />}
         </main>
       </div>

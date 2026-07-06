@@ -11,7 +11,17 @@ import {
 } from "@/components/ui/select"
 import { Bell, Calendar, Search, SlidersHorizontal } from "lucide-react"
 
-export function Topbar({ title, subtitle }: { title: string; subtitle: string }) {
+export function Topbar({ 
+  title, 
+  subtitle,
+  searchQuery,
+  onSearchChange
+}: { 
+  title: string
+  subtitle: string
+  searchQuery?: string
+  onSearchChange?: (q: string | undefined) => void
+}) {
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6">
       <div className="min-w-0 flex-1">
@@ -30,6 +40,8 @@ export function Topbar({ title, subtitle }: { title: string; subtitle: string })
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             placeholder="Filter hands, villains…"
+            value={searchQuery ?? ""}
+            onChange={(e) => onSearchChange?.(e.target.value || undefined)}
             className="h-8 w-56 rounded-md border border-input bg-card pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground focus:border-ring"
           />
         </div>

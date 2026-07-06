@@ -28,13 +28,15 @@ const nav: {
       { id: "engines",    label: "Pre / Post-Flop Engines", icon: Layers    },
       { id: "villains",   label: "Villain Mapping",         icon: Users     },
       { id: "bigpots",    label: "Big Pots & River",        icon: Target    },
-      { id: "population", label: "Population (MDA)",        icon: Radar     },
+      // TODO: Habilitar quando o Job de ETL for criado no Milestone 6
+      // { id: "population", label: "Population (MDA)",        icon: Radar     },
     ],
   },
   {
     group: "Audit",
     items: [
-      { id: "audit", label: "AI Auditor", icon: BrainCircuit, badge: "AI" },
+      // TODO: Habilitar quando o LangGraph AI for implementado
+      // { id: "audit", label: "AI Auditor", icon: BrainCircuit, badge: "AI" },
     ],
   },
   {

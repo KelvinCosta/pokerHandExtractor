@@ -17,6 +17,8 @@ export interface DashboardFilters {
   game_types?: string[]      // e.g. ["Rush & Cash"]
   stake?: number             // float, e.g. 0.05
   hero_name?: string         // default "Hero" on the backend
+  platforms?: string[]
+  search_query?: string
 }
 
 export interface AuthResponse {
