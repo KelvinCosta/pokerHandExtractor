@@ -36,7 +36,7 @@ const ALL_GAME_TYPE_OPTIONS: { label: string; value: string | undefined }[] = [
   { label: "All Types", value: undefined },
   { label: "Rush & Cash", value: "Rush & Cash" },
   { label: "Regular Cash", value: "Regular Cash" },
-  { label: "Tournaments", value: "Tournaments" },
+  { label: "Tournaments", value: "Tournament" },
   { label: "Spin & Gold", value: "Spin & Gold" },
   { label: "Mystery Battle Royale", value: "Mystery Battle Royale" },
   { label: "All-In or Fold", value: "All-In or Fold" },

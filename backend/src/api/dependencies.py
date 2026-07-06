@@ -76,7 +76,7 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
             exprs = []
             if "Rush & Cash" in filters.game_types:
                 exprs.append(pl.col("hand_id").str.starts_with("RC"))
-            if "Tournaments" in filters.game_types:
+            if "Tournament" in filters.game_types:
                 exprs.append(pl.col("hand_id").str.starts_with("SG") | pl.col("hand_id").str.starts_with("TM"))
             if "Regular Cash" in filters.game_types or "Regular" in filters.game_types:
                 exprs.append(pl.col("hand_id").str.starts_with("HD"))
@@ -186,7 +186,7 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
         
     if filters.game_types:
         # Verifica se algum dos tipos selecionados é de torneio
-        tournament_types = ["Tournaments", "Spin & Gold", "Mystery Battle Royale"]
+        tournament_types = ["Tournament", "Spin & Gold", "Mystery Battle Royale"]
         has_tournament_type = any(t in filters.game_types for t in tournament_types)
         
         if not has_tournament_type:
@@ -202,7 +202,7 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
             exprs.append(pl.col("source_file").str.to_lowercase().str.contains("spin&gold"))
         if "Mystery Battle Royale" in filters.game_types:
             exprs.append(pl.col("source_file").str.to_lowercase().str.contains("mystery battle royale") | pl.col("source_file").str.to_lowercase().str.contains("mbr"))
-        if "Tournaments" in filters.game_types:
+        if "Tournament" in filters.game_types:
             exprs.append(
                 (pl.col("source_file").str.to_lowercase().str.contains("tournament") |
                  pl.col("source_file").str.to_lowercase().str.contains("bounty") |
