@@ -94,8 +94,16 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
                 df = df.filter(pl.lit(False))
             
     # Filtro de Nível de Aposta (Stake)
-    if filters.stake is not None and "stake_level" in df.columns:
-        df = df.filter((pl.col("stake_level") - filters.stake).abs() < 0.001)
+    if filters.stake is not None:
+        if "stake_tier" in df.columns:
+            df = df.filter(pl.col("stake_tier") == filters.stake)
+        elif "stake_level" in df.columns:
+            # Fallback para float caso a base ainda não tenha sido atualizada
+            try:
+                stake_float = float(filters.stake)
+                df = df.filter((pl.col("stake_level") - stake_float).abs() < 0.001)
+            except ValueError:
+                pass
         
     # Filtro de Plataforma (Novo)
     if filters.platforms and "platform" in df.columns:

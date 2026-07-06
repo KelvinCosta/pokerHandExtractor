@@ -15,7 +15,7 @@ export interface DashboardFilters {
   start_date?: string        // ISO date string "YYYY-MM-DD"
   end_date?: string          // ISO date string "YYYY-MM-DD"
   game_types?: string[]      // e.g. ["Rush & Cash"]
-  stake?: number             // float, e.g. 0.05
+  stake?: string             // e.g. "NL10" or "Micro"
   hero_name?: string         // default "Hero" on the backend
   platforms?: string[]
   search_query?: string

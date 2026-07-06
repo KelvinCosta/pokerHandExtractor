@@ -18,7 +18,9 @@ async def get_dashboard_metadata(current_user: User = Depends(get_current_user))
         return {"stakes": [], "game_types": [], "min_date": None, "max_date": None}
         
     stakes = []
-    if "stake_level" in df.columns:
+    if "stake_tier" in df.columns:
+        stakes = df.select("stake_tier").drop_nulls().unique().sort("stake_tier").to_series().to_list()
+    elif "stake_level" in df.columns:
         stakes = df.select("stake_level").drop_nulls().unique().sort("stake_level").to_series().to_list()
         
     game_types = []
@@ -121,29 +123,36 @@ async def get_stake_breakdown(filters: DashboardFilters, current_user: User = De
     if df.height == 0:
         return []
 
-    if "stake_level" not in df.columns:
+    group_col = "stake_tier" if "stake_tier" in df.columns else "stake_level"
+    
+    if group_col not in df.columns:
         return []
 
     breakdown = (
-        df.group_by("stake_level")
+        df.group_by(group_col)
         .agg(
             pl.col("hand_id").count().alias("hands"),
-            pl.col("hero_net_profit_usd").sum().alias("profit"),
+            pl.col("hero_net_profit_usd").sum().alias("profit_usd"),
+            pl.col("hero_net_chips").sum().alias("profit_chips"),
             pl.col("hero_net_profit_bb").sum().alias("profit_bb")
         )
         .with_columns(
-            (pl.col("profit_bb") / pl.col("hands") * 100).alias("winrate")
+            (pl.col("profit_bb") / pl.col("hands") * 100).alias("winrate"),
+            (pl.col("profit_usd") + pl.col("profit_chips")).alias("profit")
         )
         .sort("profit", descending=True)
     )
 
     result = []
     for row in breakdown.iter_rows(named=True):
-        stake_val = row["stake_level"]
-        try:
-            stake_str = f"NL{int(float(stake_val) * 100)}" if stake_val is not None else "Unknown"
-        except (ValueError, TypeError):
-            stake_str = "Unknown"
+        stake_val = row[group_col]
+        if group_col == "stake_tier":
+            stake_str = str(stake_val) if stake_val else "Unknown"
+        else:
+            try:
+                stake_str = f"NL{int(float(stake_val) * 100)}" if stake_val is not None else "Unknown"
+            except (ValueError, TypeError):
+                stake_str = "Unknown"
             
         profit = row["profit"] if row["profit"] is not None else 0.0
         winrate = row["winrate"] if row["winrate"] is not None else 0.0

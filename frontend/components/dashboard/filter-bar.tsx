@@ -18,20 +18,7 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// ─── Preset stake levels matching the backend dataset ─────────────────────────
-const ALL_STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
-  { label: "All",     value: undefined },
-  { label: "NL2",    value: 0.02 },
-  { label: "NL5",    value: 0.05 },
-  { label: "NL10",   value: 0.10 },
-  { label: "NL25",   value: 0.25 },
-  { label: "NL50",   value: 0.50 },
-  { label: "NL100",  value: 1.00 },
-  { label: "NL200",  value: 2.00 },
-  { label: "NL500",  value: 5.00 },
-  { label: "NL1000", value: 10.00 },
-]
-
+// ─── Preset game types ────────────────────────────────────────────────────────
 const ALL_GAME_TYPE_OPTIONS: { label: string; value: string | undefined }[] = [
   { label: "All Types", value: undefined },
   { label: "Rush & Cash", value: "Rush & Cash" },
@@ -52,7 +39,7 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ filters, onChange, loading = false, className }: FilterBarProps) {
-  const [availableStakes, setAvailableStakes] = useState<number[]>([])
+  const [availableStakes, setAvailableStakes] = useState<string[]>([])
   const [availableGameTypes, setAvailableGameTypes] = useState<string[]>([])
   const [minDate, setMinDate] = useState<string | undefined>()
   const [maxDate, setMaxDate] = useState<string | undefined>()
@@ -72,9 +59,10 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
     return () => { cancelled = true }
   }, [])
 
-  const STAKE_OPTIONS = ALL_STAKE_OPTIONS.filter(
-    (o) => o.value === undefined || availableStakes.includes(o.value)
-  )
+  const STAKE_OPTIONS: { label: string; value: string | undefined }[] = [
+    { label: "All", value: undefined },
+    ...availableStakes.map(stake => ({ label: stake, value: stake }))
+  ]
 
   const GAME_TYPE_OPTIONS = ALL_GAME_TYPE_OPTIONS.filter(
     (o) => o.value === undefined || availableGameTypes.length === 0 || availableGameTypes.includes(o.value)

@@ -8,7 +8,7 @@ class DashboardFilters(BaseModel):
     start_date: Optional[date] = Field(None, description="Data inicial do filtro")
     end_date: Optional[date] = Field(None, description="Data final do filtro")
     game_types: Optional[List[str]] = Field(None, description="Lista de tipos de jogo (ex: ['Rush & Cash'])")
-    stake: Optional[float] = Field(None, description="Filtro específico por nível de aposta")
+    stake: Optional[str] = Field(None, description="Filtro específico por nível de aposta (ex: 'NL10' ou 'Micro')")
     hero_name: Optional[str] = Field("Hero", description="Nome do jogador base")
     platforms: Optional[List[str]] = Field(None, description="Lista de plataformas para filtrar (ex: ['ggpoker'])")
     search_query: Optional[str] = Field(None, description="Filtro de busca textual (ex: ID da mão ou nick do vilão)")

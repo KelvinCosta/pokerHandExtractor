@@ -42,6 +42,20 @@ class HandLoader:
         game_type = self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id)
         is_cash = game_type in ("Rush & Cash", "Regular Cash", "All-In or Fold")
         
+        stake_tier = "Unknown"
+        if is_cash:
+            stake_tier = f"NL{int(stake_level * 100)}"
+        else:
+            import re
+            m = re.search(r"\$([0-9.]+)", hand.game_info)
+            if m:
+                buy_in = float(m.group(1))
+                if buy_in <= 5: stake_tier = "Micro"
+                elif buy_in <= 20: stake_tier = "Low"
+                elif buy_in <= 100: stake_tier = "Medium"
+                elif buy_in <= 500: stake_tier = "High"
+                else: stake_tier = "Super"
+        
         hero_collected = sum(a.amount for a in hand.actions if a.player == hand.player_nickname and a.action_type == ActionType.COLLECT)
         hero_invested = sum(a.invested_amount for a in hand.actions if a.player == hand.player_nickname and a.action_type not in (ActionType.COLLECT, ActionType.FOLD))
         raw_profit = round(hero_collected - hero_invested, 2)
@@ -92,6 +106,7 @@ class HandLoader:
             "game_info": hand.game_info,
             "game_type": game_type,
             "stake_level": stake_level,
+            "stake_tier": stake_tier,
             "platform": hand.platform,
             "player_nickname": hand.player_nickname,
             "hero_net_profit_usd": hero_net_profit_usd,
