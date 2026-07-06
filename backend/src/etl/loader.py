@@ -47,9 +47,19 @@ class HandLoader:
             stake_tier = f"NL{int(stake_level * 100)}"
         else:
             import re
-            m = re.search(r"\$([0-9.]+)", hand.game_info)
-            if m:
-                buy_in = float(m.group(1))
+            buy_in = None
+            m_info = re.search(r"\$([0-9.]+)", hand.game_info)
+            if m_info:
+                buy_in = float(m_info.group(1))
+            else:
+                m_file = re.search(r"([0-9.]+)\.txt$", hand.source_file)
+                if m_file:
+                    try:
+                        buy_in = float(m_file.group(1))
+                    except ValueError:
+                        pass
+
+            if buy_in is not None:
                 if buy_in <= 5: stake_tier = "Micro"
                 elif buy_in <= 20: stake_tier = "Low"
                 elif buy_in <= 100: stake_tier = "Medium"
