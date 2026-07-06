@@ -12,14 +12,14 @@
  *   loading    → disables inputs while a request is in flight
  */
 
-import { useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { DashboardFilters } from "@/lib/api.types"
 import { Button } from "@/components/ui/button"
 import { RotateCcw } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ─── Preset stake levels matching the backend dataset ─────────────────────────
-const STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
+const ALL_STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: "All",     value: undefined },
   { label: "NL2",    value: 0.02 },
   { label: "NL5",    value: 0.05 },
@@ -29,9 +29,10 @@ const STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: "NL100",  value: 1.00 },
   { label: "NL200",  value: 2.00 },
   { label: "NL500",  value: 5.00 },
+  { label: "NL1000", value: 10.00 },
 ]
 
-const GAME_TYPE_OPTIONS = ["Rush & Cash", "Tournaments", "Regular"]
+const ALL_GAME_TYPE_OPTIONS = ["Rush & Cash", "Tournaments", "Regular"]
 
 const EMPTY_FILTERS: DashboardFilters = {}
 
@@ -43,6 +44,29 @@ interface FilterBarProps {
 }
 
 export function FilterBar({ filters, onChange, loading = false, className }: FilterBarProps) {
+  const [availableStakes, setAvailableStakes] = useState<number[]>([])
+  const [availableGameTypes, setAvailableGameTypes] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/api").then(({ fetchDashboardMetadata }) => {
+      fetchDashboardMetadata().then(res => {
+        if (!cancelled) {
+          setAvailableStakes(res.stakes || [])
+          setAvailableGameTypes(res.game_types || [])
+        }
+      }).catch(() => {})
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const STAKE_OPTIONS = ALL_STAKE_OPTIONS.filter(
+    (o) => o.value === undefined || availableStakes.includes(o.value)
+  )
+
+  const GAME_TYPE_OPTIONS = ALL_GAME_TYPE_OPTIONS.filter(
+    (gt) => availableGameTypes.length === 0 || availableGameTypes.includes(gt)
+  )
 
   const patch = useCallback(
     (partial: Partial<DashboardFilters>) =>

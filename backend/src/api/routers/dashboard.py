@@ -7,6 +7,29 @@ from src.database.models import User
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 
+from ..dependencies import _load_user_datalake
+
+@router.get("/metadata")
+async def get_dashboard_metadata(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    cache_entry = _load_user_datalake(current_user.id, "silver-layer")
+    df = cache_entry.get("df_hands")
+    
+    if df is None or df.height == 0:
+        return {"stakes": [], "game_types": []}
+        
+    stakes = []
+    if "stake_level" in df.columns:
+        stakes = df.select("stake_level").drop_nulls().unique().sort("stake_level").to_series().to_list()
+        
+    game_types = []
+    if "game_type" in df.columns:
+        game_types = df.select("game_type").drop_nulls().unique().sort("game_type").to_series().to_list()
+        
+    return {
+        "stakes": stakes,
+        "game_types": game_types
+    }
+
 @router.post("/health")
 async def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)

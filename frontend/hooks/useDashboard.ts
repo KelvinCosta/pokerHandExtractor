@@ -41,6 +41,9 @@ export interface DashboardState {
   /** Data returned by /api/dashboard/biggest-rivals */
   biggestRivals: any[] | null
 
+  /** Metadata global (stakes e game types presentes no banco) */
+  metadata: { stakes: number[]; game_types: string[] } | null
+
   loading: boolean
   error: string | null
 
@@ -64,6 +67,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   const [actionDistribution, setActionDistribution] = useState<any[] | null>(null)
   const [bigPots, setBigPots] = useState<BigPotHand[] | null>(null)
   const [biggestRivals, setBiggestRivals] = useState<any[] | null>(null)
+  const [metadata, setMetadata] = useState<{ stakes: number[]; game_types: string[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -85,6 +89,17 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
     const timer = setTimeout(() => setDebouncedKey(filtersKey), DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [filtersKey])
+
+  // ── Fetch Global Metadata once on mount ────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    import("@/lib/api").then(({ fetchDashboardMetadata }) => {
+      fetchDashboardMetadata().then(res => {
+        if (!cancelled) setMetadata(res)
+      }).catch(() => {}) // Ignore errors for metadata
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // ── Main fetch effect — only fires after the debounce settles ────────────────
   useEffect(() => {

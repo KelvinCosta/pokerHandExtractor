@@ -80,6 +80,18 @@ async function apiPost<TBody, TResponse>(
 
 // ─── Dashboard endpoints ──────────────────────────────────────────────────────
 
+export async function fetchDashboardMetadata(): Promise<any> {
+  const url = `${BASE_URL}/api/dashboard/metadata`
+  const headers: Record<string, string> = {}
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token")
+    if (token) headers["Authorization"] = `Bearer ${token}`
+  }
+  const res = await fetch(url, { method: "GET", headers })
+  if (!res.ok) throw new Error("Failed to fetch metadata")
+  return res.json()
+}
+
 /**
  * POST /api/dashboard/health
  * Returns aggregate profit & win-rate KPIs for the given filter window.
