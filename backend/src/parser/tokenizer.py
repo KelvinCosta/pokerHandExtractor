@@ -41,7 +41,7 @@ class GGPokerTokenizer:
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
         self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
-        self.re_collect = re.compile(r"^([^:]+?) collected \$?([0-9]+(?:\.[0-9]+)?) from (?:main )?pot")
+        self.re_collect = re.compile(r"^([^:]+?) collected \$?([0-9,]+(?:\.[0-9]+)?) from (?:main )?pot")
 
     def parse_line(self, line: str) -> Optional[Token]:
         line = line.strip()
@@ -84,13 +84,13 @@ class GGPokerTokenizer:
             remainder = match_action.group(3)
             amount = 0.0
             if remainder:
-                to_match = re.search(r"to \$?([0-9]+(?:\.[0-9]+)?)", remainder)
+                to_match = re.search(r"to \$?([0-9,]+(?:\.[0-9]+)?)", remainder)
                 if to_match:
-                    amount = float(to_match.group(1))
+                    amount = float(to_match.group(1).replace(",", ""))
                 else:
-                    first_match = re.search(r"\$?([0-9]+(?:\.[0-9]+)?)", remainder)
+                    first_match = re.search(r"\$?([0-9,]+(?:\.[0-9]+)?)", remainder)
                     if first_match:
-                        amount = float(first_match.group(1))
+                        amount = float(first_match.group(1).replace(",", ""))
                         
             is_all_in = "and is all-in" in remainder.lower()
 
@@ -122,27 +122,33 @@ class GGPokerTokenizer:
             player = match_collect.group(1).strip()
             if player == "Hero":
                 player = self.hero_name
-            amount = float(match_collect.group(2))
+            amount = float(match_collect.group(2).replace(",", ""))
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
 
         # Trata as apostas não chamadas que são devolvidas (são um COLLECT técnico)
-        match_uncalled = re.search(r"^Uncalled bet \(\$?([0-9]+(?:\.[0-9]+)?)\) returned to ([^:]+)", line)
+        match_uncalled = re.search(r"^Uncalled bet \(\$?([0-9,]+(?:\.[0-9]+)?)\) returned to ([^:]+)", line)
         if match_uncalled:
-            amount = float(match_uncalled.group(1))
+            amount = float(match_uncalled.group(1).replace(",", ""))
             player = match_uncalled.group(2).strip()
             if player == "Hero":
                 player = self.hero_name
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
 
-        if line.startswith("Total pot $"):
-            match_summary = re.search(r"Total pot \$([0-9.]+)", line)
+        if line.startswith("Total pot "):
+            match_summary = re.search(r"Total pot \$?([0-9,]+(?:\.[0-9]+)?)", line)
             if match_summary:
-                total_pot = float(match_summary.group(1))
-                rake = float(re.search(r"Rake \$([0-9.]+)", line).group(1)) if "Rake $" in line else 0.0
-                jackpot = float(re.search(r"Jackpot \$([0-9.]+)", line).group(1)) if "Jackpot $" in line else 0.0
-                bingo = float(re.search(r"Bingo \$([0-9.]+)", line).group(1)) if "Bingo $" in line else 0.0
-                fortune = float(re.search(r"Fortune \$([0-9.]+)", line).group(1)) if "Fortune $" in line else 0.0
-                tax = float(re.search(r"Tax \$([0-9.]+)", line).group(1)) if "Tax $" in line else 0.0
+                total_pot = float(match_summary.group(1).replace(",", ""))
+                
+                def extract_val(label, txt):
+                    m = re.search(f"{label} \\$?([0-9,]+(?:\\.[0-9]+)?)", txt)
+                    return float(m.group(1).replace(",", "")) if m else 0.0
+                    
+                rake = extract_val("Rake", line)
+                jackpot = extract_val("Jackpot", line)
+                bingo = extract_val("Bingo", line)
+                fortune = extract_val("Fortune", line)
+                tax = extract_val("Tax", line)
+                
                 return PotSummaryEvent(total_pot=total_pot, rake=rake, jackpot=jackpot, bingo=bingo, fortune=fortune, tax=tax)
 
         return None
