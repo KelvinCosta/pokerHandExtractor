@@ -15,3 +15,6 @@ Este documento serve como radar para as próximas iterações e desenvolvimento 
 ## Milestone 5 (Visão de Longo Prazo)
 - [ ] **Scouting & Stables (Times)**: Implementar a arquitetura B2B onde jogadores podem deixar seus perfis abertos para times (Opt-in Scouting).
 - [ ] **Report Requests (Caça Talentos)**: Permitir que recrutadores de equipes solicitem laudos comportamentais profundos (via LangGraph AI) diretamente aos jogadores na plataforma.
+
+## Pipeline ETL & Background Tasks
+- [ ] **Extração Assíncrona (Parciais em Tempo Real)**: Mover o script `extractor.py` para um worker assíncrono (ex: Celery ou background task do FastAPI). Isso permitirá que o usuário continue navegando no Dashboard enquanto vê o progresso parcial das mãos sendo extraídas via WebSocket ou Polling (Baixa Prioridade).
