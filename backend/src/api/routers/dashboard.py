@@ -636,3 +636,5 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
     df_t = df_t.fill_null(0)
     
     return df_t.to_dicts()
+
+

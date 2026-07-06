@@ -92,7 +92,8 @@ export function TournamentsView({
   })
 
   const handleRowClick = (tourney: TournamentSummary) => {
-    const searchString = tourney.source_file.split(".")[0].replace("_summary", "")
+    const match = tourney.source_file.match(/#(\d+)/)
+    const searchString = match ? `#${match[1]}` : tourney.source_file.split(".")[0].replace("_summary", "")
     setFilters({ ...(filters || {}), search_query: searchString })
     setView("bigpots")
   }
