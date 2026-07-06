@@ -96,7 +96,7 @@ async def upload_and_process(
 
     
     # 2.1 Checar Versão do ETL e resetar Silver se necessário
-    ETL_VERSION = "v4"
+    ETL_VERSION = "v4.01"
     from src.core.storage import get_s3_client
     s3 = get_s3_client()
     try:

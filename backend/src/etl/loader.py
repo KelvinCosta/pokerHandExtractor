@@ -12,9 +12,25 @@ class HandLoader:
 
     def _parse_game_type(self, source_file: str, game_info: str, hand_id: str) -> str:
         name = source_file.lower()
-        if "rushandcash" in name or hand_id.startswith("RC"):
+        
+        # 1. Reliable classification via GGPoker Hand ID prefix
+        if hand_id.startswith("HD"):
+            return "Regular Cash"
+        if hand_id.startswith("RC"):
             return "Rush & Cash"
-        if "all-in or fold" in name or "aof" in name or hand_id.startswith("AF"):
+        if hand_id.startswith("AF"):
+            return "All-In or Fold"
+        if hand_id.startswith("SG"):
+            return "Spin & Gold"
+        if hand_id.startswith("TM"):
+            if "mystery battle royale" in name or "mbr" in name:
+                return "Mystery Battle Royale"
+            return "Tournament"
+            
+        # 2. Fallback classification via filename or game_info
+        if "rushandcash" in name:
+            return "Rush & Cash"
+        if "all-in or fold" in name or "aof" in name:
             return "All-In or Fold"
         if "spin&gold" in name:
             return "Spin & Gold"
@@ -24,6 +40,7 @@ class HandLoader:
             return "Tournament"
         if "tournament" in game_info.lower():
             return "Tournament"
+            
         return "Regular Cash"
 
     def transform_hand(self, hand: HandContext) -> dict:
@@ -235,10 +252,9 @@ class HandLoader:
         
         if os.path.exists(file_path):
             existing_df = pl.read_parquet(file_path)
-            # Combinar e remover duplicatas pelo tournament_id
-            df = pl.concat([existing_df, new_df]).unique(subset=["tournament_id"], keep="last")
+            df = pl.concat([existing_df, new_df])
         else:
-            df = new_df.unique(subset=["tournament_id"], keep="last")
+            df = new_df
             
         df.write_parquet(file_path, compression="zstd")
         print(f"✅ Torneios atualizados: {len(summaries)} novos sumários salvos no Datalake (Total: {df.height})")
