@@ -32,7 +32,14 @@ const ALL_STAKE_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: "NL1000", value: 10.00 },
 ]
 
-const ALL_GAME_TYPE_OPTIONS = ["Rush & Cash", "Tournaments", "Regular"]
+const ALL_GAME_TYPE_OPTIONS: { label: string; value: string | undefined }[] = [
+  { label: "All Types", value: undefined },
+  { label: "Rush & Cash", value: "Rush & Cash" },
+  { label: "Regular Cash", value: "Regular Cash" },
+  { label: "Tournaments", value: "Tournaments" },
+  { label: "Spin & Gold", value: "Spin & Gold" },
+  { label: "Mystery Battle Royale", value: "Mystery Battle Royale" },
+]
 
 const EMPTY_FILTERS: DashboardFilters = {}
 
@@ -69,7 +76,7 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
   )
 
   const GAME_TYPE_OPTIONS = ALL_GAME_TYPE_OPTIONS.filter(
-    (gt) => availableGameTypes.length === 0 || availableGameTypes.includes(gt)
+    (o) => o.value === undefined || availableGameTypes.length === 0 || availableGameTypes.includes(o.value)
   )
 
   const patch = useCallback(
@@ -81,15 +88,10 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
   const reset = useCallback(() => onChange(EMPTY_FILTERS), [onChange])
 
   const selectedStake = STAKE_OPTIONS.find((o) => o.value === filters.stake) ?? STAKE_OPTIONS[0]
-
-  // Toggle a game type in/out of the array
-  const toggleGameType = (gt: string) => {
-    const current = filters.game_types ?? []
-    const next = current.includes(gt)
-      ? current.filter((t) => t !== gt)
-      : [...current, gt]
-    patch({ game_types: next.length > 0 ? next : undefined })
-  }
+  
+  // Como o filtro aceita array, pegamos o primeiro elemento selecionado se houver, ou 'All Types'
+  const currentTypeVal = filters.game_types && filters.game_types.length > 0 ? filters.game_types[0] : undefined
+  const selectedGameType = GAME_TYPE_OPTIONS.find((o) => o.value === currentTypeVal) ?? GAME_TYPE_OPTIONS[0]
 
   return (
     <div
@@ -130,29 +132,24 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
 
       {/* ── Game Type ─────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5">
-        <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground" title="Game Type">
           Type
         </label>
-        <div className="flex gap-1">
-          {GAME_TYPE_OPTIONS.map((gt) => {
-            const active = (filters.game_types ?? []).includes(gt)
-            return (
-              <button
-                key={gt}
-                disabled={loading}
-                onClick={() => toggleGameType(gt)}
-                className={cn(
-                  "h-7 rounded px-2 font-mono text-[10px] transition-colors disabled:opacity-50",
-                  active
-                    ? "bg-primary/20 text-primary ring-1 ring-primary/40"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {gt}
-              </button>
-            )
-          })}
-        </div>
+        <select
+          disabled={loading}
+          value={selectedGameType.label}
+          onChange={(e) => {
+            const opt = GAME_TYPE_OPTIONS.find((o) => o.label === e.target.value)
+            patch({ game_types: opt?.value ? [opt.value] : undefined })
+          }}
+          className="h-7 cursor-pointer rounded border border-input bg-background px-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+        >
+          {GAME_TYPE_OPTIONS.map((gt) => (
+            <option key={gt.label} value={gt.label}>
+              {gt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="h-4 w-px bg-border" />
