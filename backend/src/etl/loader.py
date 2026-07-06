@@ -27,6 +27,17 @@ class HandLoader:
         return "Regular Cash"
 
     def transform_hand(self, hand: HandContext) -> dict:
+        # Resolvendo o BB (Stake Level) - Fallback para torneios onde vem zerado
+        stake_level = hand.stake_level
+        if not stake_level or stake_level == 0.0:
+            post_actions = [a for a in hand.actions if a.action_type == ActionType.POST]
+            if len(post_actions) >= 2:
+                stake_level = float(post_actions[1].amount)
+            elif len(post_actions) == 1:
+                stake_level = float(post_actions[0].amount)
+            else:
+                stake_level = 0.02
+                
         # 1. Calculando Lucro Líquido do Hero
         game_type = self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id)
         is_cash = game_type in ("Rush & Cash", "Regular Cash", "All-In or Fold")
@@ -37,7 +48,7 @@ class HandLoader:
         
         hero_net_profit_usd = raw_profit if is_cash else 0.0
         hero_net_chips = raw_profit if not is_cash else 0.0
-        hero_net_profit_bb = round(raw_profit / hand.stake_level, 2) if hand.stake_level and hand.stake_level > 0 else 0.0
+        hero_net_profit_bb = round(raw_profit / stake_level, 2) if stake_level and stake_level > 0 else 0.0
         
         # 2. Extraindo Posição e Flags Pré-Flop
         preflop_actions = [a for a in hand.actions if (hasattr(a.street, "name") and a.street.name == "PRE_FLOP" or str(a.street) == "PRE_FLOP")]
@@ -80,7 +91,7 @@ class HandLoader:
             "source_file": hand.source_file,
             "game_info": hand.game_info,
             "game_type": game_type,
-            "stake_level": hand.stake_level,
+            "stake_level": stake_level,
             "platform": hand.platform,
             "player_nickname": hand.player_nickname,
             "hero_net_profit_usd": hero_net_profit_usd,
