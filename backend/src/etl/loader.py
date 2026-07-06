@@ -143,6 +143,8 @@ class HandLoader:
             "hero_vpip": hero_vpip,
             "hero_pfr": hero_pfr,
             "hero_3bet": hero_3bet,
+            "hero_hole_cards": hand.player_cards.get(hand.player_nickname, ""),
+            "known_villain_cards": str({k: v for k, v in hand.player_cards.items() if k != hand.player_nickname}),
             "current_pot": hand.current_pot, 
             "total_pot_final": hand.total_pot,
             "rake": hand.rake,

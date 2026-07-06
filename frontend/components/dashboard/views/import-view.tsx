@@ -9,12 +9,16 @@ export function ImportView() {
   const [heroName, setHeroName] = useState("")
   const [files, setFiles] = useState<File[]>([])
   const [processedList, setProcessedList] = useState<string[]>([])
+  const [versionMismatch, setVersionMismatch] = useState(false)
   const [loading, setLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchProcessedFiles().then(list => setProcessedList(list)).catch(console.error)
+    fetchProcessedFiles().then(res => {
+      setProcessedList(res.processed)
+      setVersionMismatch(res.version_mismatch)
+    }).catch(console.error)
   }, [])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +86,29 @@ export function ImportView() {
     }
   }
 
+  const handleReprocess = async () => {
+    setLoading(true)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/etl/reprocess`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("access_token")}`
+        }
+      })
+      if (!res.ok) throw new Error("Erro no reprocessamento")
+      const result = await res.json()
+      setSuccessMsg(`${result.message} - ${result.new_files} arquivos reprocessados, ${result.hands_processed} mãos carregadas!`)
+      setVersionMismatch(false)
+      fetchProcessedFiles().then(res => setProcessedList(res.processed)).catch(console.error)
+    } catch (err: any) {
+      setErrorMsg(err.message || "Erro no reprocessamento")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col p-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
@@ -92,7 +119,34 @@ export function ImportView() {
           </p>
         </div>
 
+        {versionMismatch && (
+          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-6 shadow-sm">
+            <h3 className="mb-2 text-lg font-semibold text-yellow-500">Atualização de Sistema Detectada!</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              O esquema do Datalake foi atualizado (ex: adição de novas colunas como Ranges). 
+              Você não precisa fazer upload dos arquivos novamente! Clique no botão abaixo para 
+              reconstruir seu Datalake automaticamente a partir dos arquivos já salvos.
+            </p>
+            <button
+              onClick={handleReprocess}
+              disabled={loading}
+              className="inline-flex items-center justify-center rounded-md bg-yellow-500 px-4 py-2 text-sm font-semibold text-yellow-950 transition-colors hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> Reprocessando...
+                </>
+              ) : (
+                <>
+                  <RefreshCcw className="mr-2 size-4" /> Reprocessar Datalake Automaticamente
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
         <form onSubmit={handleUpload} className="space-y-6 rounded-xl border border-border bg-card p-6 shadow-sm">
+
           {errorMsg && (
             <div className="rounded-md bg-destructive/15 p-4 text-sm font-medium text-destructive">
               {errorMsg}

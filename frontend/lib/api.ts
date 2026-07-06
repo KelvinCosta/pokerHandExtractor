@@ -96,22 +96,19 @@ export async function fetchHandDetails(handId: string): Promise<any> {
     const token = localStorage.getItem("access_token")
     if (token) headers["Authorization"] = `Bearer ${token}`
   }
-  const res = await fetch(url, { method: "GET", headers })
+  const res = await fetch(url, { method: "GET", headers: getHeaders() })
   if (!res.ok) throw new Error("Failed to fetch hand details")
   return res.json()
 }
 
-export async function fetchProcessedFiles(): Promise<string[]> {
-  const token = localStorage.getItem("access_token")
-  if (!token) return []
+export async function fetchProcessedFiles(): Promise<{processed: string[], version_mismatch: boolean}> {
   const res = await fetch(`${BASE_URL}/api/etl/processed`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: getHeaders(),
   })
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.processed || []
+  if (!res.ok) {
+    return {processed: [], version_mismatch: false}
+  }
+  return res.json()
 }
 
 /**

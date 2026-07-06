@@ -197,14 +197,121 @@ async def get_processed_files(current_user: User = Depends(get_current_user)):
         except:
             current_version = "unknown"
             
-        ETL_VERSION = "v4.02"
+        ETL_VERSION = "v4.03"
         if current_version != ETL_VERSION:
-            return {"processed": []}
+            return {"processed": [], "version_mismatch": True}
 
         obj = s3.get_object(Bucket=silver_bucket, Key=f"{current_user.id}/processed_files.json")
         import json
         data = json.loads(obj["Body"].read().decode("utf-8"))
-        return {"processed": data}
+        return {"processed": data, "version_mismatch": False}
     except Exception as e:
-        return {"processed": []}
+        return {"processed": [], "version_mismatch": False}
 
+@router.post("/reprocess")
+async def reprocess_datalake(current_user: User = Depends(get_current_user)):
+    """
+    Downloads all raw files from the Bronze layer in S3 and rebuilds the Silver layer.
+    Used when the ETL schema changes (e.g., adding hole cards).
+    """
+    from src.core.storage import get_s3_client, download_file_from_s3, upload_local_file_to_s3
+    from src.etl.loader import HandLoader
+    from src.etl.repository import DatalakeRepository
+    from src.core.parser import summary_parser, process_stream, tokenizer, initial_state
+    import shutil
+    
+    s3 = get_s3_client()
+    bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
+    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+    user_id = str(current_user.id)
+    ETL_VERSION = "v4.03"
+    
+    temp_dir = Path("data/temp") / user_id
+    silver_dir = Path("data/silver") / user_id
+    
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    silver_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Limpa arquivos locais residuais
+    for f in silver_dir.iterdir():
+        if f.is_file():
+            f.unlink()
+            
+    # Remove Silver no S3
+    try:
+        objects_to_delete = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/")
+        if 'Contents' in objects_to_delete:
+            for obj in objects_to_delete['Contents']:
+                s3.delete_object(Bucket=silver_bucket, Key=obj['Key'])
+    except Exception as e:
+        pass
+        
+    s3.put_object(Bucket=silver_bucket, Key=f"{user_id}/etl_version.txt", Body=ETL_VERSION.encode('utf-8'))
+    
+    # Baixar todos os arquivos do Bronze
+    print("Baixando arquivos da camada Bronze...")
+    new_txt_files = []
+    try:
+        bronze_objects = s3.list_objects_v2(Bucket=bronze_bucket, Prefix=f"{user_id}/")
+        if 'Contents' in bronze_objects:
+            for obj in bronze_objects['Contents']:
+                file_key = obj['Key']
+                if not file_key.endswith(".txt"):
+                    continue
+                file_name = file_key.split("/")[-1]
+                local_path = temp_dir / file_name
+                s3.download_file(bronze_bucket, file_key, str(local_path))
+                new_txt_files.append(local_path)
+    except Exception as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return {"error": f"Erro ao acessar camada Bronze: {str(e)}"}
+        
+    if not new_txt_files:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        return {"message": "Nenhum arquivo encontrado na camada Bronze.", "new_files": 0, "hands_processed": 0}
+        
+    repo = DatalakeRepository(str(temp_dir))
+    
+    summaries_to_save = []
+    hands_files_to_process = []
+    
+    for file_path in new_txt_files:
+        if summary_parser.is_summary_file(str(file_path)):
+            summary = summary_parser.parse(str(file_path))
+            if summary:
+                summaries_to_save.append(summary)
+        else:
+            hands_files_to_process.append(file_path)
+
+    def hand_stream_pipeline():
+        for file_path in hands_files_to_process:
+            with open(file_path, 'r', encoding='utf-8-sig') as f:
+                yield from process_stream(f, file_path.name, tokenizer, initial_state)
+
+    loader = HandLoader(output_dir=str(silver_dir))
+    
+    if summaries_to_save:
+        loader.save_summaries(summaries_to_save)
+        
+    processed_count = 0
+    if hands_files_to_process:
+        processed_count = loader.process_and_save(hand_stream_pipeline())
+    
+    if processed_count > 0 or summaries_to_save:
+        repo.mark_as_processed([f.name for f in new_txt_files])
+        
+        # Fazendo Upload da Camada Silver atualizada para o S3
+        for silver_file in silver_dir.iterdir():
+            if silver_file.is_file():
+                upload_local_file_to_s3(str(silver_file), silver_bucket, f"{user_id}/{silver_file.name}")
+        
+        from src.api.dependencies import invalidate_cache
+        invalidate_cache(user_id)
+        
+    shutil.rmtree(temp_dir, ignore_errors=True)
+        
+    return {
+        "message": "ETL Reprocessado com sucesso",
+        "new_files": len(new_txt_files),
+        "hands_processed": processed_count
+    }
