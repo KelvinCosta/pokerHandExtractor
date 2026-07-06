@@ -632,9 +632,25 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
     ]).sort("date", descending=True, nulls_last=True).head(500)
     
     # If date is not a string, we might need to format it, but usually it's fine.
-    # Replace NaN or null in numeric columns to avoid JSON serialization errors
     df_t = df_t.fill_null(0)
     
     return df_t.to_dicts()
+
+
+
+@router.get("/debug_s3")
+def debug_s3():
+    try:
+        import os
+        from src.core.storage import get_s3_client
+        s3 = get_s3_client()
+        silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+        response = s3.list_objects_v2(Bucket=silver_bucket)
+        if "Contents" in response:
+            return {"files": [obj["Key"] for obj in response["Contents"]]}
+        return {"files": []}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
 
 
