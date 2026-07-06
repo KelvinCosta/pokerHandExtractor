@@ -62,7 +62,7 @@ async def upload_and_process(
     download_file_from_s3(silver_bucket, f"{user_id}/processed_files.json", str(processed_log_path))
     
     # 2.1 Checar Versão do ETL e resetar Silver se necessário
-    ETL_VERSION = "v3"
+    ETL_VERSION = "v4"
     from src.core.storage import get_s3_client
     s3 = get_s3_client()
     try:

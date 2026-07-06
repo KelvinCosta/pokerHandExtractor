@@ -12,8 +12,7 @@ class TournamentSummary(BaseModel):
 class SummaryParser:
     def __init__(self):
         self.re_tournament = re.compile(r"^Tournament #([0-9]+),")
-        self.re_buyin = re.compile(r"^Buy-in:\s*\$([0-9.,]+)")
-        self.re_free = re.compile(r"^Buy-in:\s*Free", re.IGNORECASE)
+        self.re_buyin = re.compile(r"^Buy-in:\s*(.*)")
         self.re_prize = re.compile(r"^You received a total of \$([0-9.,]+)")
 
     def _safe_float(self, val_str: str) -> float:
@@ -59,10 +58,12 @@ class SummaryParser:
                         
                     match_buyin = self.re_buyin.search(line)
                     if match_buyin:
-                        buy_in = self._safe_float(match_buyin.group(1))
-                        continue
-                    elif self.re_free.search(line):
-                        buy_in = 0.0
+                        buy_in_str = match_buyin.group(1)
+                        if "free" in buy_in_str.lower():
+                            buy_in = 0.0
+                        else:
+                            amounts = re.findall(r"\$([0-9.,]+)", buy_in_str)
+                            buy_in = sum(self._safe_float(a) for a in amounts)
                         continue
                         
                     match_prize = self.re_prize.search(line)
