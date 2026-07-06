@@ -665,18 +665,21 @@ def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a")
             dups = df.filter(df["tournament_id"].is_duplicated())
             dup_profit = dups.select((pl.col("prize") - pl.col("buy_in")).sum()).item()
             
+        prefixes = df_hands.with_columns(pl.col("hand_id").str.slice(0, 2).alias("prefix")).group_by(["game_type", "prefix"]).agg(pl.count("hand_id").alias("count")).to_dicts()
+            
         return {
             "total_hands": df_hands.height,
             "breakdown": breakdown,
             "tourney_profit": tourney_profit,
             "tourney_height": tourney_height,
             "tourney_unique": tourney_unique,
-            "dup_profit": dup_profit
+            "dup_profit": dup_profit,
+            "prefixes": prefixes
         }
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
-# trigger 2
+# trigger 3
 
 
 
