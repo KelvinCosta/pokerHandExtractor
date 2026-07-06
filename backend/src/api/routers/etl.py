@@ -189,6 +189,18 @@ async def get_processed_files(current_user: User = Depends(get_current_user)):
         from src.core.storage import get_s3_client
         s3 = get_s3_client()
         silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+        
+        # Check version
+        try:
+            version_obj = s3.get_object(Bucket=silver_bucket, Key=f"{current_user.id}/etl_version.txt")
+            current_version = version_obj['Body'].read().decode('utf-8')
+        except:
+            current_version = "unknown"
+            
+        ETL_VERSION = "v4.02"
+        if current_version != ETL_VERSION:
+            return {"processed": []}
+
         obj = s3.get_object(Bucket=silver_bucket, Key=f"{current_user.id}/processed_files.json")
         import json
         data = json.loads(obj["Body"].read().decode("utf-8"))
