@@ -138,6 +138,12 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
                 df_hands = df_hands.with_columns(
                     pl.col(nome_coluna_data).str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False).dt.date().alias("data_limpa")
                 )
+                
+            # TODO: Temporário - Remover Torneios até o Milestone 6 (ETL tratar Fichas vs Buy-in)
+            if "game_type" in df_hands.columns:
+                df_hands = df_hands.filter(
+                    ~pl.col("game_type").is_in(["Tournament", "Spin & Gold", "Mystery Battle Royale"])
+                )
 
             df_actions = df_hands.explode("actions").unnest("actions")
             
