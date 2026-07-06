@@ -61,6 +61,27 @@ async def upload_and_process(
     processed_log_path = silver_dir / "processed_files.json"
     download_file_from_s3(silver_bucket, f"{user_id}/processed_files.json", str(processed_log_path))
     
+    # 2.1 Checar Versão do ETL e resetar Silver se necessário
+    ETL_VERSION = "v3"
+    from src.core.storage import get_s3_client
+    s3 = get_s3_client()
+    try:
+        version_obj = s3.get_object(Bucket=silver_bucket, Key=f"{user_id}/etl_version.txt")
+        current_version = version_obj['Body'].read().decode('utf-8')
+    except Exception:
+        current_version = "unknown"
+        
+    if current_version != ETL_VERSION:
+        print(f"⚠️ Versão ETL mudou de '{current_version}' para '{ETL_VERSION}'. Resetando a Silver Layer do usuário {user_id}...")
+        objects = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/")
+        if 'Contents' in objects:
+            for obj in objects['Contents']:
+                s3.delete_object(Bucket=silver_bucket, Key=obj['Key'])
+        # Limpa o tracking local para processar tudo de novo
+        if processed_log_path.exists():
+            processed_log_path.unlink()
+        s3.put_object(Bucket=silver_bucket, Key=f"{user_id}/etl_version.txt", Body=ETL_VERSION.encode('utf-8'))
+    
     repo = JsonProcessedHandsRepository(processed_log_path)
     processed_files = repo.get_processed_sources()
     
