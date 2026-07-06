@@ -75,6 +75,31 @@ export interface BigPotHand {
   pot_in_bb: number
   net_profit: number
 }
+
+export interface HandAction {
+  player: string
+  action_type: string
+  street: string
+  amount: number
+  is_all_in: boolean
+  invested_amount: number
+  pot_odds: number
+}
+
+export interface HandDetails {
+  hand_id: string
+  date: string
+  data_limpa: string
+  game_type: string
+  stake_level: number
+  platform: string
+  player_nickname: string
+  hero_net_profit: number
+  total_pot_final: number
+  board_cards: string[]
+  player_cards: { player: string; cards: string }[]
+  actions: HandAction[]
+}
 export interface AuditStartRequest {
   hero_name: string
   start_date?: string

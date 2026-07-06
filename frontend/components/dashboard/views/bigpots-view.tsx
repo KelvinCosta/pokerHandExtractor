@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { useDashboard } from "@/hooks/useDashboard"
 import type { DashboardFilters } from "@/lib/api.types"
+import { HandViewer } from "@/components/dashboard/hand-viewer"
 
 import {
   Table,
@@ -39,50 +41,13 @@ function Cards({ str }: { str: string }) {
 export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
   const { bigPots, loading, error } = useDashboard(filters ?? {})
   const displayHands = bigPots || []
+  
+  const [selectedHandId, setSelectedHandId] = useState<string | null>(null)
+
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-4">
-        {/* TODO: Reabilitar quando a IA do Milestone 6 conseguir calcular o EV das ações do River
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold">River Decision EV</h2>
-          <p className="mb-4 text-xs text-muted-foreground">Expected value per big blind by action type</p>
-          <ul className="flex flex-col gap-3">
-            {riverDecisions.map((d) => {
-              const positive = d.evPerBB >= 0
-              return (
-                <li key={d.action}>
-                  <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium">{d.action}</span>
-                    <span className="font-mono text-[11px] text-muted-foreground">{d.count.toLocaleString()} spots</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative h-2 flex-1 rounded-full bg-muted">
-                      <div
-                        className={cn(
-                          "absolute inset-y-0 rounded-full",
-                          positive ? "left-1/2 bg-primary/80" : "right-1/2 bg-loss/80",
-                        )}
-                        style={{ width: `${(Math.abs(d.evPerBB) / maxEv) * 50}%` }}
-                      />
-                      <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
-                    </div>
-                    <span
-                      className={cn(
-                        "w-12 text-right font-mono text-xs font-semibold tabular-nums",
-                        positive ? "text-primary" : "text-loss",
-                      )}
-                    >
-                      {positive ? "+" : ""}
-                      {d.evPerBB.toFixed(2)}
-                    </span>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-        */}
-
+        
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
@@ -111,8 +76,13 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                 ) : (
                   displayHands.map((h) => (
                     <TableRow key={h.hand_id}>
-                      <TableCell className="pl-4 font-mono text-xs text-muted-foreground">
-                        {h.hand_id.split("-")[0]}...
+                      <TableCell className="pl-4">
+                        <button 
+                          onClick={() => setSelectedHandId(h.hand_id)}
+                          className="font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
+                        >
+                          {h.hand_id.split("-")[0]}...
+                        </button>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {new Date(h.timestamp).toLocaleDateString()}
@@ -139,6 +109,11 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
           </div>
         </div>
       </section>
+
+      {/* Modal View */}
+      {selectedHandId && (
+        <HandViewer handId={selectedHandId} onClose={() => setSelectedHandId(null)} />
+      )}
     </div>
   )
 }

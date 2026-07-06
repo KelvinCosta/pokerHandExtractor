@@ -30,6 +30,28 @@ async def get_dashboard_metadata(current_user: User = Depends(get_current_user))
         "game_types": game_types
     }
 
+@router.get("/hand/{hand_id}")
+async def get_hand_details(hand_id: str, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    import os
+    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+    cache_entry = _load_user_datalake(current_user.id, silver_bucket)
+    df = cache_entry.get("df_hands")
+    
+    if df is None or df.height == 0:
+        raise HTTPException(status_code=404, detail="No data available")
+        
+    hand_row = df.filter(pl.col("hand_id") == hand_id)
+    if hand_row.height == 0:
+        raise HTTPException(status_code=404, detail=f"Hand {hand_id} not found")
+        
+    hand_dict = hand_row.to_dicts()[0]
+    
+    # Garantir que a data seja serializável para JSON (converter de date para string)
+    if "data_limpa" in hand_dict and hand_dict["data_limpa"]:
+        hand_dict["data_limpa"] = str(hand_dict["data_limpa"])
+        
+    return hand_dict
+
 @router.post("/health")
 async def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)
