@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react"
 import type { DashboardFilters } from "@/lib/api.types"
 import { fetchRanges } from "@/lib/api"
-import { Loader2 } from "lucide-react"
+import { Loader2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"]
 const POSITIONS = ["ALL", "UTG", "MP", "CO", "BTN", "SB", "BB"]
@@ -19,6 +20,7 @@ export function RangesView({ filters }: RangesViewProps) {
   const [data, setData] = useState<{ dealt: any[], played: any[] } | null>(null)
   
   const [position, setPosition] = useState("ALL")
+  const [selectedHand, setSelectedHand] = useState<string | null>(null)
   
   useEffect(() => {
     let active = true
@@ -149,8 +151,9 @@ export function RangesView({ filters }: RangesViewProps) {
                 return (
                   <div
                     key={`${r1}${r2}`}
+                    onClick={() => { if (stats.dealt > 0) setSelectedHand(key) }}
                     className={cn(
-                      "aspect-square rounded-sm flex flex-col items-center justify-center p-1 text-xs cursor-default transition-all hover:scale-105 hover:z-10 hover:shadow-md",
+                      "aspect-square rounded-sm flex flex-col items-center justify-center p-1 text-xs cursor-pointer transition-all hover:scale-105 hover:z-10 hover:shadow-md",
                       getColor(stats.dealt, stats.played)
                     )}
                     title={`${key}: Jogou ${stats.played} de ${stats.dealt} vezes (${freq}%)`}
@@ -176,7 +179,25 @@ export function RangesView({ filters }: RangesViewProps) {
             <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-sm bg-red-500"></div> 90%+</div>
           </div>
         </div>
+        </div>
       </div>
+
+      {selectedHand && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95">
+          <div className="relative flex flex-col w-full max-w-6xl max-h-[90vh] bg-card border border-border shadow-2xl rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <span className="bg-primary/20 text-primary px-2 py-0.5 rounded text-sm">{selectedHand}</span>
+                Mãos Jogadas
+              </h2>
+              <button onClick={() => setSelectedHand(null)} className="p-1 hover:bg-muted rounded-md transition-colors"><X className="size-5" /></button>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-muted/20">
+              <BigPotsView filters={{ ...filters, hole_cards_range: selectedHand }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

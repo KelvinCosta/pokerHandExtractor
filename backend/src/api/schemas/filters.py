@@ -12,6 +12,7 @@ class DashboardFilters(BaseModel):
     hero_name: Optional[str] = Field("Hero", description="Nome do jogador base")
     platforms: Optional[List[str]] = Field(None, description="Lista de plataformas para filtrar (ex: ['ggpoker'])")
     search_query: Optional[str] = Field(None, description="Filtro de busca textual (ex: ID da mão ou nick do vilão)")
+    hole_cards_range: Optional[str] = Field(None, description="Filtro de range pré-flop (ex: 'AKs')")
 
 class HandsListFilters(DashboardFilters):
     page: int = Field(1, description="Página atual")

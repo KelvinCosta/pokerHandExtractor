@@ -76,7 +76,30 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
                 cond = cond | pl.col("game_info").str.to_lowercase().str.contains(sq, literal=True)
             df = df.filter(cond)
 
+    if filters.hole_cards_range and "hero_hole_cards" in df.columns:
+        import re
+        def normalize_cards(cards_str):
+            if not cards_str: return None
+            cards = re.findall(r"([AKQJT98765432][shdc])", str(cards_str))
+            if len(cards) != 2: return None
             
+            ranks = "AKQJT98765432"
+            r1, s1 = cards[0][0], cards[0][1]
+            r2, s2 = cards[1][0], cards[1][1]
+            
+            try:
+                if ranks.index(r1) > ranks.index(r2):
+                    r1, r2 = r2, r1
+                    s1, s2 = s2, s1
+            except:
+                return None
+                
+            if r1 == r2: return f"{r1}{r2}"
+            elif s1 == s2: return f"{r1}{r2}s"
+            else: return f"{r1}{r2}o"
+            
+        df = df.filter(pl.col("hero_hole_cards").map_elements(normalize_cards, return_dtype=pl.String) == filters.hole_cards_range)
+
     # Filtro Dinâmico de Tipo de Jogo
     if filters.game_types:
         if "game_type" in df.columns:

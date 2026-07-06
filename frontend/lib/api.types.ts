@@ -19,6 +19,7 @@ export interface DashboardFilters {
   hero_name?: string         // default "Hero" on the backend
   platforms?: string[]
   search_query?: string
+  hole_cards_range?: string  // e.g. "AKs", "AA"
 }
 
 export interface AuthResponse {
