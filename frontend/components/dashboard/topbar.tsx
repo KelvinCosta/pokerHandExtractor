@@ -46,23 +46,6 @@ export function Topbar({
           />
         </div>
 
-        <Select defaultValue="all">
-          <SelectTrigger size="sm" className="h-8 w-[130px] text-xs">
-            <span className="text-muted-foreground">Stake:</span>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="nl100">NL100</SelectItem>
-            <SelectItem value="nl500">NL500</SelectItem>
-            <SelectItem value="nl1000">NL1000+</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-          <Calendar className="size-3.5" />
-          Last 90 days
-        </Button>
       </div>
 
       <div className="flex items-center gap-1">
