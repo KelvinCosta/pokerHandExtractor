@@ -37,7 +37,7 @@ class GGPokerTokenizer:
         self.hero_name = hero_name
         self.re_hand_start = re.compile(r"^Poker Hand #([a-zA-Z0-9]+):\s*(.*?)\s*-\s*(\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2})")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
-        self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante)(.*)")
+        self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante|posts the ante)(.*)")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
         self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
@@ -75,7 +75,10 @@ class GGPokerTokenizer:
             raw_action = match_action.group(2).lower()
 
             if "posts" in raw_action:
-                action = "POST"
+                if "ante" in raw_action:
+                    action = "ANTE"
+                else:
+                    action = "POST"
             else:
                 action = raw_action.upper()
                 if action.endswith("S") and action not in ["POSTS"]:

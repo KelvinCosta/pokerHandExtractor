@@ -10,6 +10,7 @@ class Street(Enum):
 
 class ActionType(Enum):
     POST = auto()
+    ANTE = auto()
     FOLD = auto()
     CHECK = auto()
     CALL = auto()
