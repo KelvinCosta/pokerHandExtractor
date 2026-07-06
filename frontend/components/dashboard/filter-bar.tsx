@@ -46,6 +46,8 @@ interface FilterBarProps {
 export function FilterBar({ filters, onChange, loading = false, className }: FilterBarProps) {
   const [availableStakes, setAvailableStakes] = useState<number[]>([])
   const [availableGameTypes, setAvailableGameTypes] = useState<string[]>([])
+  const [minDate, setMinDate] = useState<string | undefined>()
+  const [maxDate, setMaxDate] = useState<string | undefined>()
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +56,8 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
         if (!cancelled) {
           setAvailableStakes(res.stakes || [])
           setAvailableGameTypes(res.game_types || [])
+          setMinDate(res.min_date)
+          setMaxDate(res.max_date)
         }
       }).catch(() => {})
     })
@@ -103,6 +107,8 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
           type="date"
           disabled={loading}
           value={filters.start_date ?? ""}
+          min={minDate}
+          max={maxDate}
           onChange={(e) => patch({ start_date: e.target.value || undefined })}
           className="h-7 rounded border border-input bg-background px-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 [color-scheme:dark]"
         />
@@ -113,6 +119,8 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
           type="date"
           disabled={loading}
           value={filters.end_date ?? ""}
+          min={minDate}
+          max={maxDate}
           onChange={(e) => patch({ end_date: e.target.value || undefined })}
           className="h-7 rounded border border-input bg-background px-2 font-mono text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50 [color-scheme:dark]"
         />

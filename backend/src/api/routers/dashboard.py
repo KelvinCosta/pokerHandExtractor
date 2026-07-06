@@ -15,7 +15,7 @@ async def get_dashboard_metadata(current_user: User = Depends(get_current_user))
     df = cache_entry.get("df_hands")
     
     if df is None or df.height == 0:
-        return {"stakes": [], "game_types": []}
+        return {"stakes": [], "game_types": [], "min_date": None, "max_date": None}
         
     stakes = []
     if "stake_level" in df.columns:
@@ -25,9 +25,21 @@ async def get_dashboard_metadata(current_user: User = Depends(get_current_user))
     if "game_type" in df.columns:
         game_types = df.select("game_type").drop_nulls().unique().sort("game_type").to_series().to_list()
         
+    min_date = None
+    max_date = None
+    if "data_limpa" in df.columns:
+        min_date_val = df.select(pl.col("data_limpa").drop_nulls().min()).item()
+        max_date_val = df.select(pl.col("data_limpa").drop_nulls().max()).item()
+        if min_date_val:
+            min_date = str(min_date_val)
+        if max_date_val:
+            max_date = str(max_date_val)
+            
     return {
         "stakes": stakes,
-        "game_types": game_types
+        "game_types": game_types,
+        "min_date": min_date,
+        "max_date": max_date
     }
 
 @router.get("/hand/{hand_id}")
