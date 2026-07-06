@@ -86,10 +86,7 @@ export async function fetchDashboardMetadata(filters: DashboardFilters = {}): Pr
   min_date?: string
   max_date?: string
 }> {
-  return fetchAPI("/api/dashboard/metadata", {
-    method: "POST",
-    body: JSON.stringify(filters)
-  })
+  return apiPost("/api/dashboard/metadata", filters)
 }
 
 export async function fetchHandDetails(handId: string): Promise<any> {
