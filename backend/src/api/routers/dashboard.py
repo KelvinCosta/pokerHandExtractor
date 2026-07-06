@@ -298,7 +298,7 @@ async def get_analytics_bento(filters: DashboardFilters, current_user: User = De
     wssd_pct = (wssd_success / wtsd_success * 100) if wtsd_success > 0 else 0.0
 
     # 4. Linhas Azul (Showdown) e Vermelha (Non-Showdown)
-    df_hero_pnl = df.group_by("hand_id").agg(pl.col("hero_net_profit").first().alias("net_profit"))
+    df_hero_pnl = df.group_by("hand_id").agg((pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().alias("net_profit"))
     blue_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="inner")["net_profit"].sum()
     red_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="anti")["net_profit"].sum()
 
@@ -387,7 +387,7 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
         df.group_by("hand_id")
         .agg(
             pl.col("total_pot_final").first().alias("pot_size_usd"),
-            pl.col("hero_net_profit").first().alias("net_profit"),
+            (pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().alias("net_profit"),
             pl.col("stake_level").first().alias("bb_size"),
             pl.col("date").first().alias("timestamp")
         )
@@ -499,7 +499,7 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
             # (net profit do hero invertido) caso a mão tenha ido pra showdown entre os dois, ou apenas 
             # o sum(hero_net_profit) de quando eles estavam na mesma mesa.
             # O jeito certo é agregar o net profit do Hero por mão, e inverter
-            pl.col("hero_net_profit").first().sum().alias("hero_net_total"),
+            (pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().sum().alias("hero_net_total"),
             
             # VPIP: % de mãos onde o vilão deu CALL ou RAISE pre-flop
             (
