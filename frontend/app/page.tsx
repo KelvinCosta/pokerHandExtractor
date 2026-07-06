@@ -120,7 +120,7 @@ export default function Page() {
           {view === "overview"   && <OverviewView filters={filters} />}
           {view === "analytics"  && <AnalyticsView filters={filters} />}
           {view === "engines"    && <EnginesView filters={filters} />}
-          {view === "villains"   && <VillainsView filters={filters} />}
+          {view === "villains"   && <VillainsView filters={filters} setFilters={setFilters} setView={setView} />}
           {view === "bigpots"    && <BigPotsView filters={filters} />}
           {/* TODO: Reabilitar as abas no futuro
           {view === "population" && <PopulationView />}

@@ -35,7 +35,7 @@ const columns: { key: SortKey; label: string; fmt: (v: Villain) => string }[] = 
   { key: "wtsd", label: "WTSD", fmt: (v) => `${v.wtsd}%` },
 ]
 
-export function VillainsView({ filters }: { filters?: DashboardFilters }) {
+export function VillainsView({ filters, setFilters, setView }: { filters?: DashboardFilters, setFilters?: (f: DashboardFilters) => void, setView?: (v: string) => void }) {
   const { biggestRivals, loading } = useDashboard(filters ?? {})
   const villains = biggestRivals ?? []
   
@@ -59,6 +59,11 @@ export function VillainsView({ filters }: { filters?: DashboardFilters }) {
       setSortKey(key)
       setAsc(false)
     }
+  }
+
+  const handleVillainClick = (alias: string) => {
+    if (setFilters) setFilters({ ...filters, search_query: alias })
+    if (setView) setView("bigpots")
   }
 
   return (
@@ -88,7 +93,7 @@ export function VillainsView({ filters }: { filters?: DashboardFilters }) {
             </TableHeader>
             <TableBody>
               {sorted.map((v) => (
-                <TableRow key={v.id} className="group">
+                <TableRow key={v.id} className="group cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => handleVillainClick(v.alias)}>
                   <TableCell className="pl-4">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-medium">{v.alias}</span>
