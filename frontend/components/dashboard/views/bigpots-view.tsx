@@ -81,7 +81,7 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                           onClick={() => setSelectedHandId(h.hand_id)}
                           className="font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
                         >
-                          {h.hand_id.split("-")[0]}...
+                          {h.hand_id.split("-")[0]}
                         </button>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
