@@ -243,8 +243,8 @@ async def get_profit_trend(filters: DashboardFilters, current_user: User = Depen
     
     return unique_events.select([
         pl.col("display_date").alias("date"),
-        "cumulative_profit",
-        pl.col("profit_event").alias("hero_net_profit")
+        pl.col("cumulative_profit").round(2),
+        pl.col("profit_event").round(2).alias("hero_net_profit")
     ]).to_dicts()
 
 @router.post("/analytics")
