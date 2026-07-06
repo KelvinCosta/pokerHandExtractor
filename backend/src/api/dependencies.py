@@ -78,8 +78,10 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
                 exprs.append(pl.col("hand_id").str.starts_with("RC"))
             if "Tournaments" in filters.game_types:
                 exprs.append(pl.col("hand_id").str.starts_with("SG") | pl.col("hand_id").str.starts_with("TM"))
-            if "Regular" in filters.game_types:
+            if "Regular Cash" in filters.game_types or "Regular" in filters.game_types:
                 exprs.append(pl.col("hand_id").str.starts_with("HD"))
+            if "All-In or Fold" in filters.game_types:
+                exprs.append(pl.col("hand_id").str.starts_with("AF"))
             
             if exprs:
                 # Faz um OR entre todas as expressões válidas

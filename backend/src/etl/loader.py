@@ -14,6 +14,8 @@ class HandLoader:
         name = source_file.lower()
         if "rushandcash" in name or hand_id.startswith("RC"):
             return "Rush & Cash"
+        if "all-in or fold" in name or "aof" in name or hand_id.startswith("AF"):
+            return "All-In or Fold"
         if "spin&gold" in name:
             return "Spin & Gold"
         if "mystery battle royale" in name or "mbr" in name:

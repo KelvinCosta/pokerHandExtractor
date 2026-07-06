@@ -39,6 +39,7 @@ const ALL_GAME_TYPE_OPTIONS: { label: string; value: string | undefined }[] = [
   { label: "Tournaments", value: "Tournaments" },
   { label: "Spin & Gold", value: "Spin & Gold" },
   { label: "Mystery Battle Royale", value: "Mystery Battle Royale" },
+  { label: "All-In or Fold", value: "All-In or Fold" },
 ]
 
 const EMPTY_FILTERS: DashboardFilters = {}
