@@ -37,6 +37,7 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
 const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "overview",   label: "Health",    icon: Activity   },
   { id: "analytics",  label: "Analytics", icon: BarChart2  },
+  { id: "ranges",     label: "Ranges",    icon: Radar      },
   { id: "engines",    label: "Engines",   icon: Layers     },
   { id: "villains",   label: "Villains",  icon: Users      },
   { id: "tournaments",label: "Tourneys",  icon: Target     },

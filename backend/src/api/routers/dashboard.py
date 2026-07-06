@@ -697,10 +697,12 @@ def get_ranges(filters: DashboardFilters, user_id: str = "335f7c35-320e-4671-a90
             return {"matrix": {}}
 
         # Aplicar filtros (exceto posição, que pode vir separada no payload ou usar hero_position)
-        if filters.date_from:
-            df_hands = df_hands.filter(pl.col("date") >= filters.date_from)
-        if filters.date_to:
-            df_hands = df_hands.filter(pl.col("date") <= filters.date_to)
+        if "data_limpa" in df_hands.columns:
+            if filters.start_date:
+                df_hands = df_hands.filter(pl.col("data_limpa") >= filters.start_date)
+            if filters.end_date:
+                df_hands = df_hands.filter(pl.col("data_limpa") <= filters.end_date)
+                
         if filters.game_types:
             df_hands = df_hands.filter(pl.col("game_type").is_in(filters.game_types))
         
