@@ -637,3 +637,46 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
     return df_t.to_dicts()
 
 
+@router.get("/debug_tournaments_dup")
+def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a"):
+    try:
+        from src.api.dependencies import _load_user_datalake
+        cache = _load_user_datalake(user_id, "poker-silver")
+        import polars as pl
+        df_hands = cache.get("df_hands")
+        
+        breakdown = df_hands.group_by("game_type").agg(
+            pl.count("hand_id").alias("hands"), 
+            pl.col("hero_net_profit_usd").sum().alias("profit_usd")
+        ).to_dicts()
+        
+        df = cache.get("df_tournaments", None)
+        tourney_profit = 0
+        tourney_height = 0
+        tourney_unique = 0
+        dup_profit = 0
+        
+        if df is not None:
+            tourney_profit = df.select((pl.col("prize") - pl.col("buy_in")).sum()).item()
+            tourney_height = df.height
+            tourney_unique = df.unique(subset=["tournament_id", "prize", "buy_in"]).height
+            
+            # Duplicates profit
+            dups = df.filter(df["tournament_id"].is_duplicated())
+            dup_profit = dups.select((pl.col("prize") - pl.col("buy_in")).sum()).item()
+            
+        return {
+            "total_hands": df_hands.height,
+            "breakdown": breakdown,
+            "tourney_profit": tourney_profit,
+            "tourney_height": tourney_height,
+            "tourney_unique": tourney_unique,
+            "dup_profit": dup_profit
+        }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+# trigger 2
+
+
+

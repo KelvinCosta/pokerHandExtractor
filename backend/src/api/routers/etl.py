@@ -96,7 +96,7 @@ async def upload_and_process(
 
     
     # 2.1 Checar Versão do ETL e resetar Silver se necessário
-    ETL_VERSION = "v4.01"
+    ETL_VERSION = "v4.02"
     from src.core.storage import get_s3_client
     s3 = get_s3_client()
     try:
@@ -114,6 +114,14 @@ async def upload_and_process(
         # Limpa o tracking local para processar tudo de novo
         if processed_log_path.exists():
             processed_log_path.unlink()
+        
+        hands_path = silver_dir / "hands.parquet"
+        if hands_path.exists():
+            hands_path.unlink()
+            
+        if tournaments_path.exists():
+            tournaments_path.unlink()
+            
         s3.put_object(Bucket=silver_bucket, Key=f"{user_id}/etl_version.txt", Body=ETL_VERSION.encode('utf-8'))
     
     repo = JsonProcessedHandsRepository(processed_log_path)
