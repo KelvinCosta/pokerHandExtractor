@@ -199,9 +199,19 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
         # Para simplificar agora, se pediu torneio, mandamos os sumários
         exprs = []
         if "Spin & Gold" in filters.game_types:
-            exprs.append(pl.col("source_file").str.starts_with("SG"))
+            exprs.append(pl.col("source_file").str.to_lowercase().str.contains("spin&gold"))
+        if "Mystery Battle Royale" in filters.game_types:
+            exprs.append(pl.col("source_file").str.to_lowercase().str.contains("mystery battle royale") | pl.col("source_file").str.to_lowercase().str.contains("mbr"))
         if "Tournaments" in filters.game_types:
-            exprs.append(pl.col("source_file").str.starts_with("TM"))
+            exprs.append(
+                (pl.col("source_file").str.to_lowercase().str.contains("tournament") |
+                 pl.col("source_file").str.to_lowercase().str.contains("bounty") |
+                 pl.col("source_file").str.to_lowercase().str.contains("freeroll") |
+                 pl.col("source_file").str.to_lowercase().str.contains("step")) &
+                ~pl.col("source_file").str.to_lowercase().str.contains("spin&gold") &
+                ~pl.col("source_file").str.to_lowercase().str.contains("mystery battle royale") &
+                ~pl.col("source_file").str.to_lowercase().str.contains("mbr")
+            )
             
         if exprs:
             combined_expr = exprs[0]
