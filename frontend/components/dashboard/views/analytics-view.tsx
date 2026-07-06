@@ -5,11 +5,7 @@ import type { DashboardFilters } from "@/lib/api.types"
 
 import { cn } from "@/lib/utils"
 import {
-  analyticsKpis,
-  biggestRivals as biggestRivalsMock,
   currency,
-  evBarSeries,
-  topLeaks,
 } from "@/lib/poker-data"
 import {
   ArrowDownRight,
@@ -413,7 +409,7 @@ export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
       delta: analytics.red_line_profit >= 0 ? "Aggressive" : "Passive",
       hint: "Profit won before SD",
     }
-  ] : analyticsKpis;
+  ] : [];
 
   return (
     <div className="flex flex-col gap-5">
@@ -438,7 +434,7 @@ export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
         {/* TODO: Implementar Machine Learning de Leaks vs GTO Benchmark
         <TopLeaksTable />
         */}
-        <BiggestRivals rivals={liveRivals || biggestRivalsMock} />
+        <BiggestRivals rivals={liveRivals || []} />
       </section>
 
     </div>

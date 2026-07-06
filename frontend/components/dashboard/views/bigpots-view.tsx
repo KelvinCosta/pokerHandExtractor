@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { bigHands, currency, riverDecisions } from "@/lib/poker-data"
+import { bigHands, currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 
 const suitColor = (card: string) =>
@@ -38,13 +38,10 @@ function Cards({ str }: { str: string }) {
 
 export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
   const { bigPots, loading, error } = useDashboard(filters ?? {})
-  const maxEv = Math.max(...riverDecisions.map((d) => Math.abs(d.evPerBB)))
-  
-  const displayHands = bigPots || []
-
   return (
     <div className="flex flex-col gap-4">
-      <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <section className="flex flex-col gap-4">
+        {/* TODO: Reabilitar quando a IA do Milestone 6 conseguir calcular o EV das ações do River
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">River Decision EV</h2>
           <p className="mb-4 text-xs text-muted-foreground">Expected value per big blind by action type</p>
@@ -83,8 +80,9 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
             })}
           </ul>
         </div>
+        */}
 
-        <div className="rounded-lg border border-border bg-card xl:col-span-2">
+        <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
               <h2 className="text-sm font-semibold">Big Pot Audit</h2>

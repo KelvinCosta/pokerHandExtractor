@@ -16,9 +16,6 @@ import {
 import { KpiCard } from "@/components/dashboard/kpi-card"
 import {
   currency,
-  healthKpis,
-  profitSeries,
-  stakeBreakdown as stakeBreakdownMock,
 } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { useDashboard } from "@/hooks/useDashboard"
@@ -124,13 +121,12 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
 
 export function OverviewView({ filters }: { filters?: DashboardFilters }) {
   const { health, preflop, profitTrend, stakeBreakdown: liveStakeBreakdown, loading, error } = useDashboard(filters ?? {})
-  const maxProfit = Math.max(...(liveStakeBreakdown?.length ? liveStakeBreakdown : stakeBreakdownMock).map((s) => s.profit))
+  const displayStakeBreakdown = liveStakeBreakdown || []
+  const maxProfit = displayStakeBreakdown.length > 0 ? Math.max(...displayStakeBreakdown.map((s) => s.profit)) : 1
 
   // Build live KPI cards when data is available, else fall back to mock
   const liveKpis = buildLiveKpis(health, preflop)
-  const displayKpis = liveKpis
-    ? [...liveKpis, ...healthKpis.slice(liveKpis.length)]   // live first, mock fills the rest
-    : healthKpis
+  const displayKpis = liveKpis || []
 
   // Map live profitTrend or fall back to mock
   const displayProfitData = profitTrend && profitTrend.length > 0
@@ -138,7 +134,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
         time: pt.date, // Use the full timestamp so each hand is a step in the area chart
         profit: pt.cumulative_profit,
       }))
-    : profitSeries
+    : []
 
   // Determinar o pico do gráfico atual (usando valor absoluto para pegar picos negativos tb)
   const chartMaxProfit = Math.max(
@@ -265,7 +261,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
           <h2 className="text-sm font-semibold">Profit by Stake</h2>
           <p className="mb-4 text-xs text-muted-foreground">Where the edge is coming from</p>
           <ul className="flex flex-col gap-3">
-            {(liveStakeBreakdown && liveStakeBreakdown.length > 0 ? liveStakeBreakdown : stakeBreakdownMock).map((s) => (
+            {displayStakeBreakdown.map((s) => (
               <li key={s.stake}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className="font-mono font-medium">{s.stake}</span>

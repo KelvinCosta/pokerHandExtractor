@@ -13,7 +13,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { MetricGauge } from "@/components/dashboard/metric-gauge"
-import { actionDistribution as actionDistributionMock, postflopMetrics, preflopMetrics } from "@/lib/poker-data"
+
 
 const distConfig = {
   fold: { label: "Fold", color: "var(--chart-4)" },
@@ -28,12 +28,12 @@ export function EnginesView({ filters }: { filters?: DashboardFilters }) {
     { key: "vpip", label: "VPIP", value: preflop.vpip_pct, unit: "%", trend: "up", delta: "Optimal", hint: "Voluntarily put $ in pot" },
     { key: "pfr", label: "PFR", value: preflop.pfr_pct, unit: "%", trend: "up", delta: "Good", hint: "Pre-flop raise" },
     { key: "three_bet", label: "3-Bet", value: preflop.three_bet_pct, unit: "%", trend: "up", delta: "Aggressive", hint: "Re-raise before flop" },
-  ] : preflopMetrics;
+  ] : [];
 
   const livePostflopMetrics = postflop ? [
     { key: "cbet_flop", label: "C-Bet Flop", value: postflop.cbet_flop_pct, unit: "%", trend: "up", delta: "Aggressive", hint: "Bet flop as pre-flop raiser" },
     { key: "fold_cbet_flop", label: "Fold to Flop C-Bet", value: postflop.fold_to_cbet_flop_pct, unit: "%", trend: "down", delta: "Sticky", hint: "Fold when facing C-Bet" }
-  ] : postflopMetrics;
+  ] : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -71,7 +71,7 @@ export function EnginesView({ filters }: { filters?: DashboardFilters }) {
           How the hero distributes fold / call / raise across each betting round
         </p>
         <ChartContainer config={distConfig} className="h-[260px] w-full">
-          <BarChart data={actionDistribution || actionDistributionMock} margin={{ left: 4, right: 8, top: 8 }}>
+          <BarChart data={actionDistribution || []} margin={{ left: -16, right: 8, top: 16 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="street" tickLine={false} axisLine={false} tickMargin={8} className="font-mono text-[10px]" />
             <YAxis
