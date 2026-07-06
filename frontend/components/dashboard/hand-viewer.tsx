@@ -170,7 +170,7 @@ function PokerTable({ data, isCash }: { data: HandDetails; isCash: boolean }) {
 }
 
 // ─── Action Log ───────────────────────────────────────────────────────────────
-function ActionLog({ data }: { data: HandDetails }) {
+function ActionLog({ data, isCash }: { data: HandDetails; isCash: boolean }) {
   if (!data.actions?.length) {
     return <p className="py-6 text-center text-xs text-muted-foreground">No action data available.</p>
   }
