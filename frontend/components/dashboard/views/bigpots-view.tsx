@@ -116,7 +116,7 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                     Pot (BB) <SortIcon column="pot_in_bb" />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none pr-4 text-right hover:text-primary" onClick={() => handleSort("net_profit")}>
-                    Result (USD) <SortIcon column="net_profit" />
+                    Result <SortIcon column="net_profit" />
                   </TableHead>
                 </TableRow>
               </TableHeader>
