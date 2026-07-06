@@ -59,6 +59,9 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
             cond = pl.col("hand_id").str.to_lowercase().str.contains(sq, literal=True) | pl.col("player").str.to_lowercase().str.contains(sq, literal=True)
             if "source_file" in df.columns:
                 cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq, literal=True)
+            if "game_info" in df.columns:
+                cond = cond | pl.col("game_info").str.to_lowercase().str.contains(sq, literal=True)
+
             
             # Encontra os hand_ids que tem match com a busca
             matching_hands = df.filter(cond).select("hand_id").unique()
@@ -69,7 +72,10 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
             cond = pl.col("hand_id").str.to_lowercase().str.contains(sq, literal=True)
             if "source_file" in df.columns:
                 cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq, literal=True)
+            if "game_info" in df.columns:
+                cond = cond | pl.col("game_info").str.to_lowercase().str.contains(sq, literal=True)
             df = df.filter(cond)
+
             
     # Filtro Dinâmico de Tipo de Jogo
     if filters.game_types:

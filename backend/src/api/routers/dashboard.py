@@ -638,12 +638,26 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
 
 
 
-@router.get("/debug_s3")
-def debug_s3():
+@router.get("/debug_tournaments_dup")
+def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a"):
     try:
-        import os
-        from src.core.storage import get_s3_client
-        s3 = get_s3_client()
+        from src.api.dependencies import _load_user_datalake
+        cache = _load_user_datalake(user_id, "poker-silver")
+        df = cache.get("df_tournaments", None)
+        if df is None:
+            return {"error": "No tournaments df"}
+        
+        dup_count = df.height - df.unique(subset=["tournament_id"]).height
+        
+        return {
+            "height": df.height,
+            "unique": df.unique(subset=["tournament_id"]).height,
+            "dup_count": dup_count,
+            "sample_ids": df["tournament_id"].to_list()[:10]
+        }
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
         silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
         response = s3.list_objects_v2(Bucket=silver_bucket)
         if "Contents" in response:

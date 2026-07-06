@@ -91,6 +91,10 @@ async def upload_and_process(
     processed_log_path = silver_dir / "processed_files.json"
     download_file_from_s3(silver_bucket, f"{user_id}/processed_files.json", str(processed_log_path))
     
+    tournaments_path = silver_dir / "tournaments.parquet"
+    download_file_from_s3(silver_bucket, f"{user_id}/tournaments.parquet", str(tournaments_path))
+
+    
     # 2.1 Checar Versão do ETL e resetar Silver se necessário
     ETL_VERSION = "v4"
     from src.core.storage import get_s3_client

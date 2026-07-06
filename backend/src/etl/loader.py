@@ -238,7 +238,7 @@ class HandLoader:
             # Combinar e remover duplicatas pelo tournament_id
             df = pl.concat([existing_df, new_df]).unique(subset=["tournament_id"], keep="last")
         else:
-            df = new_df
+            df = new_df.unique(subset=["tournament_id"], keep="last")
             
         df.write_parquet(file_path, compression="zstd")
         print(f"✅ Torneios atualizados: {len(summaries)} novos sumários salvos no Datalake (Total: {df.height})")
