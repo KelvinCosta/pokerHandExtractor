@@ -56,9 +56,9 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
     if filters.search_query:
         sq = filters.search_query.lower()
         if "player" in df.columns:
-            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq) | pl.col("player").str.to_lowercase().str.contains(sq)
+            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq, literal=True) | pl.col("player").str.to_lowercase().str.contains(sq, literal=True)
             if "source_file" in df.columns:
-                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq)
+                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq, literal=True)
             
             # Encontra os hand_ids que tem match com a busca
             matching_hands = df.filter(cond).select("hand_id").unique()
@@ -66,9 +66,9 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
             # Mantém todas as ações dessas mãos intactas
             df = df.join(matching_hands, on="hand_id", how="inner")
         else:
-            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq)
+            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq, literal=True)
             if "source_file" in df.columns:
-                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq)
+                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq, literal=True)
             df = df.filter(cond)
             
     # Filtro Dinâmico de Tipo de Jogo
@@ -234,7 +234,7 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
     if filters.search_query:
         sq = filters.search_query.lower()
         if "source_file" in df_t.columns:
-            df_t = df_t.filter(pl.col("source_file").str.to_lowercase().str.contains(sq))
+            df_t = df_t.filter(pl.col("source_file").str.to_lowercase().str.contains(sq, literal=True))
 
     return df_t
 
