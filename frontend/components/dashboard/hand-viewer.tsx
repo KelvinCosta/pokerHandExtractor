@@ -95,6 +95,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
     if (!data) return null
 
     const heroCards = data.player_cards?.find(p => p.player === data.player_nickname)?.cards?.split(" ") || []
+    const villainsWithCards = data.player_cards?.filter(p => p.player !== data.player_nickname && p.cards) || []
 
     return (
       <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -136,14 +137,31 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
             </div>
           </div>
 
-          <div className="z-10 flex flex-col items-center">
-            <Badge variant="secondary" className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
-              Hero ({data.player_nickname})
-            </Badge>
-            <div className="flex gap-2">
-              <GraphicalCard card={heroCards[0]} hidden={!heroCards[0]} />
-              <GraphicalCard card={heroCards[1]} hidden={!heroCards[1]} />
+          <div className="z-10 flex flex-wrap items-center justify-center gap-8">
+            <div className="flex flex-col items-center">
+              <Badge variant="secondary" className="mb-3 bg-primary/20 text-primary hover:bg-primary/30">
+                Hero ({data.player_nickname})
+              </Badge>
+              <div className="flex gap-2">
+                <GraphicalCard card={heroCards[0]} hidden={!heroCards[0]} />
+                <GraphicalCard card={heroCards[1]} hidden={!heroCards[1]} />
+              </div>
             </div>
+
+            {villainsWithCards.map((villain, idx) => {
+              const vCards = villain.cards.split(" ")
+              return (
+                <div key={idx} className="flex flex-col items-center opacity-90">
+                  <Badge variant="outline" className="mb-3 border-loss/30 text-loss hover:bg-loss/10 bg-loss/5">
+                    {villain.player}
+                  </Badge>
+                  <div className="flex gap-2">
+                    <GraphicalCard card={vCards[0]} hidden={!vCards[0]} />
+                    <GraphicalCard card={vCards[1]} hidden={!vCards[1]} />
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
 
