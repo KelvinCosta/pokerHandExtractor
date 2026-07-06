@@ -366,3 +366,14 @@ export async function apiUpload(
 
   return res.json()
 }
+
+export async function fetchRanges(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<any> {
+  return apiPost<DashboardFilters, any>(
+    "/api/dashboard/ranges",
+    filters,
+    signal,
+  )
+}

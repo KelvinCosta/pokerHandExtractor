@@ -7,6 +7,7 @@ import { Topbar } from "@/components/dashboard/topbar"
 import { FilterBar } from "@/components/dashboard/filter-bar"
 import { OverviewView } from "@/components/dashboard/views/overview-view"
 import { AnalyticsView } from "@/components/dashboard/views/analytics-view"
+import { RangesView } from "@/components/dashboard/views/ranges-view"
 import { EnginesView } from "@/components/dashboard/views/engines-view"
 import { VillainsView } from "@/components/dashboard/views/villains-view"
 import { TournamentsView } from "@/components/dashboard/views/tournaments-view"
@@ -22,6 +23,7 @@ import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users, Waves 
 const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolean }> = {
   overview:   { title: "General Health",           subtitle: "Global KPIs, profit trend & edge distribution", hasFilters: true  },
   analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
+  ranges:     { title: "Preflop Ranges",           subtitle: "VPIP Matrix and Hand Frequencies",             hasFilters: true  },
   engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
   villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: true },
   tournaments:{ title: "Tournaments",             subtitle: "Tournament summaries, ROI & results",          hasFilters: true },
@@ -122,6 +124,7 @@ export default function Page() {
         <main className="flex-1 overflow-y-auto p-4 scrollbar-thin md:p-6">
           {view === "overview"   && <OverviewView filters={filters} />}
           {view === "analytics"  && <AnalyticsView filters={filters} />}
+          {view === "ranges"     && <RangesView filters={filters} />}
           {view === "engines"    && <EnginesView filters={filters} />}
           {view === "villains"   && <VillainsView filters={filters} setFilters={setFilters} setView={setView} />}
           {view === "tournaments"&& <TournamentsView filters={filters} setFilters={setFilters} setView={setView} />}

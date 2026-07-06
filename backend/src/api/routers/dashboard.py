@@ -679,6 +679,88 @@ def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a")
     except Exception as e:
         import traceback
         return {"error": str(e), "trace": traceback.format_exc()}
+
+
+@router.post("/ranges")
+def get_ranges(filters: DashboardFilters, user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a"):
+    """
+    Returns 13x13 matrix data for the selected position and player.
+    """
+    try:
+        from src.api.dependencies import _load_user_datalake
+        import polars as pl
+        import re
+
+        cache = _load_user_datalake(user_id, "poker-silver")
+        df_hands = cache.get("df_hands")
+        if df_hands is None or df_hands.height == 0:
+            return {"matrix": {}}
+
+        # Aplicar filtros (exceto posição, que pode vir separada no payload ou usar hero_position)
+        if filters.date_from:
+            df_hands = df_hands.filter(pl.col("date") >= filters.date_from)
+        if filters.date_to:
+            df_hands = df_hands.filter(pl.col("date") <= filters.date_to)
+        if filters.game_types:
+            df_hands = df_hands.filter(pl.col("game_type").is_in(filters.game_types))
+        
+        # Opcional: filtro por posição
+        position = "ALL" # Placeholder caso a gente queira permitir "ALL" ou passar num DTO
+        # Se quiser ler do body, podemos adicionar 'position: str' no DashboardFilters depois
+        
+        # Extrai os dados das hole_cards (se a coluna existir no Parquet v4.03)
+        if "hero_hole_cards" not in df_hands.columns:
+            return {"error": "Por favor, clique em 'Reprocessar Datalake Automaticamente' na aba de Importação para calcular as Ranges.", "matrix": {}}
+
+        # Pega as hole cards e filtra quem tem VPIP = True
+        df_played = df_hands.filter(pl.col("hero_hole_cards").is_not_null() & (pl.col("hero_hole_cards") != ""))
+        
+        # Para matriz, precisamos: Total dealt (quantas vezes recebeu) e Total played (quantas vezes jogou)
+        # Vamos retornar só as absolutas por enquanto, ou VPIP % (played / dealt)
+        # Simplificação inicial: contagem absoluta de vezes que recebeu a mão
+        def normalize_cards(cards_str):
+            if not cards_str: return None
+            cards = re.findall(r"([AKQJT98765432][shdc])", str(cards_str))
+            if len(cards) != 2: return None
+            
+            ranks = "AKQJT98765432"
+            r1, s1 = cards[0][0], cards[0][1]
+            r2, s2 = cards[1][0], cards[1][1]
+            
+            try:
+                if ranks.index(r1) > ranks.index(r2):
+                    r1, r2 = r2, r1
+                    s1, s2 = s2, s1
+            except:
+                return None
+                
+            if r1 == r2: return f"{r1}{r2}"
+            elif s1 == s2: return f"{r1}{r2}s"
+            else: return f"{r1}{r2}o"
+
+        # Aplicar a normalização e contar
+        # (Idealmente isso seria feito em Rust/Polars nativo, mas para MVP usamos map_elements)
+        df_played = df_played.with_columns(
+            pl.col("hero_hole_cards").map_elements(normalize_cards, return_dtype=pl.String).alias("range_hand")
+        )
+        
+        df_valid = df_played.filter(pl.col("range_hand").is_not_null())
+        
+        # Calcula Totais Dealt
+        dealt_counts = df_valid.group_by(["hero_position", "range_hand"]).len().to_dicts()
+        
+        # Calcula Played (VPIP == True)
+        played_counts = df_valid.filter(pl.col("hero_vpip") == True).group_by(["hero_position", "range_hand"]).len().to_dicts()
+        
+        return {
+            "dealt": dealt_counts,
+            "played": played_counts
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
 # trigger 3
 
 

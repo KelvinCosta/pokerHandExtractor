@@ -14,7 +14,7 @@ import {
   BrainCircuit,
 } from "lucide-react"
 
-export type ViewId = "overview" | "analytics" | "engines" | "villains" | "tournaments" | "bigpots" | "population" | "audit" | "import"
+export type ViewId = "overview" | "analytics" | "ranges" | "engines" | "villains" | "tournaments" | "bigpots" | "population" | "audit" | "import"
 
 const nav: {
   group: string
@@ -25,6 +25,7 @@ const nav: {
     items: [
       { id: "overview",   label: "General Health",         icon: Activity  },
       { id: "analytics",  label: "Analytics Dashboard",    icon: BarChart2, badge: "NEW" },
+      { id: "ranges",     label: "Preflop Ranges",         icon: Radar, badge: "NEW" },
       { id: "engines",    label: "Pre / Post-Flop Engines", icon: Layers    },
       { id: "villains",   label: "Villain Mapping",         icon: Users     },
       { id: "tournaments", label: "Tournaments",           icon: Target    },
