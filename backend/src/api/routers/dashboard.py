@@ -339,11 +339,11 @@ async def get_big_pots(filters: DashboardFilters, current_user: User = Depends(g
         .agg(
             pl.col("total_pot_final").first().alias("pot_size_usd"),
             pl.col("hero_net_profit").first().alias("net_profit"),
-            pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
+            pl.col("stake_level").first().alias("bb_size"),
             pl.col("date").first().alias("timestamp")
         )
         .with_columns(
-            (pl.col("pot_size_usd") / pl.col("bb_size")).alias("pot_in_bb")
+            (pl.col("pot_size_usd") / pl.col("bb_size").fill_null(0.02)).alias("pot_in_bb")
         )
         .filter(pl.col("pot_in_bb") >= 40.0)
         .sort("pot_in_bb", descending=True)
