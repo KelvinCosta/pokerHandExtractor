@@ -139,15 +139,23 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
                     pl.col(nome_coluna_data).str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False).dt.date().alias("data_limpa")
                 )
                 
-            # TODO: Temporário - Remover Torneios até o Milestone 6 (ETL tratar Fichas vs Buy-in)
-            if "game_type" in df_hands.columns:
-                df_hands = df_hands.filter(
-                    ~pl.col("game_type").is_in(["Tournament", "Spin & Gold", "Mystery Battle Royale"])
-                )
+            # TODO: Filtro removido (Milestone 6) - O ETL agora separa hero_net_profit_usd de hero_net_chips corretamente
+            # if "game_type" in df_hands.columns:
+            #     df_hands = df_hands.filter(
+            #         ~pl.col("game_type").is_in(["Tournament", "Spin & Gold", "Mystery Battle Royale"])
+            #     )
 
             df_actions = df_hands.explode("actions").unnest("actions")
             
-            cache_entry = {"df_hands": df_hands, "df_actions": df_actions, "timestamp": time.time()}
+            # Carregar sumários de torneios se existirem
+            df_tournaments = pl.DataFrame()
+            try:
+                s3_tournaments_path = f"s3://{silver_bucket}/{user_id}/tournaments.parquet"
+                df_tournaments = pl.scan_parquet(s3_tournaments_path, storage_options=storage_options).collect()
+            except Exception:
+                pass # Se não houver arquivo de torneios, segue normalmente com df vazio
+            
+            cache_entry = {"df_hands": df_hands, "df_actions": df_actions, "df_tournaments": df_tournaments, "timestamp": time.time()}
             _DATALAKE_CACHE[user_id] = cache_entry
             return cache_entry
         except Exception as e:
@@ -164,3 +172,21 @@ def get_filtered_hands_df(filters: DashboardFilters, user: User) -> pl.DataFrame
     silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
     cache_entry = _load_user_datalake(user.id, silver_bucket)
     return _apply_filters(cache_entry["df_hands"], filters)
+
+def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.DataFrame:
+    """Retorna os Sumários de Torneios filtrados (usado para compor o Profit total)"""
+    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+    cache_entry = _load_user_datalake(user.id, silver_bucket)
+    df_t = cache_entry.get("df_tournaments", pl.DataFrame())
+    
+    if df_t.height == 0:
+        return df_t
+        
+    # (Opcional) Poderíamos aplicar filtros de data aqui baseando-nos na data do torneio se ela estivesse salva
+    # Como não temos certeza se `date` ou `data_limpa` existe em tournaments.parquet, retornamos tudo ou podemos filtrar
+    # Pela especificação atual de summary_parser, os summaries não possuem data, eles possuem source_file e id.
+    # Assumiremos que o filtro global de Dashboard serve principalmente para as mãos. Para o Profit Real
+    # podemos deixar os torneios entrarem, ou precisaríamos vincular o tournament_id a uma data de hand_id.
+    
+    return df_t
+

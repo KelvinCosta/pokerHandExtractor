@@ -66,32 +66,41 @@ async def get_hand_details(hand_id: str, current_user: User = Depends(get_curren
 
 @router.post("/health")
 async def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    from src.api.dependencies import get_filtered_tournaments_df
+    
     df = get_filtered_hands_df(filters, current_user)
+    
+    # Se não houver mãos, ainda podemos ter jogado apenas torneios cujo summary foi parseado?
+    # Para simplificar, consideramos o dashboard atrelado primariamente às mãos.
     if df.height == 0:
         return {
             "total_hands": 0,
             "profit_usd": 0.0,
             "profit_bb": 0.0,
-            "bb_100": 0.0
+            "bb_100": 0.0,
+            "std_dev_bb100": 0.0,
+            "total_sessions": 0
         }
         
-    hero = filters.hero_name
     total_maos = df.height
     
-    lucro_por_mao = df.with_columns(
-        (pl.col("hero_net_profit") / pl.col("stake_level")).alias("lucro_bb")
-    )
-    
-    lucro_total = lucro_por_mao.select(pl.col("hero_net_profit").sum()).item()
-    lucro_total_bb = lucro_por_mao.select(pl.col("lucro_bb").sum()).item()
+    # Agora as colunas hero_net_profit_usd e hero_net_profit_bb já vêm do ETL prontas!
+    lucro_total = df.select(pl.col("hero_net_profit_usd").sum()).item()
+    lucro_total_bb = df.select(pl.col("hero_net_profit_bb").sum()).item()
     
     val_lucro_total = float(lucro_total) if lucro_total is not None else 0.0
     val_lucro_bb = float(lucro_total_bb) if lucro_total_bb is not None else 0.0
     
+    # Adicionar lucros reais de Torneio (Prize - Buy-in) provenientes dos sumários
+    df_t = get_filtered_tournaments_df(filters, current_user)
+    if df_t.height > 0:
+        tourney_profit = df_t.select((pl.col("prize") - pl.col("buy_in")).sum()).item()
+        val_lucro_total += float(tourney_profit) if tourney_profit is not None else 0.0
+    
     bb100 = (val_lucro_bb / total_maos) * 100 if total_maos > 0 else 0.0
     
-    # Standard Deviation (bb/100) = std(lucro_bb_por_mao) * sqrt(100)
-    std_dev_hand = lucro_por_mao.select(pl.col("lucro_bb").std()).item()
+    # Standard Deviation (bb/100) = std(hero_net_profit_bb) * sqrt(100)
+    std_dev_hand = df.select(pl.col("hero_net_profit_bb").std()).item()
     std_dev_bb100 = float(std_dev_hand * 10) if std_dev_hand is not None else 0.0
     
     # Sessions (Dias Jogados)
@@ -112,20 +121,14 @@ async def get_stake_breakdown(filters: DashboardFilters, current_user: User = De
     if df.height == 0:
         return []
 
-    # Se não tiver a coluna, retorna fallback vazio
     if "stake_level" not in df.columns:
         return []
-
-    # Criar a coluna de profit em big blinds antes de agregar
-    df = df.with_columns(
-        (pl.col("hero_net_profit") / pl.col("stake_level")).alias("hero_net_profit_bb")
-    )
 
     breakdown = (
         df.group_by("stake_level")
         .agg(
             pl.col("hand_id").count().alias("hands"),
-            pl.col("hero_net_profit").sum().alias("profit"),
+            pl.col("hero_net_profit_usd").sum().alias("profit"),
             pl.col("hero_net_profit_bb").sum().alias("profit_bb")
         )
         .with_columns(
@@ -186,30 +189,62 @@ async def get_preflop_chart(filters: DashboardFilters, current_user: User = Depe
 
 @router.post("/profit-trend")
 async def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    from src.api.dependencies import get_filtered_tournaments_df
+    
     df = get_filtered_hands_df(filters, current_user)
-    if df.height == 0:
+    df_t = get_filtered_tournaments_df(filters, current_user)
+    
+    if df.height == 0 and df_t.height == 0:
         return []
         
-    unique_hands = (
-        df.sort("data_limpa" if "data_limpa" in df.columns else "date")
+    timeline_events = []
+    
+    if df.height > 0:
+        # Usa data_limpa (Date) para ordenação geral e date (String/Time) para tooltip
+        sort_col = "data_limpa" if "data_limpa" in df.columns else "date"
+        hands_events = df.select([
+            pl.col(sort_col).cast(pl.Utf8).alias("sort_date"),
+            pl.col("date").cast(pl.Utf8).alias("display_date"),
+            pl.col("hero_net_profit_usd").alias("profit_event")
+        ])
+        timeline_events.append(hands_events)
+        
+    if df_t.height > 0:
+        # Tentativa de extrair a data do nome do arquivo (ex: GG20260419...)
+        tourneys_events = df_t.select([
+            # Fallback de ordenação: tenta extrair do arquivo, se falhar joga pra '9999-99-99'
+            pl.when(pl.col("source_file").str.contains(r"\d{8}"))
+              .then(pl.col("source_file").str.extract(r"(\d{8})").str.replace(r"(\d{4})(\d{2})(\d{2})", r"${1}-${2}-${3}"))
+              .otherwise(pl.lit("9999-12-31")).alias("sort_date"),
+              
+            pl.col("source_file").alias("display_date"),
+            (pl.col("prize") - pl.col("buy_in")).alias("profit_event")
+        ])
+        timeline_events.append(tourneys_events)
+        
+    # Combina tudo em um único dataframe de eventos
+    combined_df = pl.concat(timeline_events, how="vertical")
+    
+    # Ordena cronologicamente e calcula o cumulativo
+    unique_events = (
+        combined_df.sort("sort_date")
           .with_columns(
-              pl.col("hero_net_profit").cum_sum().alias("cumulative_profit")
+              pl.col("profit_event").cum_sum().alias("cumulative_profit")
           )
     )
     
     # Downsample para evitar gargalo de renderização no SVG (Recharts)
     max_points = 150
-    if unique_hands.height > max_points:
-        step = unique_hands.height // max_points
-        # Pegar 1 a cada N pontos, ou se for a última linha (para o lucro final bater exato)
-        unique_hands = unique_hands.filter(
+    if unique_events.height > max_points:
+        step = unique_events.height // max_points
+        unique_events = unique_events.filter(
             (pl.int_range(0, pl.len()) % step == 0) | (pl.int_range(0, pl.len()) == pl.len() - 1)
         )
     
-    return unique_hands.select([
-        "date",
+    return unique_events.select([
+        pl.col("display_date").alias("date"),
         "cumulative_profit",
-        "hero_net_profit"
+        pl.col("profit_event").alias("hero_net_profit")
     ]).to_dicts()
 
 @router.post("/analytics")

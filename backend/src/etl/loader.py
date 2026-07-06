@@ -38,9 +38,16 @@ class HandLoader:
             dict_batch = []
             for hand in batch:
                 # 1. Calculando Lucro Líquido do Hero
+                game_type = self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id)
+                is_cash = game_type in ("Rush & Cash", "Regular Cash")
+                
                 hero_collected = sum(a.amount for a in hand.actions if a.player == hand.player_nickname and a.action_type == ActionType.COLLECT)
                 hero_invested = sum(a.invested_amount for a in hand.actions if a.player == hand.player_nickname and a.action_type not in (ActionType.COLLECT, ActionType.FOLD))
-                hero_net_profit = round(hero_collected - hero_invested, 2)
+                raw_profit = round(hero_collected - hero_invested, 2)
+                
+                hero_net_profit_usd = raw_profit if is_cash else 0.0
+                hero_net_chips = raw_profit if not is_cash else 0.0
+                hero_net_profit_bb = round(raw_profit / hand.stake_level, 2) if hand.stake_level and hand.stake_level > 0 else 0.0
                 
                 # 2. Extraindo Posição e Flags Pré-Flop
                 preflop_actions = [a for a in hand.actions if (hasattr(a.street, "name") and a.street.name == "PRE_FLOP" or str(a.street) == "PRE_FLOP")]
@@ -83,11 +90,13 @@ class HandLoader:
                     "date": hand.timestamp,
                     "source_file": hand.source_file,
                     "game_info": hand.game_info,
-                    "game_type": self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id),
+                    "game_type": game_type,
                     "stake_level": hand.stake_level,
                     "platform": hand.platform,
                     "player_nickname": hand.player_nickname,
-                    "hero_net_profit": hero_net_profit,
+                    "hero_net_profit_usd": hero_net_profit_usd,
+                    "hero_net_chips": hero_net_chips,
+                    "hero_net_profit_bb": hero_net_profit_bb,
                     "hero_position": hero_position,
                     "hero_vpip": hero_vpip,
                     "hero_pfr": hero_pfr,
