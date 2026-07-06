@@ -219,9 +219,9 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
                 tickMargin={8}
                 width={48}
                 tickFormatter={(v) => {
-                  // Se os valores forem pequenos (ex: 12 USD), não divide por 1000.
-                  if (chartMaxProfit < 100) return `$${v.toFixed(2)}`
-                  return `$${(v / 1000).toFixed(0)}k`
+                  if (v === 0) return "$0"
+                  if (chartMaxProfit < 1000) return `$${v.toFixed(0)}`
+                  return `$${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
                 }}
                 className="font-mono text-[10px]"
               />
