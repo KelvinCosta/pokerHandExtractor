@@ -217,10 +217,15 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.core.storage import get_s3_client, download_file_from_s3, upload_local_file_to_s3
     from src.etl.loader import HandLoader
     from src.etl.repository import DatalakeRepository
-    from src.parser import summary_parser
+    from src.parser.summary_parser import SummaryParser
     from extractor import process_stream
-    from src.parser.tokenizer import tokenizer, initial_state
+    from src.parser.tokenizer import TokenizerFactory
+    from src.fsm.states import InitState
     import shutil
+    
+    tokenizer = TokenizerFactory.create("ggpoker")
+    initial_state = InitState()
+    summary_parser = SummaryParser()
     
     s3 = get_s3_client()
     bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
