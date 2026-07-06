@@ -284,7 +284,7 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     
     for file_path in new_txt_files:
         if summary_parser.is_summary_file(str(file_path)):
-            summary = summary_parser.parse(str(file_path))
+            summary = summary_parser.parse_file(str(file_path))
             if summary:
                 summaries_to_save.append(summary)
         else:
