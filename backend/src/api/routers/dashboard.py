@@ -620,14 +620,16 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
     if df_t.height == 0:
         return []
         
-    sort_col = "date" if "date" in df_t.columns else "source_file"
-    
     df_t = df_t.with_columns([
+        pl.when(pl.col("source_file").str.contains(r"\d{8}"))
+          .then(pl.col("source_file").str.extract(r"(\d{8})").str.replace(r"(\d{4})(\d{2})(\d{2})", r"${1}-${2}-${3}"))
+          .otherwise(pl.lit(None, dtype=pl.String)).alias("date"),
+        pl.lit(0).alias("rebuys"),
         (pl.col("prize") - pl.col("buy_in")).alias("profit"),
         pl.when(pl.col("buy_in") > 0)
           .then(((pl.col("prize") - pl.col("buy_in")) / pl.col("buy_in")) * 100)
           .otherwise(0.0).alias("roi")
-    ]).sort(sort_col, descending=True).head(500)
+    ]).sort("date", descending=True, nulls_last=True).head(500)
     
     # If date is not a string, we might need to format it, but usually it's fine.
     # Replace NaN or null in numeric columns to avoid JSON serialization errors
