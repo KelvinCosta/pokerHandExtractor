@@ -101,7 +101,7 @@ const STREET_STYLE: Record<string, string> = {
 const STREET_ORDER = ["PREFLOP", "FLOP", "TURN", "RIVER"]
 
 // ─── Felt Table ───────────────────────────────────────────────────────────────
-function PokerTable({ data }: { data: HandDetails }) {
+function PokerTable({ data, isCash }: { data: HandDetails; isCash: boolean }) {
   const heroCards = data.player_cards?.find(p => p.player === data.player_nickname)?.cards?.split(" ") ?? []
   const villainsWithCards = data.player_cards?.filter(p => p.player !== data.player_nickname && p.cards) ?? []
   const board = data.board_cards ?? []
@@ -162,7 +162,7 @@ function PokerTable({ data }: { data: HandDetails }) {
       <div className="mt-6 z-10 flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-1.5">
         <span className="h-2 w-2 rounded-full bg-amber-400 opacity-80" />
         <span className="font-mono text-xs text-amber-300">
-          Final Pot: <span className="font-bold">{currency(data.total_pot_final)}</span>
+          Final Pot: <span className="font-bold">{isCash ? currency(data.total_pot_final) : Math.round(data.total_pot_final).toLocaleString()}</span>
         </span>
       </div>
     </div>
@@ -231,7 +231,7 @@ function ActionLog({ data }: { data: HandDetails }) {
                     "font-mono text-xs tabular-nums",
                     act.amount > 0 ? "text-zinc-200" : "text-zinc-600",
                   )}>
-                    {act.amount > 0 ? currency(act.amount) : "—"}
+                    {act.amount > 0 ? (isCash ? currency(act.amount) : Math.round(act.amount).toLocaleString()) : "—"}
                   </span>
                 </div>
               )
@@ -323,7 +323,11 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
             </div>
           )}
 
-          {!loading && !error && data && (
+          {!loading && !error && data && (() => {
+            const isWin = (data.hero_net_profit_usd + data.hero_net_chips) > 0
+            const isCash = data.game_type === "Rush & Cash" || data.game_type === "Regular Cash" || data.game_type === "All-In or Fold"
+            
+            return (
             <div className="flex flex-col gap-5 p-5">
 
               {/* ── KPI Strip ─────────────────────────────────────────────── */}
@@ -331,10 +335,10 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                 {[
                   { label: "Date",       value: data.data_limpa },
                   { label: "Game Type",  value: data.game_type },
-                  { label: "Final Pot",  value: currency(data.total_pot_final) },
+                  { label: "Final Pot",  value: isCash ? currency(data.total_pot_final) : Math.round(data.total_pot_final).toLocaleString() },
                   {
                     label: "Hero Result",
-                    value: `${data.hero_net_profit >= 0 ? "+" : ""}${currency(data.hero_net_profit)}`,
+                    value: `${isWin ? "+" : ""}${isCash ? currency(data.hero_net_profit_usd + data.hero_net_chips) : Math.round(data.hero_net_profit_usd + data.hero_net_chips).toLocaleString()}`,
                     highlight: true,
                     win: isWin,
                   },
@@ -361,18 +365,18 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
               </div>
 
               {/* ── Poker Table ───────────────────────────────────────────── */}
-              <PokerTable data={data} />
+              <PokerTable data={data} isCash={isCash} />
 
               {/* ── Action Log ────────────────────────────────────────────── */}
               <div>
                 <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
                   Action History
                 </p>
-                <ActionLog data={data} />
+                <ActionLog data={data} isCash={isCash} />
               </div>
 
             </div>
-          )}
+          )})()}
         </ScrollArea>
       </div>
     </div>

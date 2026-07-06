@@ -109,7 +109,7 @@ class TurnState(BaseStreetState):
     street = Street.TURN
     def process(self, token: Token, context: HandContext) -> Tuple[State, HandContext]:
         if isinstance(token, StreetChangeEvent) and token.street_name == "RIVER":
-            new_context = replace(context, board_cards=context.board_cards + tuple(token.cards))
+            new_context = replace(context, board_cards=tuple(token.cards))
             return RiverState(), new_context
         return super().process(token, context)
 
@@ -117,7 +117,7 @@ class FlopState(BaseStreetState):
     street = Street.FLOP
     def process(self, token: Token, context: HandContext) -> Tuple[State, HandContext]:
         if isinstance(token, StreetChangeEvent) and token.street_name == "TURN":
-            new_context = replace(context, board_cards=context.board_cards + tuple(token.cards))
+            new_context = replace(context, board_cards=tuple(token.cards))
             return TurnState(), new_context
         return super().process(token, context)
 
@@ -125,7 +125,7 @@ class PreFlopState(BaseStreetState):
     street = Street.PRE_FLOP
     def process(self, token: Token, context: HandContext) -> Tuple[State, HandContext]:
         if isinstance(token, StreetChangeEvent) and token.street_name == "FLOP":
-            new_context = replace(context, board_cards=context.board_cards + tuple(token.cards))
+            new_context = replace(context, board_cards=tuple(token.cards))
             return FlopState(), new_context
         return super().process(token, context)
 

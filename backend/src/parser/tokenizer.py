@@ -52,12 +52,12 @@ class GGPokerTokenizer:
         if match_start:
             game_info_str = match_start.group(2).strip()
             stake_level = 0.0
-            # Ex: "Hold'em No Limit ($0.05/$0.10)" ou "$1/$2"
-            stake_match = re.search(r"\$([0-9.]+)/\$\$?([0-9.]+)", game_info_str)
+            # Ex: "Hold'em No Limit ($0.05/$0.10)" ou "$1/$2" ou "(800/1,600(250))"
+            stake_match = re.search(r"\$([0-9,.]+)/\$\$?([0-9,.]+)", game_info_str)
             if not stake_match:
-                stake_match = re.search(r"\$?([0-9.]+)/\$?([0-9.]+)", game_info_str)
+                stake_match = re.search(r"\$?([0-9,.]+)/\$?([0-9,.]+)", game_info_str)
             if stake_match:
-                stake_level = float(stake_match.group(2))
+                stake_level = float(stake_match.group(2).replace(",", ""))
             
             return HandStartEvent(hand_id=match_start.group(1), game_info=game_info_str, timestamp=match_start.group(3), stake_level=stake_level)
 
