@@ -104,12 +104,22 @@ export function ImportView() {
                 <UploadCloud className="size-8 text-muted-foreground" />
                 <div className="text-sm text-muted-foreground">
                   <label htmlFor="file-upload" className="cursor-pointer font-semibold text-primary hover:underline">
-                    Clique aqui
+                    Selecionar Arquivos
                   </label>{" "}
-                  para selecionar arquivos
+                  ou{" "}
+                  <label htmlFor="dir-upload" className="cursor-pointer font-semibold text-primary hover:underline">
+                    Selecionar Pasta
+                  </label>
                 </div>
                 <input
                   id="file-upload"
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <input
+                  id="dir-upload"
                   type="file"
                   multiple
                   /* @ts-ignore - webkitdirectory não está nativamente tipado no React DOM standard mas funciona nos navegadores modernos */
