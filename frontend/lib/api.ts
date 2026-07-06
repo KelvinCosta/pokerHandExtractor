@@ -183,6 +183,21 @@ export async function fetchMonthlyProfit(
 }
 
 /**
+ * POST /api/dashboard/tournaments
+ * Returns a list of tournaments
+ */
+export async function fetchTournamentsList(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<TournamentSummary[]> {
+  return apiPost<DashboardFilters, TournamentSummary[]>(
+    "/api/dashboard/tournaments",
+    filters,
+    signal,
+  )
+}
+
+/**
  * POST /api/dashboard/analytics
  * Returns WWSF, WTSD, W$SD and Red/Blue line profit
  */

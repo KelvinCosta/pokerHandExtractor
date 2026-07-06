@@ -52,20 +52,24 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
         if filters.end_date:
             df = df.filter(pl.col("data_limpa") <= filters.end_date)
             
-    # Filtro de Busca Textual (ID da mão ou Oponentes)
+    # Filtro de Busca Textual (ID da mão ou Oponentes ou Arquivo)
     if filters.search_query:
         sq = filters.search_query.lower()
         if "player" in df.columns:
+            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq) | pl.col("player").str.to_lowercase().str.contains(sq)
+            if "source_file" in df.columns:
+                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq)
+            
             # Encontra os hand_ids que tem match com a busca
-            matching_hands = df.filter(
-                pl.col("hand_id").str.to_lowercase().str.contains(sq) | 
-                pl.col("player").str.to_lowercase().str.contains(sq)
-            ).select("hand_id").unique()
+            matching_hands = df.filter(cond).select("hand_id").unique()
             
             # Mantém todas as ações dessas mãos intactas
             df = df.join(matching_hands, on="hand_id", how="inner")
         else:
-            df = df.filter(pl.col("hand_id").str.to_lowercase().str.contains(sq))
+            cond = pl.col("hand_id").str.to_lowercase().str.contains(sq)
+            if "source_file" in df.columns:
+                cond = cond | pl.col("source_file").str.to_lowercase().str.contains(sq)
+            df = df.filter(cond)
             
     # Filtro Dinâmico de Tipo de Jogo
     if filters.game_types:
@@ -226,6 +230,11 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
             for e in exprs[1:]:
                 combined_expr = combined_expr | e
             df_t = df_t.filter(combined_expr)
+
+    if filters.search_query:
+        sq = filters.search_query.lower()
+        if "source_file" in df_t.columns:
+            df_t = df_t.filter(pl.col("source_file").str.to_lowercase().str.contains(sq))
 
     return df_t
 

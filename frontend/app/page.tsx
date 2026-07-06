@@ -9,6 +9,7 @@ import { OverviewView } from "@/components/dashboard/views/overview-view"
 import { AnalyticsView } from "@/components/dashboard/views/analytics-view"
 import { EnginesView } from "@/components/dashboard/views/engines-view"
 import { VillainsView } from "@/components/dashboard/views/villains-view"
+import { TournamentsView } from "@/components/dashboard/views/tournaments-view"
 import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 import { PopulationView } from "@/components/dashboard/views/population-view"
 import { AuditView } from "@/components/dashboard/views/audit-view"
@@ -23,6 +24,7 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
   analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
   engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
   villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: true },
+  tournaments:{ title: "Tournaments",             subtitle: "Tournament summaries, ROI & results",          hasFilters: true },
   bigpots:    { title: "Hands Database",           subtitle: "Search, filter & review hand histories",       hasFilters: true  },
   population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
   audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
@@ -121,6 +123,7 @@ export default function Page() {
           {view === "analytics"  && <AnalyticsView filters={filters} />}
           {view === "engines"    && <EnginesView filters={filters} />}
           {view === "villains"   && <VillainsView filters={filters} setFilters={setFilters} setView={setView} />}
+          {view === "tournaments"&& <TournamentsView filters={filters} setFilters={setFilters} setView={setView} />}
           {view === "bigpots"    && <BigPotsView filters={filters} />}
           {/* TODO: Reabilitar as abas no futuro
           {view === "population" && <PopulationView />}

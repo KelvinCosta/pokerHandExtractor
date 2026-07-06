@@ -60,6 +60,16 @@ export interface MonthlyProfitPoint {
   profit: number
 }
 
+export interface TournamentSummary {
+  source_file: string
+  buy_in: number
+  prize: number
+  rebuys: number
+  profit: number
+  roi: number
+  date?: string
+}
+
 // ─── Audit / Chat Request Types ───────────────────────────────────────────────
 export interface AnalyticsBentoMetrics {
   wwsf_pct: number

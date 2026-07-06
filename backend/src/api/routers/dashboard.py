@@ -610,3 +610,27 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
             "tags": []
         })
     return result
+
+@router.post("/tournaments")
+async def get_tournaments_list(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    from src.api.dependencies import get_filtered_tournaments_df
+    
+    df_t = get_filtered_tournaments_df(filters, current_user)
+    
+    if df_t.height == 0:
+        return []
+        
+    sort_col = "date" if "date" in df_t.columns else "source_file"
+    
+    df_t = df_t.with_columns([
+        (pl.col("prize") - pl.col("buy_in")).alias("profit"),
+        pl.when(pl.col("buy_in") > 0)
+          .then(((pl.col("prize") - pl.col("buy_in")) / pl.col("buy_in")) * 100)
+          .otherwise(0.0).alias("roi")
+    ]).sort(sort_col, descending=True).head(500)
+    
+    # If date is not a string, we might need to format it, but usually it's fine.
+    # Replace NaN or null in numeric columns to avoid JSON serialization errors
+    df_t = df_t.fill_null(0)
+    
+    return df_t.to_dicts()

@@ -14,7 +14,7 @@ import {
   BrainCircuit,
 } from "lucide-react"
 
-export type ViewId = "overview" | "analytics" | "engines" | "villains" | "bigpots" | "population" | "audit" | "import"
+export type ViewId = "overview" | "analytics" | "engines" | "villains" | "tournaments" | "bigpots" | "population" | "audit" | "import"
 
 const nav: {
   group: string
@@ -27,7 +27,8 @@ const nav: {
       { id: "analytics",  label: "Analytics Dashboard",    icon: BarChart2, badge: "NEW" },
       { id: "engines",    label: "Pre / Post-Flop Engines", icon: Layers    },
       { id: "villains",   label: "Villain Mapping",         icon: Users     },
-      { id: "bigpots",    label: "Hands Database",        icon: Target    },
+      { id: "tournaments", label: "Tournaments",           icon: Target    },
+      { id: "bigpots",    label: "Hands Database",        icon: Spade     },
       // TODO: Habilitar quando o Job de ETL for criado no Milestone 6
       // { id: "population", label: "Population (MDA)",        icon: Radar     },
     ],
