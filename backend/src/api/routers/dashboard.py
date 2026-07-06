@@ -327,14 +327,16 @@ async def get_postflop_engines(filters: DashboardFilters, current_user: User = D
         "fold_to_cbet_flop_pct": round(fold_cbet_flop_pct, 1)
     }
 
-@router.post("/big-pots")
-async def get_big_pots(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> list[Dict[str, Any]]:
+from ..schemas.filters import DashboardFilters, HandsListFilters
+
+@router.post("/hands")
+async def get_hands_list(filters: HandsListFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
-        return []
+        return {"data": [], "total": 0, "page": filters.page, "limit": filters.limit}
 
-    # 1. Identificar Potes Grandes
-    df_pot_sizes = (
+    # Calcula as métricas base para cada mão
+    df_hands_stats = (
         df.group_by("hand_id")
         .agg(
             pl.col("total_pot_final").first().alias("pot_size_usd"),
@@ -345,20 +347,33 @@ async def get_big_pots(filters: DashboardFilters, current_user: User = Depends(g
         .with_columns(
             (pl.col("pot_size_usd") / pl.col("bb_size").fill_null(0.02)).alias("pot_in_bb")
         )
-        .filter(pl.col("pot_in_bb") >= 40.0)
-        .sort("pot_in_bb", descending=True)
-        .head(50) # Top 50 biggest pots to avoid payload bloat
     )
 
-    if df_pot_sizes.height == 0:
-        return []
+    if df_hands_stats.height == 0:
+        return {"data": [], "total": 0, "page": filters.page, "limit": filters.limit}
 
-    return df_pot_sizes.select([
-        "hand_id",
-        "timestamp",
-        "pot_in_bb",
-        "net_profit"
-    ]).to_dicts()
+    # Ordenação dinâmica
+    valid_sort_cols = ["timestamp", "pot_in_bb", "net_profit"]
+    sort_col = filters.sort_by if filters.sort_by in valid_sort_cols else "timestamp"
+    df_hands_stats = df_hands_stats.sort(sort_col, descending=filters.sort_desc)
+
+    total_items = df_hands_stats.height
+    
+    # Paginação
+    offset = (filters.page - 1) * filters.limit
+    df_hands_stats = df_hands_stats.slice(offset, filters.limit)
+
+    return {
+        "data": df_hands_stats.select([
+            "hand_id",
+            "timestamp",
+            "pot_in_bb",
+            "net_profit"
+        ]).to_dicts(),
+        "total": total_items,
+        "page": filters.page,
+        "limit": filters.limit
+    }
 
 @router.post("/engines/action-distribution")
 async def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:

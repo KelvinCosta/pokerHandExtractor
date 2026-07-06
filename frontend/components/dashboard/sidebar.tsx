@@ -27,7 +27,7 @@ const nav: {
       { id: "analytics",  label: "Analytics Dashboard",    icon: BarChart2, badge: "NEW" },
       { id: "engines",    label: "Pre / Post-Flop Engines", icon: Layers    },
       { id: "villains",   label: "Villain Mapping",         icon: Users     },
-      { id: "bigpots",    label: "Big Pots & River",        icon: Target    },
+      { id: "bigpots",    label: "Hands Database",        icon: Target    },
       // TODO: Habilitar quando o Job de ETL for criado no Milestone 6
       // { id: "population", label: "Population (MDA)",        icon: Radar     },
     ],

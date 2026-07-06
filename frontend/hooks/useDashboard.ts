@@ -15,8 +15,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchBigPots, fetchActionDistribution, fetchBiggestRivals, fetchStakeBreakdown } from "@/lib/api"
-import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics, BigPotHand } from "@/lib/api.types"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchActionDistribution, fetchBiggestRivals, fetchStakeBreakdown } from "@/lib/api"
+import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics } from "@/lib/api.types"
 
 export interface DashboardState {
   /** Current filter values */
@@ -36,8 +36,7 @@ export interface DashboardState {
   postflop: PostflopEngineMetrics | null
   /** Data returned by /api/dashboard/engines/action-distribution */
   actionDistribution: any[] | null
-  /** Data returned by /api/dashboard/big-pots */
-  bigPots: BigPotHand[] | null
+
   /** Data returned by /api/dashboard/biggest-rivals */
   biggestRivals: any[] | null
 
@@ -119,7 +118,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
 
       try {
         // Parallel fetch — all requests share the same filter payload and signal
-        const [healthData, stakeData, preflopData, profitTrendData, analyticsData, postflopData, actionDistData, bigPotsData, rivalsData] = await Promise.all([
+        const [healthData, stakeData, preflopData, profitTrendData, analyticsData, postflopData, actionDistData, rivalsData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchStakeBreakdown(payload, controller.signal),
           fetchPreflopMetrics(payload, controller.signal),
@@ -127,7 +126,6 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
           fetchAnalyticsBento(payload, controller.signal),
           fetchPostflopEngines(payload, controller.signal),
           fetchActionDistribution(payload, controller.signal),
-          fetchBigPots(payload, controller.signal),
           fetchBiggestRivals(payload, controller.signal),
         ])
 
@@ -139,7 +137,6 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
           setAnalytics(analyticsData)
           setPostflop(postflopData)
           setActionDistribution(actionDistData)
-          setBigPots(bigPotsData)
           setBiggestRivals(rivalsData)
         }
       } catch (err: unknown) {
@@ -162,5 +159,5 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedKey, tick])
 
-  return { filters, health, stakeBreakdown, preflop, profitTrend, analytics, postflop, actionDistribution, bigPots, biggestRivals, loading, error, refetch }
+  return { filters, health, stakeBreakdown, preflop, profitTrend, analytics, postflop, actionDistribution, biggestRivals, loading, error, refetch }
 }

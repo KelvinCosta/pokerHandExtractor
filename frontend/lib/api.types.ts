@@ -76,6 +76,13 @@ export interface BigPotHand {
   net_profit: number
 }
 
+export interface HandsListResponse {
+  data: BigPotHand[]
+  total: number
+  page: number
+  limit: number
+}
+
 export interface HandAction {
   player: string
   action_type: string

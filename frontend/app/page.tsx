@@ -23,7 +23,7 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
   analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
   engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
   villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: true },
-  bigpots:    { title: "Big Pots & River Audit",   subtitle: "High-value hands & final-street decisions",    hasFilters: true  },
+  bigpots:    { title: "Hands Database",           subtitle: "Search, filter & review hand histories",       hasFilters: true  },
   population: { title: "Population (MDA)",          subtitle: "Mass data analysis across the field",          hasFilters: false },
   audit:      { title: "AI Behavioral Auditor",    subtitle: "Socratic dialogue · LangGraph Agent pipeline", hasFilters: false },
   import:     { title: "Import Data (ETL)",        subtitle: "Upload raw poker hand histories for processing",hasFilters: false },
@@ -35,7 +35,7 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "analytics",  label: "Analytics", icon: BarChart2  },
   { id: "engines",    label: "Engines",   icon: Layers     },
   { id: "villains",   label: "Villains",  icon: Users      },
-  { id: "bigpots",    label: "Big Pots",  icon: Target     },
+  { id: "bigpots",    label: "Hands",     icon: Target     },
   // TODO: Habilitar quando o Job de ETL estiver pronto no Milestone 6
   // { id: "population", label: "MDA",       icon: Radar      },
   // TODO: Habilitar quando o LangGraph AI for implementado

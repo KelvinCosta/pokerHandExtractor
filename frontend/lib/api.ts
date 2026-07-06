@@ -201,15 +201,15 @@ export async function fetchPostflopEngines(
 }
 
 /**
- * POST /api/dashboard/big-pots
- * Returns list of >40bb pots
+ * POST /api/dashboard/hands
+ * Returns paginated and sorted list of hands
  */
-export async function fetchBigPots(
-  filters: DashboardFilters = {},
+export async function fetchHandsList(
+  filters: HandsListFilters,
   signal?: AbortSignal,
-): Promise<BigPotHand[]> {
-  return apiPost<DashboardFilters, BigPotHand[]>(
-    "/api/dashboard/big-pots",
+): Promise<HandsListResponse> {
+  return apiPost<HandsListFilters, HandsListResponse>(
+    "/api/dashboard/hands",
     filters,
     signal,
   )
