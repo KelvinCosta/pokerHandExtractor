@@ -179,7 +179,6 @@ export function RangesView({ filters }: RangesViewProps) {
             <div className="flex items-center gap-1"><div className="w-4 h-4 rounded-sm bg-red-500"></div> 90%+</div>
           </div>
         </div>
-        </div>
       </div>
 
       {selectedHand && (
