@@ -46,18 +46,19 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
 
   useEffect(() => {
     let cancelled = false;
+    const gameTypesStr = JSON.stringify(filters.game_types || []);
     import("@/lib/api").then(({ fetchDashboardMetadata }) => {
-      fetchDashboardMetadata().then(res => {
+      fetchDashboardMetadata(filters).then(res => {
         if (!cancelled) {
           setAvailableStakes(res.stakes || [])
           setAvailableGameTypes(res.game_types || [])
-          setMinDate(res.min_date)
-          setMaxDate(res.max_date)
+          if (res.min_date && !minDate) setMinDate(res.min_date)
+          if (res.max_date && !maxDate) setMaxDate(res.max_date)
         }
       }).catch(() => {})
     })
     return () => { cancelled = true }
-  }, [])
+  }, [JSON.stringify(filters.game_types)])
 
   const STAKE_OPTIONS: { label: string; value: string | undefined }[] = [
     { label: "All", value: undefined },

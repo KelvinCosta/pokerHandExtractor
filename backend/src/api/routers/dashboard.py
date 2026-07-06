@@ -9,23 +9,32 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 
 from ..dependencies import _load_user_datalake
 
-@router.get("/metadata")
-async def get_dashboard_metadata(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+@router.post("/metadata")
+async def get_dashboard_metadata(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     cache_entry = _load_user_datalake(current_user.id, "silver-layer")
     df = cache_entry.get("df_hands")
     
     if df is None or df.height == 0:
         return {"stakes": [], "game_types": [], "min_date": None, "max_date": None}
         
-    stakes = []
-    if "stake_tier" in df.columns:
-        stakes = df.select("stake_tier").drop_nulls().unique().sort("stake_tier").to_series().to_list()
-    elif "stake_level" in df.columns:
-        stakes = df.select("stake_level").drop_nulls().unique().sort("stake_level").to_series().to_list()
+    # Obtém game_types sem filtrar por game_types
+    filters_for_gt = filters.model_copy(update={'game_types': None})
+    df_gt = get_filtered_df(filters_for_gt, current_user)
+    
+    # Obtém stakes sem filtrar por stake (mas filtrado por game_types)
+    filters_for_stakes = filters.model_copy(update={'stake': None})
+    df_stakes = get_filtered_df(filters_for_stakes, current_user)
         
+    stakes = []
+    if df_stakes.height > 0:
+        if "stake_tier" in df_stakes.columns:
+            stakes = df_stakes.select("stake_tier").drop_nulls().unique().sort("stake_tier").to_series().to_list()
+        elif "stake_level" in df_stakes.columns:
+            stakes = df_stakes.select("stake_level").drop_nulls().unique().sort("stake_level").to_series().to_list()
+            
     game_types = []
-    if "game_type" in df.columns:
-        game_types = df.select("game_type").drop_nulls().unique().sort("game_type").to_series().to_list()
+    if df_gt.height > 0 and "game_type" in df_gt.columns:
+        game_types = df_gt.select("game_type").drop_nulls().unique().sort("game_type").to_series().to_list()
         
     min_date = None
     max_date = None

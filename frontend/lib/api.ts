@@ -80,16 +80,16 @@ async function apiPost<TBody, TResponse>(
 
 // ─── Dashboard endpoints ──────────────────────────────────────────────────────
 
-export async function fetchDashboardMetadata(): Promise<any> {
-  const url = `${BASE_URL}/api/dashboard/metadata`
-  const headers: Record<string, string> = {}
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("access_token")
-    if (token) headers["Authorization"] = `Bearer ${token}`
-  }
-  const res = await fetch(url, { method: "GET", headers })
-  if (!res.ok) throw new Error("Failed to fetch metadata")
-  return res.json()
+export async function fetchDashboardMetadata(filters: DashboardFilters = {}): Promise<{
+  stakes: string[]
+  game_types: string[]
+  min_date?: string
+  max_date?: string
+}> {
+  return fetchAPI("/api/dashboard/metadata", {
+    method: "POST",
+    body: JSON.stringify(filters)
+  })
 }
 
 export async function fetchHandDetails(handId: string): Promise<any> {
