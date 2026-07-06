@@ -16,10 +16,10 @@ interface HandViewerProps {
 // ─── Card Helpers ─────────────────────────────────────────────────────────────
 const SUIT_SYMBOL: Record<string, string> = { s: "♠", h: "♥", d: "♦", c: "♣" }
 const SUIT_COLOR: Record<string, string> = {
-  s: "text-slate-200",
-  h: "text-rose-400",
-  d: "text-sky-400",
-  c: "text-emerald-400",
+  s: "text-zinc-900",
+  h: "text-rose-600",
+  d: "text-sky-600",
+  c: "text-zinc-900",
 }
 const SUIT_GLOW: Record<string, string> = {
   s: "",
