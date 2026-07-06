@@ -182,11 +182,30 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
     if df_t.height == 0:
         return df_t
         
-    # (Opcional) Poderíamos aplicar filtros de data aqui baseando-nos na data do torneio se ela estivesse salva
-    # Como não temos certeza se `date` ou `data_limpa` existe em tournaments.parquet, retornamos tudo ou podemos filtrar
-    # Pela especificação atual de summary_parser, os summaries não possuem data, eles possuem source_file e id.
-    # Assumiremos que o filtro global de Dashboard serve principalmente para as mãos. Para o Profit Real
-    # podemos deixar os torneios entrarem, ou precisaríamos vincular o tournament_id a uma data de hand_id.
-    
+    if filters.game_types:
+        # Verifica se algum dos tipos selecionados é de torneio
+        tournament_types = ["Tournaments", "Spin & Gold", "Mystery Battle Royale"]
+        has_tournament_type = any(t in filters.game_types for t in tournament_types)
+        
+        if not has_tournament_type:
+            # Se filtrou apenas por Cash Games, não retorna nada dos sumários
+            return df_t.clear()
+            
+        # Opcional: Se a gente quisesse ser muito restrito, a gente poderia olhar o source_file.
+        # "Spin & Gold" -> source_file começa com "SG"
+        # "Tournaments" -> começa com "TM"
+        # Para simplificar agora, se pediu torneio, mandamos os sumários
+        exprs = []
+        if "Spin & Gold" in filters.game_types:
+            exprs.append(pl.col("source_file").str.starts_with("SG"))
+        if "Tournaments" in filters.game_types:
+            exprs.append(pl.col("source_file").str.starts_with("TM"))
+            
+        if exprs:
+            combined_expr = exprs[0]
+            for e in exprs[1:]:
+                combined_expr = combined_expr | e
+            df_t = df_t.filter(combined_expr)
+
     return df_t
 
