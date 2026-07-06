@@ -30,6 +30,15 @@ import type {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000"
 
+export function getHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token")
+    if (token) headers["Authorization"] = `Bearer ${token}`
+  }
+  return headers
+}
+
 // ─── Core fetch wrapper ───────────────────────────────────────────────────────
 /**
  * POST helper with typed request / response bodies.
