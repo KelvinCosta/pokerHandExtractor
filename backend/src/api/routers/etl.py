@@ -223,7 +223,7 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.fsm.states import InitState
     import shutil
     
-    tokenizer = TokenizerFactory.create("ggpoker")
+    tokenizer = TokenizerFactory.get_tokenizer("ggpoker")
     initial_state = InitState()
     summary_parser = SummaryParser()
     
