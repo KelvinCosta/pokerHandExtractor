@@ -3,6 +3,9 @@
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
+  Cell,
   CartesianGrid,
   XAxis,
   YAxis,
@@ -120,7 +123,7 @@ function buildLiveKpis(health: unknown, preflop: unknown) {
 }
 
 export function OverviewView({ filters }: { filters?: DashboardFilters }) {
-  const { health, preflop, profitTrend, stakeBreakdown: liveStakeBreakdown, loading, error } = useDashboard(filters ?? {})
+  const { health, preflop, profitTrend, monthlyProfit, stakeBreakdown: liveStakeBreakdown, loading, error } = useDashboard(filters ?? {})
   const displayStakeBreakdown = liveStakeBreakdown || []
   const maxProfit = displayStakeBreakdown.length > 0 ? Math.max(...displayStakeBreakdown.map((s) => s.profit)) : 1
 
@@ -141,6 +144,7 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
     ...displayProfitData.map((d) => Math.abs(d.profit))
   )
 
+  const displayMonthlyProfit = monthlyProfit || []
 
   return (
     <div className="flex flex-col gap-4">
@@ -291,6 +295,69 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* ── Monthly Profit Section ─────────────────────────────────────────── */}
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-1 mt-2">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold">Monthly Profit</h2>
+              <p className="text-xs text-muted-foreground">Month-by-month financial performance</p>
+            </div>
+          </div>
+          {displayMonthlyProfit.length === 0 ? (
+            <div className="flex h-[240px] items-center justify-center text-sm text-muted-foreground">
+              No monthly data available
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="h-[240px] w-full">
+              <BarChart data={displayMonthlyProfit} margin={{ left: 4, right: 8, top: 8, bottom: 8 }}>
+                <CartesianGrid vertical={false} stroke="var(--border)" />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  className="font-mono text-[10px]"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  width={48}
+                  tickFormatter={(v) => {
+                    if (v === 0) return "$0"
+                    if (Math.abs(v) < 1000) return `$${v.toFixed(0)}`
+                    return `$${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
+                  }}
+                  className="font-mono text-[10px]"
+                />
+                <ChartTooltip
+                  cursor={{ fill: "var(--border)", opacity: 0.1 }}
+                  content={
+                    <ChartTooltipContent
+                      className="font-mono"
+                      formatter={(value) => (
+                        <span className="flex w-full justify-between gap-4">
+                          <span className="capitalize text-muted-foreground">Profit</span>
+                          <span className={cn("tabular-nums", Number(value) >= 0 ? "text-[#10B981]" : "text-[#FF3B3B]")}>
+                            {currency(Number(value))}
+                          </span>
+                        </span>
+                      )}
+                    />
+                  }
+                />
+                <Bar dataKey="profit" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                  {displayMonthlyProfit.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "var(--color-profit)" : "#FF3B3B"} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          )}
         </div>
       </section>
     </div>

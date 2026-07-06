@@ -168,6 +168,21 @@ export async function fetchProfitTrend(
 }
 
 /**
+ * POST /api/dashboard/monthly-profit
+ * Returns profit/loss grouped by YYYY-MM
+ */
+export async function fetchMonthlyProfit(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<MonthlyProfitPoint[]> {
+  return apiPost<DashboardFilters, MonthlyProfitPoint[]>(
+    "/api/dashboard/monthly-profit",
+    filters,
+    signal,
+  )
+}
+
+/**
  * POST /api/dashboard/analytics
  * Returns WWSF, WTSD, W$SD and Red/Blue line profit
  */

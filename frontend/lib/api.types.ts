@@ -55,6 +55,11 @@ export interface ProfitTrendPoint {
   hero_net_profit: number
 }
 
+export interface MonthlyProfitPoint {
+  month: string
+  profit: number
+}
+
 // ─── Audit / Chat Request Types ───────────────────────────────────────────────
 export interface AnalyticsBentoMetrics {
   wwsf_pct: number

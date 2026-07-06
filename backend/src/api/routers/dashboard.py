@@ -265,6 +265,51 @@ async def get_profit_trend(filters: DashboardFilters, current_user: User = Depen
         pl.col("profit_event").round(2).alias("hero_net_profit")
     ]).to_dicts()
 
+@router.post("/monthly-profit")
+async def get_monthly_profit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+    from src.api.dependencies import get_filtered_tournaments_df
+    
+    df = get_filtered_hands_df(filters, current_user)
+    df_t = get_filtered_tournaments_df(filters, current_user)
+    
+    if df.height == 0 and df_t.height == 0:
+        return []
+        
+    timeline_events = []
+    
+    if df.height > 0:
+        sort_col = "data_limpa" if "data_limpa" in df.columns else "date"
+        hands_events = df.select([
+            pl.col(sort_col).cast(pl.Utf8).alias("sort_date"),
+            pl.col("hero_net_profit_usd").alias("profit_event")
+        ])
+        timeline_events.append(hands_events)
+        
+    if df_t.height > 0:
+        tourneys_events = df_t.select([
+            pl.when(pl.col("source_file").str.contains(r"\d{8}"))
+              .then(pl.col("source_file").str.extract(r"(\d{8})").str.replace(r"(\d{4})(\d{2})(\d{2})", r"${1}-${2}-${3}"))
+              .otherwise(pl.lit("9999-12-31")).alias("sort_date"),
+            (pl.col("prize") - pl.col("buy_in")).alias("profit_event")
+        ])
+        timeline_events.append(tourneys_events)
+        
+    combined_df = pl.concat(timeline_events, how="vertical")
+    
+    monthly_df = (
+        combined_df.filter(pl.col("sort_date").str.starts_with("20"))
+        .with_columns(
+            pl.col("sort_date").str.slice(0, 7).alias("month")
+        )
+        .group_by("month")
+        .agg(
+            pl.col("profit_event").sum().alias("profit")
+        )
+        .sort("month")
+    )
+    
+    return monthly_df.to_dicts()
+
 @router.post("/analytics")
 async def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)

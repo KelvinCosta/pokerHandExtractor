@@ -15,8 +15,8 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchAnalyticsBento, fetchPostflopEngines, fetchActionDistribution, fetchBiggestRivals, fetchStakeBreakdown } from "@/lib/api"
-import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, AnalyticsBentoMetrics, PostflopEngineMetrics } from "@/lib/api.types"
+import { fetchHealthMetrics, fetchPreflopMetrics, fetchProfitTrend, fetchMonthlyProfit, fetchAnalyticsBento, fetchPostflopEngines, fetchActionDistribution, fetchBiggestRivals, fetchStakeBreakdown } from "@/lib/api"
+import type { DashboardFilters, HealthMetrics, PreflopMetrics, ProfitTrendPoint, MonthlyProfitPoint, AnalyticsBentoMetrics, PostflopEngineMetrics } from "@/lib/api.types"
 
 export interface DashboardState {
   /** Current filter values */
@@ -30,6 +30,8 @@ export interface DashboardState {
   preflop: PreflopMetrics | null
   /** Data returned by /api/dashboard/profit-trend */
   profitTrend: ProfitTrendPoint[] | null
+  /** Data returned by /api/dashboard/monthly-profit */
+  monthlyProfit: MonthlyProfitPoint[] | null
   /** Data returned by /api/dashboard/analytics */
   analytics: AnalyticsBentoMetrics | null
   /** Data returned by /api/dashboard/engines/postflop */
@@ -61,6 +63,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   const [stakeBreakdown, setStakeBreakdown] = useState<any[] | null>(null)
   const [preflop, setPreflop] = useState<PreflopMetrics | null>(null)
   const [profitTrend, setProfitTrend] = useState<ProfitTrendPoint[] | null>(null)
+  const [monthlyProfit, setMonthlyProfit] = useState<MonthlyProfitPoint[] | null>(null)
   const [analytics, setAnalytics] = useState<AnalyticsBentoMetrics | null>(null)
   const [postflop, setPostflop] = useState<PostflopEngineMetrics | null>(null)
   const [actionDistribution, setActionDistribution] = useState<any[] | null>(null)
@@ -118,11 +121,12 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
 
       try {
         // Parallel fetch — all requests share the same filter payload and signal
-        const [healthData, stakeData, preflopData, profitTrendData, analyticsData, postflopData, actionDistData, rivalsData] = await Promise.all([
+        const [healthData, stakeData, preflopData, profitTrendData, monthlyProfitData, analyticsData, postflopData, actionDistData, rivalsData] = await Promise.all([
           fetchHealthMetrics(payload, controller.signal),
           fetchStakeBreakdown(payload, controller.signal),
           fetchPreflopMetrics(payload, controller.signal),
           fetchProfitTrend(payload, controller.signal),
+          fetchMonthlyProfit(payload, controller.signal),
           fetchAnalyticsBento(payload, controller.signal),
           fetchPostflopEngines(payload, controller.signal),
           fetchActionDistribution(payload, controller.signal),
@@ -134,6 +138,7 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
           setStakeBreakdown(stakeData)
           setPreflop(preflopData)
           setProfitTrend(profitTrendData)
+          setMonthlyProfit(monthlyProfitData)
           setAnalytics(analyticsData)
           setPostflop(postflopData)
           setActionDistribution(actionDistData)
@@ -159,5 +164,5 @@ export function useDashboard(filters: DashboardFilters = DEFAULT_FILTERS): Dashb
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedKey, tick])
 
-  return { filters, health, stakeBreakdown, preflop, profitTrend, analytics, postflop, actionDistribution, biggestRivals, loading, error, refetch }
+  return { filters, health, stakeBreakdown, preflop, profitTrend, monthlyProfit, analytics, postflop, actionDistribution, biggestRivals, loading, error, refetch }
 }
