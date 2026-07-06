@@ -170,3 +170,17 @@ async def upload_and_process(
         "new_files": len(new_txt_files),
         "hands_processed": processed_count
     }
+
+@router.get("/processed")
+async def get_processed_files(current_user: User = Depends(get_current_user)):
+    try:
+        from src.core.storage import get_s3_client
+        s3 = get_s3_client()
+        silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
+        obj = s3.get_object(Bucket=silver_bucket, Key=f"{current_user.id}/processed_files.json")
+        import json
+        data = json.loads(obj["Body"].read().decode("utf-8"))
+        return {"processed": data}
+    except Exception as e:
+        return {"processed": []}
+

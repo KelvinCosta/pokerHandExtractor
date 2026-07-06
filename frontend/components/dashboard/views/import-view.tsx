@@ -1,20 +1,55 @@
 "use client"
 
-import { useState } from "react"
-import { apiUpload } from "@/lib/api"
+import { useState, useEffect } from "react"
+import { apiUpload, fetchProcessedFiles } from "@/lib/api"
 import { UploadCloud, CheckCircle2, Loader2, RefreshCcw } from "lucide-react"
 
 export function ImportView() {
   const [platform, setPlatform] = useState("ggpoker")
   const [heroName, setHeroName] = useState("")
   const [files, setFiles] = useState<File[]>([])
+  const [processedList, setProcessedList] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    fetchProcessedFiles().then(list => setProcessedList(list)).catch(console.error)
+  }, [])
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files))
+      const selectedFiles = Array.from(e.target.files)
+      const validFiles: File[] = []
+      
+      for (const file of selectedFiles) {
+        // Simple heuristic to check if it's a summary file without reading the whole file
+        let isSummary = false;
+        try {
+          const slice = file.slice(0, 100);
+          const text = await slice.text();
+          isSummary = text.startsWith("Tournament #");
+        } catch(e) {}
+        
+        let computedName = file.name;
+        if (isSummary && !computedName.toLowerCase().endsWith("_summary.txt")) {
+          const lastDot = computedName.lastIndexOf(".");
+          if (lastDot > 0) {
+            computedName = computedName.substring(0, lastDot) + "_summary" + computedName.substring(lastDot);
+          }
+        }
+        
+        if (!processedList.includes(computedName)) {
+          validFiles.push(file)
+        }
+      }
+      
+      if (validFiles.length < selectedFiles.length) {
+        setErrorMsg(`${selectedFiles.length - validFiles.length} arquivo(s) já processado(s) ignorado(s).`)
+        setTimeout(() => setErrorMsg(null), 5000)
+      }
+      
+      setFiles(validFiles)
     }
   }
 
