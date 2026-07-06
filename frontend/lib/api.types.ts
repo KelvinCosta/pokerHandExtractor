@@ -74,6 +74,7 @@ export interface BigPotHand {
   timestamp: string
   pot_in_bb: number
   net_profit: number
+  is_cash?: boolean
 }
 
 export interface HandsListResponse {

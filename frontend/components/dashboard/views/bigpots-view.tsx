@@ -154,7 +154,7 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                           )}
                         >
                           {h.net_profit < 0 ? "" : "+"}
-                          {currency(h.net_profit)}
+                          {h.is_cash === false ? `${Math.round(h.net_profit).toLocaleString()}` : currency(h.net_profit)}
                         </span>
                       </TableCell>
                     </TableRow>

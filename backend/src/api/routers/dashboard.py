@@ -389,10 +389,12 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
             pl.col("total_pot_final").first().alias("pot_size_usd"),
             (pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().alias("net_profit"),
             pl.col("stake_level").first().alias("bb_size"),
-            pl.col("date").first().alias("timestamp")
+            pl.col("date").first().alias("timestamp"),
+            pl.col("game_type").first().alias("game_type")
         )
         .with_columns(
-            (pl.col("pot_size_usd") / pl.col("bb_size").fill_null(0.02)).alias("pot_in_bb")
+            (pl.col("pot_size_usd") / pl.col("bb_size").fill_null(0.02)).alias("pot_in_bb"),
+            pl.col("game_type").is_in(["Rush & Cash", "Regular Cash", "All-In or Fold"]).alias("is_cash")
         )
     )
 
@@ -415,7 +417,8 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
             "hand_id",
             "timestamp",
             "pot_in_bb",
-            "net_profit"
+            "net_profit",
+            "is_cash"
         ]).to_dicts(),
         "total": total_items,
         "page": filters.page,
