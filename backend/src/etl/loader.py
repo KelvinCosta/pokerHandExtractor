@@ -181,8 +181,18 @@ class HandLoader:
             
         df = pl.DataFrame(dict_batch)
         
-        # Cast explícito para garantir que listas vazias não sejam inferidas como List(Null)
-        df = df.with_columns(pl.col("board_cards").cast(pl.List(pl.String)))
+        # Cast explícito para garantir que listas vazias não sejam inferidas como List(Null) e floats como Int64
+        df = df.with_columns([
+            pl.col("board_cards").cast(pl.List(pl.String)),
+            pl.col("hero_net_profit_usd").cast(pl.Float64),
+            pl.col("hero_net_chips").cast(pl.Float64),
+            pl.col("hero_net_profit_bb").cast(pl.Float64),
+            pl.col("rake").cast(pl.Float64),
+            pl.col("jackpot").cast(pl.Float64),
+            pl.col("bingo").cast(pl.Float64),
+            pl.col("fortune").cast(pl.Float64),
+            pl.col("tax").cast(pl.Float64)
+        ])
 
         flop_suits_count = (
             pl.col("board_cards").list.slice(0, 3)
