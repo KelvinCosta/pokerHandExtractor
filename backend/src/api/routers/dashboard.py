@@ -274,7 +274,7 @@ async def get_postflop_engines(filters: DashboardFilters, current_user: User = D
 
     hands_hero_saw_flop = (
         df.filter((pl.col("player") == pl.col("player_nickname")) & (pl.col("street") == "FLOP"))
-        .select("hand_id").unique()
+        .select(["hand_id", "player_nickname"]).unique(subset=["hand_id"])
     )
 
     last_preflop_raise = (
