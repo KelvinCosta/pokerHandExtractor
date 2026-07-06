@@ -38,6 +38,7 @@ function Cards({ str }: { str: string }) {
 
 export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
   const { bigPots, loading, error } = useDashboard(filters ?? {})
+  const displayHands = bigPots || []
   return (
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-4">
