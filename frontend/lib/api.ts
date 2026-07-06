@@ -101,22 +101,6 @@ export async function fetchHandDetails(handId: string): Promise<any> {
   return res.json()
 }
 
-export async function apiUpload(url: string, formData: FormData) {
-  const token = localStorage.getItem("access_token")
-  const res = await fetch(`${BASE_URL}${url}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  })
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}))
-    throw new Error(errorData.detail || `Upload failed: ${res.status}`)
-  }
-  return res.json()
-}
-
 export async function fetchProcessedFiles(): Promise<string[]> {
   const token = localStorage.getItem("access_token")
   if (!token) return []
