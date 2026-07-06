@@ -94,22 +94,6 @@ export function FilterBar({ filters, onChange, loading = false, className }: Fil
         className,
       )}
     >
-      {/* ── Search Query ────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1.5">
-        <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          Search
-        </label>
-        <input
-          disabled={loading}
-          value={filters.search_query ?? ""}
-          onChange={(e) => patch({ search_query: e.target.value || undefined })}
-          placeholder="Player or Hand ID"
-          className="h-7 w-32 rounded border border-input bg-background px-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
-        />
-      </div>
-
-      <div className="h-4 w-px bg-border" />
-
       {/* ── Date Range ────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-1.5">
         <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
