@@ -178,7 +178,9 @@ function ActionLog({ data }: { data: HandDetails }) {
   // Group actions by street
   const grouped: Record<string, typeof data.actions> = {}
   for (const act of data.actions) {
-    const street = (act.street ?? "PREFLOP").toUpperCase()
+    let street = (act.street ?? "PREFLOP").toUpperCase()
+    if (street === "PRE_FLOP") street = "PREFLOP"
+    
     if (!grouped[street]) grouped[street] = []
     grouped[street].push(act)
   }
