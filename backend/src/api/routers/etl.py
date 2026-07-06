@@ -197,7 +197,7 @@ async def get_processed_files(current_user: User = Depends(get_current_user)):
         except:
             current_version = "unknown"
             
-        ETL_VERSION = "v4.03"
+        ETL_VERSION = "v4.04"
         if current_version != ETL_VERSION:
             return {"processed": [], "version_mismatch": True}
 
@@ -230,7 +230,7 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
     silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
     user_id = str(current_user.id)
-    ETL_VERSION = "v4.03"
+    ETL_VERSION = "v4.04"
     
     temp_dir = Path("data/temp") / user_id
     silver_dir = Path("data/silver") / user_id
