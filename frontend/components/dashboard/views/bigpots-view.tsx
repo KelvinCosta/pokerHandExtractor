@@ -119,7 +119,7 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                         {new Date(h.timestamp).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="font-mono text-xs tabular-nums text-muted-foreground">
-                        {h.pot_in_bb.toFixed(1)}bb
+                        {(h.pot_in_bb ?? 0).toFixed(1)}bb
                       </TableCell>
                       <TableCell className="pr-4 text-right">
                         <span

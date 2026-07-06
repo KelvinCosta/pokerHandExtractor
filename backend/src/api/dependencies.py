@@ -52,6 +52,21 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
         if filters.end_date:
             df = df.filter(pl.col("data_limpa") <= filters.end_date)
             
+    # Filtro de Busca Textual (ID da mão ou Oponentes)
+    if filters.search_query:
+        sq = filters.search_query.lower()
+        if "player" in df.columns:
+            # Encontra os hand_ids que tem match com a busca
+            matching_hands = df.filter(
+                pl.col("hand_id").str.to_lowercase().str.contains(sq) | 
+                pl.col("player").str.to_lowercase().str.contains(sq)
+            ).select("hand_id").unique()
+            
+            # Mantém todas as ações dessas mãos intactas
+            df = df.join(matching_hands, on="hand_id", how="inner")
+        else:
+            df = df.filter(pl.col("hand_id").str.to_lowercase().str.contains(sq))
+            
     # Filtro Dinâmico de Tipo de Jogo
     if filters.game_types:
         if "game_type" in df.columns:
