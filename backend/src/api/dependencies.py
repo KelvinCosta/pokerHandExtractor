@@ -172,6 +172,8 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
             try:
                 s3_tournaments_path = f"s3://{silver_bucket}/{user_id}/tournaments.parquet"
                 df_tournaments = pl.scan_parquet(s3_tournaments_path, storage_options=storage_options).collect()
+                if "tournament_id" in df_tournaments.columns:
+                    df_tournaments = df_tournaments.unique(subset=["tournament_id"], keep="last", maintain_order=True)
             except Exception:
                 pass # Se não houver arquivo de torneios, segue normalmente com df vazio
             

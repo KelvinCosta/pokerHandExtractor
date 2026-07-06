@@ -83,7 +83,10 @@ class BaseStreetState(State):
             return self, new_context
 
         elif isinstance(token, CardsRevealedEvent):
-            return self, context.set_player_cards(token.player, token.cards)
+            ctx = context.set_player_cards(token.player, token.cards)
+            if token.is_dealt:
+                ctx = replace(ctx, player_nickname=token.player)
+            return self, ctx
 
         elif isinstance(token, HandStartEvent):
             return InitState().process(token, None)

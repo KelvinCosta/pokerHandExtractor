@@ -21,6 +21,7 @@ class RawActionEvent(BaseModel):
 class CardsRevealedEvent(BaseModel):
     player: str
     cards: str
+    is_dealt: bool = False
 
 class PotSummaryEvent(BaseModel):
     total_pot: float = 0.0
@@ -104,7 +105,7 @@ class GGPokerTokenizer:
             player = match_dealt.group(1).strip()
             if player == "Hero":
                 player = self.hero_name
-            return CardsRevealedEvent(player=player, cards=match_dealt.group(2))
+            return CardsRevealedEvent(player=player, cards=match_dealt.group(2), is_dealt=True)
 
         match_shows = self.re_shows.search(line)
         if match_shows:
