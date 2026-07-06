@@ -48,7 +48,7 @@ class HandLoader:
         else:
             import re
             buy_in = None
-            m_info = re.search(r"\$([0-9.]+)", hand.game_info)
+            m_info = re.search(r"\$([0-9.]+)(?!,)", hand.game_info)
             if m_info:
                 buy_in = float(m_info.group(1))
             else:

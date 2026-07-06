@@ -223,8 +223,8 @@ async def get_profit_trend(filters: DashboardFilters, current_user: User = Depen
         tourneys_events = df_t.select([
             # Fallback de ordenação: tenta extrair do arquivo, se falhar joga pra '9999-99-99'
             pl.when(pl.col("source_file").str.contains(r"\d{8}"))
-              .then(pl.col("source_file").str.extract(r"(\d{8})").str.replace(r"(\d{4})(\d{2})(\d{2})", r"${1}-${2}-${3}"))
-              .otherwise(pl.lit("9999-12-31")).alias("sort_date"),
+              .then(pl.col("source_file").str.extract(r"(\d{8})").str.replace(r"(\d{4})(\d{2})(\d{2})", r"${1}-${2}-${3} 23:59:59"))
+              .otherwise(pl.lit("9999-12-31 23:59:59")).alias("sort_date"),
               
             pl.col("source_file").alias("display_date"),
             (pl.col("prize") - pl.col("buy_in")).alias("profit_event")
