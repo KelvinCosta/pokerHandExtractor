@@ -37,6 +37,32 @@ def process_stream(stream: Iterable[str], source_name: str, tokenizer, initial_s
         yield replace(hand_context, source_file=source_name)
 
 load_dotenv()
+import concurrent.futures
+import time
+
+def process_file_worker(file_path: str, platform: str, hero_name: str) -> list:
+    # Worker function that runs in a separate process
+    from src.parser.tokenizer import TokenizerFactory
+    from src.fsm.states import InitState
+    from src.etl.loader import HandLoader
+    from pathlib import Path
+    
+    tokenizer = TokenizerFactory.get_tokenizer(platform, hero_name=hero_name)
+    initial_state = InitState(platform=platform, hero_name=hero_name)
+    loader = HandLoader(output_dir="") # Usado apenas para o transform_hand
+    
+    file_path_obj = Path(file_path)
+    dict_batch = []
+    
+    try:
+        with open(file_path_obj, 'r', encoding='utf-8') as f:
+            for hand_context in process_stream(f, file_path_obj.name, tokenizer, initial_state):
+                dict_batch.append(loader.transform_hand(hand_context))
+    except Exception as e:
+        print(f"Erro ao processar arquivo {file_path_obj.name}: {e}")
+        
+    return dict_batch
+
 def main():
     parser = argparse.ArgumentParser(description="Processador ETL de Históricos de Mãos de Poker")
     parser.add_argument("--platform", required=True, help="Plataforma de origem (ex: ggpoker)")
@@ -69,8 +95,6 @@ def main():
     print(f"🚀 Iniciando Processamento Stream ({len(new_txt_files)} novos arquivos encontrados)...\n")
     print(f"👤 Jogador logado: {args.hero_name} | 🌐 Plataforma: {args.platform}")
     
-    tokenizer = TokenizerFactory.get_tokenizer(args.platform, hero_name=args.hero_name)
-    initial_state = InitState(platform=args.platform, hero_name=args.hero_name)
     summary_parser = SummaryParser()
     
     summaries_to_save = []
@@ -83,14 +107,9 @@ def main():
             if summary:
                 summaries_to_save.append(summary)
         else:
-            hands_files_to_process.append(file_path)
+            hands_files_to_process.append(str(file_path))
 
-    def hand_stream_pipeline() -> Iterator[HandContext]:
-        for file_path in hands_files_to_process:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                yield from process_stream(f, file_path.name, tokenizer, initial_state)
-
-    print("💾 Iniciando a carga no Polars (ETL - Camada Silver)...\n")
+    print("💾 Iniciando a carga no Polars (ETL - Camada Silver) com Multiprocessing...\n")
     loader = HandLoader(output_dir=str(silver_dir))
     
     # Salvar Sumários
@@ -99,7 +118,34 @@ def main():
         
     processed_count = 0
     if hands_files_to_process:
-        processed_count = loader.process_and_save(hand_stream_pipeline())
+        run_id = int(time.time() * 1000)
+        batch_index = 1
+        current_batch = []
+        batch_size = 10000
+        
+        # Parallelize the extraction and parsing phase
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            futures = [executor.submit(process_file_worker, f, args.platform, args.hero_name) for f in hands_files_to_process]
+            
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    hands_dicts = future.result()
+                    if hands_dicts:
+                        current_batch.extend(hands_dicts)
+                        
+                    while len(current_batch) >= batch_size:
+                        to_save = current_batch[:batch_size]
+                        current_batch = current_batch[batch_size:]
+                        processed_count += loader.save_dict_batch(to_save, run_id, batch_index)
+                        batch_index += 1
+                except Exception as e:
+                    print(f"Erro em worker process: {e}")
+                    
+        # Salva o resto do batch
+        if current_batch:
+            processed_count += loader.save_dict_batch(current_batch, run_id, batch_index)
+            
+        print(f"📊 Carga completa! Total de mãos particionadas: {processed_count}")
     
     if processed_count > 0 or summaries_to_save:
         # Atualiza o log de processados usando o Repository
