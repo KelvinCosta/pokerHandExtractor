@@ -37,7 +37,8 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "analytics",  label: "Analytics", icon: BarChart2  },
   { id: "engines",    label: "Engines",   icon: Layers     },
   { id: "villains",   label: "Villains",  icon: Users      },
-  { id: "bigpots",    label: "Hands",     icon: Target     },
+  { id: "tournaments",label: "Tourneys",  icon: Target     },
+  { id: "bigpots",    label: "Hands",     icon: Spade      },
   // TODO: Habilitar quando o Job de ETL estiver pronto no Milestone 6
   // { id: "population", label: "MDA",       icon: Radar      },
   // TODO: Habilitar quando o LangGraph AI for implementado
