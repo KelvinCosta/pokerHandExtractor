@@ -29,7 +29,7 @@ class HandLoader:
     def transform_hand(self, hand: HandContext) -> dict:
         # 1. Calculando Lucro Líquido do Hero
         game_type = self._parse_game_type(hand.source_file, hand.game_info, hand.hand_id)
-        is_cash = game_type in ("Rush & Cash", "Regular Cash")
+        is_cash = game_type in ("Rush & Cash", "Regular Cash", "All-In or Fold")
         
         hero_collected = sum(a.amount for a in hand.actions if a.player == hand.player_nickname and a.action_type == ActionType.COLLECT)
         hero_invested = sum(a.invested_amount for a in hand.actions if a.player == hand.player_nickname and a.action_type not in (ActionType.COLLECT, ActionType.FOLD))
