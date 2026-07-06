@@ -258,16 +258,19 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     print("Baixando arquivos da camada Bronze...")
     new_txt_files = []
     try:
-        bronze_objects = s3.list_objects_v2(Bucket=bronze_bucket, Prefix=f"{user_id}/")
-        if 'Contents' in bronze_objects:
-            for obj in bronze_objects['Contents']:
-                file_key = obj['Key']
-                if not file_key.endswith(".txt"):
-                    continue
-                file_name = file_key.split("/")[-1]
-                local_path = temp_dir / file_name
-                s3.download_file(bronze_bucket, file_key, str(local_path))
-                new_txt_files.append(local_path)
+        paginator = s3.get_paginator('list_objects_v2')
+        pages = paginator.paginate(Bucket=bronze_bucket, Prefix=f"{user_id}/")
+        
+        for page in pages:
+            if 'Contents' in page:
+                for obj in page['Contents']:
+                    file_key = obj['Key']
+                    if not file_key.endswith(".txt"):
+                        continue
+                    file_name = file_key.split("/")[-1]
+                    local_path = temp_dir / file_name
+                    s3.download_file(bronze_bucket, file_key, str(local_path))
+                    new_txt_files.append(local_path)
     except Exception as e:
         shutil.rmtree(temp_dir, ignore_errors=True)
         return {"error": f"Erro ao acessar camada Bronze: {str(e)}"}
