@@ -216,7 +216,6 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     """
     from src.core.storage import get_s3_client, download_file_from_s3, upload_local_file_to_s3
     from src.etl.loader import HandLoader
-    from src.etl.repository import DatalakeRepository
     from src.parser.summary_parser import SummaryParser
     from extractor import process_stream
     from src.parser.tokenizer import TokenizerFactory
@@ -277,7 +276,8 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
         shutil.rmtree(temp_dir, ignore_errors=True)
         return {"message": "Nenhum arquivo encontrado na camada Bronze.", "new_files": 0, "hands_processed": 0}
         
-    repo = DatalakeRepository(str(temp_dir))
+    from src.etl.repository import JsonProcessedHandsRepository
+    repo = JsonProcessedHandsRepository(silver_dir / "processed_files.json")
     
     summaries_to_save = []
     hands_files_to_process = []
