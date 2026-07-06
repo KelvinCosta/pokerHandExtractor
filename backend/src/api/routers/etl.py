@@ -41,21 +41,51 @@ async def upload_and_process(
     silver_dir = temp_dir / "silver"
     silver_dir.mkdir(parents=True, exist_ok=True)
     
+    import uuid
+    summary_parser = SummaryParser()
+    
     saved_files = []
+    used_basenames = set()
     
     # 1. Salvar na camada Bronze (S3) e no temp (Processamento)
     for file in files:
-        basename = Path(file.filename).name
-        object_name = f"{user_id}/{basename}"
+        original_basename = Path(file.filename).name
         
-        temp_file_path = temp_dir / basename
-        with open(temp_file_path, "wb") as buffer:
+        # Save to a temporary UUID file first
+        temp_uuid_name = f"{uuid.uuid4()}.txt"
+        temp_uuid_path = temp_dir / temp_uuid_name
+        
+        with open(temp_uuid_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        with open(temp_file_path, "rb") as f_up:
+        # Determine final basename
+        final_basename = original_basename
+        if summary_parser.is_summary_file(str(temp_uuid_path)):
+            if not final_basename.lower().endswith("_summary.txt"):
+                name_part = Path(final_basename).stem
+                ext_part = Path(final_basename).suffix
+                final_basename = f"{name_part}_summary{ext_part}"
+                
+        # Handle collisions (if user uploads multiple files with exact same calculated name)
+        base_stem = Path(final_basename).stem
+        base_ext = Path(final_basename).suffix
+        counter = 1
+        while final_basename in used_basenames:
+            final_basename = f"{base_stem}_{counter}{base_ext}"
+            counter += 1
+            
+        used_basenames.add(final_basename)
+        
+        # Rename UUID file to final basename
+        final_file_path = temp_dir / final_basename
+        temp_uuid_path.rename(final_file_path)
+        
+        # Upload to S3 bronze
+        object_name = f"{user_id}/{final_basename}"
+        with open(final_file_path, "rb") as f_up:
             upload_file_stream_to_s3(f_up, bronze_bucket, object_name)
             
-        saved_files.append(temp_file_path)
+        saved_files.append(final_file_path)
         
     # 2. Configurar ETL Incremental (Baixando histórico anterior do S3)
     processed_log_path = silver_dir / "processed_files.json"
