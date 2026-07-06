@@ -217,7 +217,9 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.core.storage import get_s3_client, download_file_from_s3, upload_local_file_to_s3
     from src.etl.loader import HandLoader
     from src.etl.repository import DatalakeRepository
-    from src.core.parser import summary_parser, process_stream, tokenizer, initial_state
+    from src.parser import summary_parser
+    from extractor import process_stream
+    from src.parser.tokenizer import tokenizer, initial_state
     import shutil
     
     s3 = get_s3_client()
