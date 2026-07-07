@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { fetchHandDetails } from "@/lib/api"
 import type { HandDetails } from "@/lib/api.types"
-import { X, Loader2, AlertCircle, Trophy, TrendingDown } from "lucide-react"
+import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check } from "lucide-react"
 import { currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -166,6 +166,54 @@ function PokerTable({ data, isCash }: { data: HandDetails; isCash: boolean }) {
         </span>
       </div>
     </div>
+  )
+}
+
+// ─── Copy Button ────────────────────────────────────────────────────────────────
+function CopyButton({ data, isCash }: { data: HandDetails; isCash: boolean }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = () => {
+    let out = `Hand #${data.hand_id} (${data.game_type})\n`
+    out += `Date: ${data.data_limpa}\n`
+    out += `Final Pot: ${isCash ? currency(data.total_pot_final) : Math.round(data.total_pot_final).toLocaleString()}\n\n`
+    
+    const grouped: Record<string, typeof data.actions> = {}
+    for (const act of data.actions || []) {
+      let street = (act.street ?? "PREFLOP").toUpperCase()
+      if (street === "PRE_FLOP") street = "PREFLOP"
+      if (!grouped[street]) grouped[street] = []
+      grouped[street].push(act)
+    }
+    
+    for (const street of STREET_ORDER) {
+      if (grouped[street]) {
+        out += `--- ${street} ---\n`
+        for (const act of grouped[street]) {
+          const isAllIn = act.is_all_in ? " (All-in)" : ""
+          let line = `${act.player}: ${act.action_type || act.action}`
+          if (act.amount > 0) {
+            line += ` ${isCash ? currency(act.amount) : Math.round(act.amount).toLocaleString()}`
+          }
+          out += `${line}${isAllIn}\n`
+        }
+        out += `\n`
+      }
+    }
+
+    navigator.clipboard.writeText(out.trim())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <button 
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 rounded-md border border-zinc-700 bg-zinc-800/50 px-2.5 py-1 text-xs text-zinc-300 transition-colors hover:bg-zinc-700 hover:text-zinc-100"
+    >
+      {copied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+      {copied ? "Copied" : "Copy Actions"}
+    </button>
   )
 }
 
@@ -369,9 +417,12 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
 
               {/* ── Action Log ────────────────────────────────────────────── */}
               <div>
-                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                  Action History
-                </p>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-zinc-500">
+                    Action History
+                  </p>
+                  <CopyButton data={data} isCash={isCash} />
+                </div>
                 <ActionLog data={data} isCash={isCash} />
               </div>
 
