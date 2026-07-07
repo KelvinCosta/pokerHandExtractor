@@ -1,5 +1,9 @@
 from langchain_ollama import ChatOllama
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    SystemMessagePromptTemplate,
+    HumanMessagePromptTemplate
+)
 from src.domain.ports import IHandAnalyzer
 from src.domain.models import HandContext
 from src.domain.ai_models import HandAnalysis
@@ -7,47 +11,37 @@ from src.domain.ai_models import HandAnalysis
 class LlmPromptAnalyzer(IHandAnalyzer):
     def __init__(self, model_name: str = "llama3"):
         self.model_name = model_name
-        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=512)
-        self.prompt = PromptTemplate.from_template(
-            """
-            Você é um Arquiteto de Software e Jogador Profissional de Poker de High Stakes, especialista em GTO (Game Theory Optimal) e estratégias Exploitative para jogos de Micro-Stakes (NL2 e NL5).
+        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=1024)
+        
+        system_template = """Você é um Arquiteto de Software e Jogador Profissional de Poker de High Stakes, especialista em GTO (Game Theory Optimal).
 
-            A sua missão é analisar históricos de mãos fornecidos num formato de log de texto.
-            Você NUNCA deve dar conselhos genéricos. Você deve ser estrito, matemático e focar em encontrar "vazamentos" (leaks) na lógica do jogador (Hero).
+A sua missão é analisar históricos de mãos. Você NUNCA deve dar conselhos genéricos. Seja estrito, matemático e encontre vazamentos (leaks).
 
-            Siga OBRIGATORIAMENTE este pipeline de processamento para cada mão:
+<regras_inquebraveis>
+1. Leia a 'Relative Position' no bloco [GTO METRICS].
+2. Leia o SPR e o Effective Stack fornecidos no bloco [GTO METRICS].
+3. Valores no log estão em Dinheiro ($). Leia o "Big Blind" no [GTO METRICS] para converter mentalmente as apostas para BBs e saber se o sizing foi alto ou baixo. NUNCA ache que $0.02 são "0.02 BBs".
+4. NUNCA chame um Segundo Par de "mão forte" num pote grande.
+5. Identifique corretamente os Atores: "Hero" é o jogador analisado. Os outros são os Vilões. Preste atenção a QUEM fez a aposta e NÃO INVENTE AÇÕES QUE NÃO ACONTECERAM.
+5. O idioma da resposta DEVE SER Português do Brasil (pt-BR).
+6. Sunk Cost Fallacy: Avalie as [Pot Odds: X%] listadas nas ações de CALL do Hero.
+7. Se SPR <= 1 no Flop, o Hero está COMMITADO. Nunca sugira fold ou apostar pequeno.
+8. NÃO repita os nomes destas regras e nem imprima diretrizes na saída.
+</regras_inquebraveis>
 
-            1. LEITURA DE ESTADO (PRE-FLOP):
-            - Leia a 'Relative Position' no bloco [GTO METRICS]. Hero está In Position (IP) ou Out of Position (OOP)?
-            - Foi um Pote Simples (SRP), 3-Bet ou 4-Bet?
-            - A mão inicial do Hero justificava a ação? (Ex: Pagar 3-bets fora de posição com mãos marginais como AJo, KTo é um erro grave. Se o Hero fez isso, critique severamente).
+FORMATO DE SAÍDA EXIGIDO:
+**DIAGNÓSTICO PRÉ-FLOP:** [Análise severa da entrada]
+**DIAGNÓSTICO PÓS-FLOP:** [Análise linha a linha das apostas e equidade]
+**VEREDICTO ARQUITETURAL:** [Qual foi o erro principal? Qual botão deveria ter sido clicado?]"""
 
-            2. AVALIAÇÃO DE TEXTURA (PÓS-FLOP):
-            - Leia o SPR (Stack-to-Pot Ratio) e o Effective Stack fornecidos no bloco [GTO METRICS].
-            - Como a mão do Hero se conecta com o Bordo? É Top Pair? Draw? Segundo Par? Lixo?
-            - NUNCA chame um Segundo Par de "mão forte" num pote grande.
-
-            3. AUDITORIA DE ERROS COMUNS:
-            - Value Owning: O Hero apostou no River com uma mão média quando mãos piores nunca dariam call e mãos melhores nunca foldariam?
-            - Passividade Pré-flop: O Hero deu apenas Call com mãos Premium (QQ+, AK, AQs) em vez de aplicar uma 3-bet?
-            - Sunk Cost Fallacy: O Hero pagou múltiplas apostas apenas por "esperança"? Avalie as [Pot Odds: X%] listadas ao lado das ações de CALL do Hero para julgar se o call foi matematicamente incorreto.
-
-            4. FORMATO DE SAÍDA:
-            Gere a análise dividida em:
-            - [DIAGNÓSTICO PRÉ-FLOP]: Avaliação severa da decisão de entrada.
-            - [DIAGNÓSTICO PÓS-FLOP]: Análise linha a linha das apostas (sizing) e da equidade.
-            - [VEREDICTO ARQUITETURAL]: Qual foi o erro principal? Qual botão deveria ter sido clicado (Fold, Call, Raise) e porquê.
-            - DIRETRIZ DE SAÍDA: Você deve gerar toda a resposta OBRIGATORIAMENTE em Português do Brasil (pt-BR)
-            
-            REGRAS MATEMÁTICAS E LÓGICAS INQUEBRÁVEIS (STRICT RULES):
-                1. Regra do All-in: Se um jogador aposta All-in e toma Call, a rodada de apostas acaba. Nunca sugira que um jogador faça "Fold" para um "Call".
-                2. Regra do SPR (Stack-to-Pot Ratio): Se no Flop a aposta restante do Hero for menor ou igual ao tamanho do pote (SPR <= 1), o Hero está matematicamente COMMITADO. Com Top Pair ou Overpair (ex: AA, KK), a única jogada correta é ir All-in. NUNCA critique um all-in com SPR baixo e NUNCA sugira "apostar pequeno" se o stack restante for minúsculo.
-                3. Regra de Ocultação: Com SPR baixo (potes grandes, pouco stack), ocultar informação é irrelevante. O objetivo é realizar equidade.
-            MÃO:
-            {hand_history}
-            ANÁLISE:
-            """
-        )
+        human_template = """
+MÃO:
+{hand_history}
+"""
+        self.prompt = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template(system_template),
+            HumanMessagePromptTemplate.from_template(human_template)
+        ])
 
         self.chain = self.prompt | self.llm
         
@@ -90,6 +84,13 @@ class LlmPromptAnalyzer(IHandAnalyzer):
         return "Out of Position / Middle Position"
 
     def _format_hand(self, hand: HandContext) -> str:
+        player_map = {hand.player_nickname: "Hero"}
+        villain_counter = 1
+        for act in hand.actions:
+            if act.player not in player_map:
+                player_map[act.player] = f"Villain {villain_counter}"
+                villain_counter += 1
+                
         out = f"Hand #{hand.hand_id} ({hand.game_info or 'Cash Game'})\n"
         out += f"Date: {hand.timestamp}\n"
         
@@ -98,11 +99,10 @@ class LlmPromptAnalyzer(IHandAnalyzer):
         eff_stack_bb = round(eff_stack / hand.stake_level, 1) if hand.stake_level > 0 else 0
         rel_pos = self._determine_relative_position(hand)
         
-        out += f"""
-        [GTO METRICS]
-        Effective Stack: {eff_stack_bb} BBs
-        Relative Position: {rel_pos}
-        """
+        out += "\n[GTO METRICS]\n"
+        out += f"Big Blind: ${hand.stake_level}\n"
+        out += f"Effective Stack: {eff_stack_bb} BBs\n"
+        out += f"Relative Position: {rel_pos}\n"
         
         # Track running pot for Pot Odds and SPR
         running_pot = 0.0
@@ -148,7 +148,8 @@ class LlmPromptAnalyzer(IHandAnalyzer):
                 
                 for act in grouped[street]:
                     is_all_in = " (All-in)" if act.is_all_in else ""
-                    line = f"{act.player}: {act.action_type.name}"
+                    mapped_player = player_map.get(act.player, act.player)
+                    line = f"{mapped_player}: {act.action_type.name}"
                     if act.amount > 0:
                         line += f" {act.amount}"
                         
@@ -167,7 +168,8 @@ class LlmPromptAnalyzer(IHandAnalyzer):
         if villains_with_cards:
             out += "--- SHOWDOWN ---\n"
             for p, c in villains_with_cards.items():
-                out += f"{p} shows [{c}]\n"
+                mapped_villain = player_map.get(p, p)
+                out += f"{mapped_villain} shows [{c}]\n"
             out += "\n"
             
         return out.strip()
