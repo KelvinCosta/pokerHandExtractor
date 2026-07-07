@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import type { DashboardFilters, TournamentSummary } from "@/lib/api.types"
 import { fetchTournamentsList } from "@/lib/api"
 import { type ViewId } from "@/components/dashboard/sidebar"
@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 import { currency } from "@/lib/poker-data"
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, Calendar } from "lucide-react"
+
+// All game_type values the backend stores as "tournament" variants
+const TOURNAMENT_GAME_TYPES = ["Tournament", "Spin & Gold", "Mystery Battle Royale"]
 
 export function TournamentsView({ 
   filters,
@@ -46,7 +49,10 @@ export function TournamentsView({
       setLoading(true)
       try {
         const response = await fetchTournamentsList({
-          ...filters
+          // Always send ALL tournament types — the game_types filter from
+          // the global filter bar must not exclude tournament sub-types.
+          ...filters,
+          game_types: TOURNAMENT_GAME_TYPES,
         }, controller.signal)
         
         if (!cancelled) {
@@ -68,6 +74,29 @@ export function TournamentsView({
     }
   }, [filters])
 
+  const filteredData = useMemo(() => {
+    // The backend does NOT apply date filters to the tournaments parquet,
+    // so we filter client-side using the `date` field on each TournamentSummary.
+    let result = data
+
+    if (filters?.start_date) {
+      const from = new Date(filters.start_date)
+      result = result.filter((t) => {
+        if (!t.date) return false
+        return new Date(t.date) >= from
+      })
+    }
+    if (filters?.end_date) {
+      const to = new Date(filters.end_date)
+      result = result.filter((t) => {
+        if (!t.date) return false
+        return new Date(t.date) <= to
+      })
+    }
+
+    return result
+  }, [data, filters?.start_date, filters?.end_date])
+
   const handleSort = (column: keyof TournamentSummary) => {
     if (sortBy === column) {
       setSortDesc(!sortDesc)
@@ -82,7 +111,7 @@ export function TournamentsView({
     return sortDesc ? <ArrowDownIcon className="ml-1 inline-block h-3 w-3" /> : <ArrowUpIcon className="ml-1 inline-block h-3 w-3" />
   }
 
-  const sortedData = [...data].sort((a, b) => {
+  const sortedData = [...filteredData].sort((a, b) => {
     let valA = a[sortBy] ?? ""
     let valB = b[sortBy] ?? ""
     
@@ -108,9 +137,17 @@ export function TournamentsView({
               <h2 className="text-sm font-semibold">Tournaments Summary</h2>
               <p className="text-xs text-muted-foreground">Click on a tournament to view its hands</p>
             </div>
-            <span className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:inline">
-              {data.length} events
-            </span>
+            <div className="hidden items-center gap-2 sm:flex">
+              {(filters?.start_date || filters?.end_date) && (
+                <span className="flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[9px] text-amber-400">
+                  <Calendar className="size-2.5" />
+                  {filters.start_date ?? "…"} → {filters.end_date ?? "…"}
+                </span>
+              )}
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                {filteredData.length}{data.length !== filteredData.length ? ` / ${data.length}` : ""} events
+              </span>
+            </div>
           </div>
           <div className="overflow-x-auto scrollbar-thin">
             <Table>
