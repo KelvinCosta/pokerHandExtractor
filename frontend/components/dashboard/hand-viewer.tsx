@@ -344,6 +344,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiResult, setAiResult] = useState<{ analysis_id: string; raw_analysis: string; agent_version: string } | null>(null)
   const [feedbackSent, setFeedbackSent] = useState<"up" | "down" | null>(null)
+  const [aiCopied, setAiCopied] = useState(false)
 
   useEffect(() => {
     if (!handId) { setData(null); return }
@@ -353,6 +354,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
     setAiResult(null)
     setAiError(null)
     setFeedbackSent(null)
+    setAiCopied(false)
     
     fetchHandDetails(handId)
       .then(res  => { if (!cancelled) setData(res) })
@@ -386,6 +388,13 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
       console.error("Failed to submit feedback", err)
       setFeedbackSent(null) // Revert on failure
     }
+  }
+
+  const handleCopyAiResponse = () => {
+    if (!aiResult) return
+    navigator.clipboard.writeText(aiResult.raw_analysis)
+    setAiCopied(true)
+    setTimeout(() => setAiCopied(false), 2000)
   }
 
   if (!handId) return null
@@ -509,7 +518,16 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                     </div>
                     
                     <div className="flex items-center justify-between mt-2 pt-3 border-t border-indigo-500/20">
-                      <span className="text-[10px] font-mono text-indigo-400/50">Model: {aiResult.agent_version}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-mono text-indigo-400/50">Model: {aiResult.agent_version}</span>
+                        <button
+                          onClick={handleCopyAiResponse}
+                          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
+                        >
+                          {aiCopied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+                          {aiCopied ? "Copied" : "Copy"}
+                        </button>
+                      </div>
                       
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-zinc-500 uppercase tracking-widest mr-1">Was this useful?</span>
