@@ -8,6 +8,14 @@ class HandStartEvent(BaseModel):
     game_info: str = ""
     stake_level: float = 0.0
 
+class ButtonInfoEvent(BaseModel):
+    button_seat: int
+
+class SeatInfoEvent(BaseModel):
+    seat: int
+    player: str
+    starting_stack: float
+
 class StreetChangeEvent(BaseModel):
     street_name: str 
     cards: List[str]
@@ -31,12 +39,14 @@ class PotSummaryEvent(BaseModel):
     fortune: float = 0.0
     tax: float = 0.0
 
-Token = Union[HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent]
+Token = Union[HandStartEvent, ButtonInfoEvent, SeatInfoEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent]
 
 class GGPokerTokenizer:
     def __init__(self, hero_name: str = "Hero"):
         self.hero_name = hero_name
         self.re_hand_start = re.compile(r"^Poker Hand #([a-zA-Z0-9]+):\s*(.*?)\s*-\s*(\d{4}/\d{2}/\d{2}\s\d{2}:\d{2}:\d{2})")
+        self.re_button = re.compile(r"Seat #(\d+) is the button")
+        self.re_seat = re.compile(r"^Seat (\d+): (.*?) \(\$?([0-9,.]+)(?: in chips)?\)")
         self.re_street = re.compile(r"^\*\*\* (FLOP|TURN|RIVER) \*\*\*\s+(.*)$")
         self.re_action = re.compile(r"^([^:]+): (folds|calls|raises|bets|checks|posts small blind|posts big blind|posts ante|posts the ante)(.*)")
         self.re_dealt = re.compile(r"^Dealt to ([^\[]+) \[([^\]]+)\]")
@@ -61,6 +71,18 @@ class GGPokerTokenizer:
                 stake_level = float(stake_match.group(2).replace(",", ""))
             
             return HandStartEvent(hand_id=match_start.group(1), game_info=game_info_str, timestamp=match_start.group(3), stake_level=stake_level)
+
+        match_button = self.re_button.search(line)
+        if match_button:
+            return ButtonInfoEvent(button_seat=int(match_button.group(1)))
+            
+        match_seat = self.re_seat.search(line)
+        if match_seat:
+            player_name = match_seat.group(2).strip()
+            if player_name == "Hero":
+                player_name = self.hero_name
+            stack = float(match_seat.group(3).replace(",", ""))
+            return SeatInfoEvent(seat=int(match_seat.group(1)), player=player_name, starting_stack=stack)
 
         match_street = self.re_street.search(line)
         if match_street:

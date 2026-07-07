@@ -73,6 +73,27 @@ async def analyze_hand(hand_id: str, current_user: User = Depends(get_current_us
         if "player" in p and "cards" in p:
             player_cards[p["player"]] = p["cards"]
 
+    import ast
+    starting_stacks = {}
+    player_seats = {}
+    button_seat = 0
+    try:
+        ss_raw = hand_dict.get("starting_stacks", "{}")
+        if isinstance(ss_raw, str):
+            starting_stacks = ast.literal_eval(ss_raw)
+        elif isinstance(ss_raw, dict):
+            starting_stacks = ss_raw
+            
+        ps_raw = hand_dict.get("player_seats", "{}")
+        if isinstance(ps_raw, str):
+            player_seats = ast.literal_eval(ps_raw)
+        elif isinstance(ps_raw, dict):
+            player_seats = ps_raw
+            
+        button_seat = int(hand_dict.get("button_seat", 0))
+    except Exception:
+        pass
+
     hand_context = HandContext(
         hand_id=hand_dict.get("hand_id", hand_id),
         timestamp=hand_dict.get("data_limpa", ""),
@@ -81,7 +102,10 @@ async def analyze_hand(hand_id: str, current_user: User = Depends(get_current_us
         board_cards=tuple(hand_dict.get("board_cards", [])),
         player_cards=player_cards,
         player_nickname=hand_dict.get("player_nickname", "Hero"),
-        total_pot=hand_dict.get("total_pot_final", 0.0)
+        total_pot=hand_dict.get("total_pot_final", 0.0),
+        starting_stacks=starting_stacks,
+        player_seats=player_seats,
+        button_seat=button_seat
     )
     
     # 3. Run the orchestrator

@@ -41,6 +41,11 @@ class HandContext:
     platform: str = ""
     player_nickname: str = ""
     total_pot: float = 0.0
+    
+    # GTO Analytics Properties (Optional for older hands)
+    starting_stacks: Mapping[str, float] = field(default_factory=dict)
+    player_seats: Mapping[str, int] = field(default_factory=dict)
+    button_seat: int = 0
     rake: float = 0.0
     jackpot: float = 0.0
     bingo: float = 0.0

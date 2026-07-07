@@ -67,10 +67,44 @@ class LlmPromptAnalyzer(IHandAnalyzer):
             created_at=None
         )
 
+    def _calculate_effective_stack(self, hand: HandContext) -> float:
+        if not hasattr(hand, "starting_stacks") or not hand.starting_stacks:
+            return 0.0
+        hero_stack = hand.starting_stacks.get(hand.player_nickname, 0.0)
+        villain_stacks = [s for p, s in hand.starting_stacks.items() if p != hand.player_nickname]
+        if not villain_stacks:
+            return hero_stack
+        max_villain = max(villain_stacks)
+        return min(hero_stack, max_villain)
+
+    def _determine_relative_position(self, hand: HandContext) -> str:
+        if not hasattr(hand, "player_seats") or not hand.player_seats:
+            return "Unknown"
+        hero_seat = hand.player_seats.get(hand.player_nickname, -1)
+        btn_seat = getattr(hand, "button_seat", 0)
+        if hero_seat == -1 or btn_seat == 0:
+            return "Unknown"
+        if hero_seat == btn_seat:
+            return "In Position (Button)"
+        # Simple heuristic for now
+        return "Out of Position / Middle Position"
+
     def _format_hand(self, hand: HandContext) -> str:
         out = f"Hand #{hand.hand_id} ({hand.game_info or 'Cash Game'})\n"
         out += f"Date: {hand.timestamp}\n"
-        out += f"Final Pot: {hand.total_pot}\n\n"
+        
+        # Calculate GTO Metrics if available
+        eff_stack = self._calculate_effective_stack(hand)
+        eff_stack_bb = round(eff_stack / hand.stake_level, 1) if hand.stake_level > 0 else 0
+        rel_pos = self._determine_relative_position(hand)
+        
+        out += "\n[GTO METRICS]\n"
+        out += f"Effective Stack: {eff_stack_bb} BBs\n"
+        out += f"Relative Position: {rel_pos}\n"
+        
+        # Track running pot for Pot Odds and SPR
+        running_pot = 0.0
+        flop_pot = 0.0
         
         grouped = {}
         for act in hand.actions:
@@ -81,6 +115,18 @@ class LlmPromptAnalyzer(IHandAnalyzer):
                 grouped[street] = []
             grouped[street].append(act)
             
+        # Calculate Pot before Flop actions (for SPR)
+        for act in grouped.get("PREFLOP", []):
+            running_pot += getattr(act, "invested_amount", 0.0)
+        flop_pot = running_pot
+        
+        if flop_pot > 0 and eff_stack > 0:
+            spr = round(eff_stack / flop_pot, 2)
+            out += f"SPR (Flop): {spr}\n"
+            
+        out += "\n"
+        out += f"Final Pot: {hand.total_pot}\n\n"
+        
         hero_cards_val = hand.player_cards.get(hand.player_nickname, "")
         board_cards = hand.board_cards or ()
         
@@ -103,6 +149,15 @@ class LlmPromptAnalyzer(IHandAnalyzer):
                     line = f"{act.player}: {act.action_type.name}"
                     if act.amount > 0:
                         line += f" {act.amount}"
+                        
+                    # Pot odds calculation (very naive approach based on invested amount)
+                    invested = getattr(act, "invested_amount", 0.0)
+                    running_pot += invested
+                    
+                    if act.player == hand.player_nickname and act.action_type.name == "CALL" and invested > 0:
+                        pot_odds_pct = round((invested / running_pot) * 100, 1) if running_pot > 0 else 0
+                        line += f" [Pot Odds: {pot_odds_pct}%]"
+                        
                     out += f"{line}{is_all_in}\n"
                 out += "\n"
         

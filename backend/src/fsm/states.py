@@ -130,6 +130,17 @@ class PreFlopState(BaseStreetState):
         if isinstance(token, StreetChangeEvent) and token.street_name == "FLOP":
             new_context = replace(context, board_cards=tuple(token.cards))
             return FlopState(), new_context
+            
+        if type(token).__name__ == "ButtonInfoEvent":
+            return self, replace(context, button_seat=token.button_seat)
+            
+        if type(token).__name__ == "SeatInfoEvent":
+            new_stacks = dict(context.starting_stacks)
+            new_stacks[token.player] = token.starting_stack
+            new_seats = dict(context.player_seats)
+            new_seats[token.player] = token.seat
+            return self, replace(context, starting_stacks=new_stacks, player_seats=new_seats)
+            
         return super().process(token, context)
 
 class InitState(State):
