@@ -386,3 +386,35 @@ export async function fetchRanges(
     signal,
   )
 }
+
+// ─── AI Analysis ──────────────────────────────────────────────────────────────
+export interface AiAnalysisResponse {
+  analysis_id: string
+  raw_analysis: string
+  agent_version: string
+}
+
+export interface AiFeedbackRequest {
+  is_useful: boolean
+  comments?: string
+}
+
+export async function analyzeHand(handId: string, signal?: AbortSignal): Promise<AiAnalysisResponse> {
+  // We use POST with empty body, but our apiPost wrapper expects a body.
+  return apiPost<Record<string, never>, AiAnalysisResponse>(
+    `/api/ai/analyze/${handId}`,
+    {},
+    signal,
+  )
+}
+
+export async function submitAnalysisFeedback(
+  feedback: AiFeedbackRequest,
+  signal?: AbortSignal,
+): Promise<any> {
+  return apiPost<AiFeedbackRequest, any>(
+    "/api/ai/feedback",
+    feedback,
+    signal,
+  )
+}

@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { fetchHandDetails } from "@/lib/api"
+import { fetchHandDetails, analyzeHand, submitAnalysisFeedback } from "@/lib/api"
 import type { HandDetails } from "@/lib/api.types"
-import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check } from "lucide-react"
+import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check, Sparkles, ThumbsUp, ThumbsDown } from "lucide-react"
 import { currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -339,17 +339,54 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // AI State
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [aiResult, setAiResult] = useState<{ analysis_id: string; raw_analysis: string; agent_version: string } | null>(null)
+  const [feedbackSent, setFeedbackSent] = useState<"up" | "down" | null>(null)
+
   useEffect(() => {
     if (!handId) { setData(null); return }
     let cancelled = false
     setLoading(true)
     setError(null)
+    setAiResult(null)
+    setAiError(null)
+    setFeedbackSent(null)
+    
     fetchHandDetails(handId)
       .then(res  => { if (!cancelled) setData(res) })
       .catch(err => { if (!cancelled) setError(err.message || "Failed to load hand") })
       .finally(()  => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [handId])
+
+  const handleAskAI = async () => {
+    if (!handId) return
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const res = await analyzeHand(handId)
+      setAiResult(res)
+    } catch (err: any) {
+      setAiError(err.message || "Failed to analyze hand")
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  const handleFeedback = async (isUseful: boolean) => {
+    if (!aiResult) return
+    setFeedbackSent(isUseful ? "up" : "down")
+    try {
+      await submitAnalysisFeedback({
+        is_useful: isUseful,
+      })
+    } catch (err) {
+      console.error("Failed to submit feedback", err)
+      setFeedbackSent(null) // Revert on failure
+    }
+  }
 
   if (!handId) return null
 
@@ -433,6 +470,73 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* ── AI Analysis Panel ─────────────────────────────────────────── */}
+              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-indigo-400" />
+                    <h3 className="font-semibold text-sm text-indigo-100">AI Hand Analysis</h3>
+                  </div>
+                  {!aiResult && !aiLoading && (
+                    <button
+                      onClick={handleAskAI}
+                      className="flex items-center gap-2 rounded-md bg-indigo-500 hover:bg-indigo-600 transition-colors px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/20"
+                    >
+                      Ask AI
+                    </button>
+                  )}
+                </div>
+                
+                {aiLoading && (
+                  <div className="flex items-center gap-2 text-indigo-400/70 text-xs font-mono">
+                    <Loader2 className="size-3 animate-spin" />
+                    Analyzing hand with AI...
+                  </div>
+                )}
+                
+                {aiError && (
+                  <p className="text-xs text-rose-400 font-mono bg-rose-500/10 p-2 rounded-md border border-rose-500/20">
+                    {aiError}
+                  </p>
+                )}
+                
+                {aiResult && (
+                  <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                    <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                      {aiResult.raw_analysis}
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-indigo-500/20">
+                      <span className="text-[10px] font-mono text-indigo-400/50">Model: {aiResult.agent_version}</span>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-widest mr-1">Was this useful?</span>
+                        <button 
+                          onClick={() => handleFeedback(true)}
+                          disabled={feedbackSent !== null}
+                          className={cn(
+                            "p-1.5 rounded-md transition-colors",
+                            feedbackSent === "up" ? "bg-emerald-500/20 text-emerald-400" : "hover:bg-zinc-800 text-zinc-400 disabled:opacity-50"
+                          )}
+                        >
+                          <ThumbsUp className="size-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => handleFeedback(false)}
+                          disabled={feedbackSent !== null}
+                          className={cn(
+                            "p-1.5 rounded-md transition-colors",
+                            feedbackSent === "down" ? "bg-rose-500/20 text-rose-400" : "hover:bg-zinc-800 text-zinc-400 disabled:opacity-50"
+                          )}
+                        >
+                          <ThumbsDown className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* ── Poker Table ───────────────────────────────────────────── */}
