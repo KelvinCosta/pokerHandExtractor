@@ -211,12 +211,15 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
                 minTickGap={32}
                 className="font-mono text-[10px]"
                 tickFormatter={(value) => {
-                  if (typeof value !== "string") return ""
+                  if (typeof value !== "string" || !value) return ""
                   // Backend returns "YYYY/MM/DD HH:MM:SS" — show only the date portion
                   if (value.includes(" ")) {
                     const datePart = value.split(" ")[0] // "YYYY/MM/DD"
-                    const [y, m, d] = datePart.split("/")
-                    return `${d}/${m}`  // "DD/MM"
+                    const parts = datePart.split("/")
+                    if (parts.length === 3 && parts[1] && parts[2]) {
+                      return `${parts[2]}/${parts[1]}`  // "DD/MM"
+                    }
+                    return datePart // fallback: show raw date
                   }
                   return value
                 }}
