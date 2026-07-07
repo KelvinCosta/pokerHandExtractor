@@ -98,9 +98,11 @@ class LlmPromptAnalyzer(IHandAnalyzer):
         eff_stack_bb = round(eff_stack / hand.stake_level, 1) if hand.stake_level > 0 else 0
         rel_pos = self._determine_relative_position(hand)
         
-        out += "\n[GTO METRICS]\n"
-        out += f"Effective Stack: {eff_stack_bb} BBs\n"
-        out += f"Relative Position: {rel_pos}\n"
+        out += f"""
+        [GTO METRICS]
+        Effective Stack: {eff_stack_bb} BBs
+        Relative Position: {rel_pos}
+        """
         
         # Track running pot for Pot Odds and SPR
         running_pot = 0.0
