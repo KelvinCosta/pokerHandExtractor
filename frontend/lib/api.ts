@@ -87,6 +87,36 @@ async function apiPost<TBody, TResponse>(
   return res.json() as Promise<TResponse>
 }
 
+async function apiGet<TResponse>(
+  path: string,
+  params?: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<TResponse> {
+  const query = params ? "?" + new URLSearchParams(params).toString() : ""
+  const url = `${BASE_URL}${path}${query}`
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token")
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers,
+    signal,
+  })
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} — ${res.statusText}`)
+  }
+
+  return res.json() as Promise<TResponse>
+}
+
 // ─── Dashboard endpoints ──────────────────────────────────────────────────────
 
 export async function fetchDashboardMetadata(filters: DashboardFilters = {}): Promise<{
