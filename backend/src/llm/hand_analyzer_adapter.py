@@ -201,6 +201,11 @@ MÃO:
                         amt_bb = round(act.amount / bb, 1)
                         line += f" {amt_bb} BBs"
                         
+                        # Se for BET ou RAISE, calcular o percentual em relação ao pote (antes da aposta)
+                        if act_name in ("BET", "RAISE") and running_pot > 0:
+                            pct_pot = round((act.amount / running_pot) * 100)
+                            line += f" ({pct_pot}% do pot)"
+                            
                     # Pot odds calculation (very naive approach based on invested amount)
                     invested = getattr(act, "invested_amount", 0.0)
                     running_pot += invested
