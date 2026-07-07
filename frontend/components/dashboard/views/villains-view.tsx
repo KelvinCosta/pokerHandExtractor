@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils"
 import { ArrowDown, ArrowUp, ChevronsUpDown, Skull } from "lucide-react"
 import { useDashboard } from "@/hooks/useDashboard"
 import type { DashboardFilters } from "@/lib/api.types"
+import { getVillainTag, saveVillainTag } from "@/lib/api"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { useEffect } from "react"
 
 type SortKey = keyof Pick<Villain, "hands" | "net" | "vpip" | "pfr" | "threeBet" | "wtsd">
 
@@ -164,13 +168,7 @@ export function VillainsView({
 
                   {/* Tags */}
                   <TableCell className="pr-5 text-right">
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {v.tags.slice(0, 2).map((t) => (
-                        <span key={t} className="rounded-full bg-zinc-800 px-1.5 py-0.5 font-mono text-[9px] text-zinc-400">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
+                    <VillainTagsEditor alias={v.alias} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -274,5 +272,61 @@ function SortBtn({ label, active, asc, onClick }: {
         ? asc ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />
         : <ChevronsUpDown className="size-3 opacity-40" />}
     </button>
+  )
+}
+
+function VillainTagsEditor({ alias }: { alias: string }) {
+  const [note, setNote] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [loading, setLoading] = useState(false)
+  
+  useEffect(() => {
+    getVillainTag(alias).then(r => setNote(r.note)).catch(() => {})
+  }, [alias])
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await saveVillainTag(alias, note || "")
+      setEditing(false)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <form onSubmit={handleSave} className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+        <Input 
+          autoFocus
+          value={note || ""} 
+          onChange={e => setNote(e.target.value)}
+          className="h-6 w-32 text-xs bg-black/50 font-mono" 
+          placeholder="Tag/Note..."
+          disabled={loading}
+        />
+        <Button type="submit" size="sm" variant="outline" className="h-6 px-2 text-xs font-mono" disabled={loading}>
+          Save
+        </Button>
+      </form>
+    )
+  }
+
+  return (
+    <div 
+      className="flex flex-wrap justify-end gap-1 min-h-6 min-w-[50px] cursor-text"
+      onClick={(e) => { e.stopPropagation(); setEditing(true) }}
+    >
+      {note ? (
+        <span className="rounded-full bg-zinc-800/80 px-2 py-0.5 font-mono text-[10px] text-zinc-300 border border-border">
+          {note}
+        </span>
+      ) : (
+        <span className="text-[10px] font-mono text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">
+          Click to add note
+        </span>
+      )}
+    </div>
   )
 }

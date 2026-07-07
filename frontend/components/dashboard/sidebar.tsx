@@ -25,6 +25,8 @@ export type ViewId =
   | "population"
   | "audit"
   | "import"
+  | "cbet-audit"
+  | "river-audit"
 
 const nav: {
   group: string
@@ -37,6 +39,8 @@ const nav: {
       { id: "analytics",    label: "Analytics Dashboard",     icon: BarChart2, badge: "NEW" },
       { id: "ranges",       label: "Preflop Ranges",          icon: Radar,     badge: "NEW" },
       { id: "engines",      label: "Pre / Post-Flop Engines", icon: Layers    },
+      { id: "cbet-audit",   label: "C-Bet Analysis",          icon: Target,    badge: "NEW" },
+      { id: "river-audit",  label: "River Audit",             icon: Waves,     badge: "NEW" },
       { id: "villains",     label: "Villain Mapping",         icon: Users     },
       { id: "tournaments",  label: "Tournaments",             icon: Target    },
       { id: "bigpots",      label: "Hands Database",          icon: Spade     },

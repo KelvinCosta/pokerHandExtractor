@@ -130,6 +130,15 @@ class HandNoteRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class VillainNoteRecord(Base):
+    __tablename__ = 'villain_notes'
+    id = Column(String, primary_key=True)
+    player = Column(String, index=True) # Nome do vilão
+    user_id = Column(String, index=True) # Dono da nota
+    note = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 # ==========================================
 # UTILITÁRIOS (HELPERS DE REPOSITÓRIO)
 # ==========================================

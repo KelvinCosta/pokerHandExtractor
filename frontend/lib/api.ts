@@ -464,3 +464,41 @@ export async function saveHandNote(handId: string, note: string, signal?: AbortS
     signal,
   )
 }
+
+export async function fetchCbetTextures(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<import("./api.types").CbetTexturesResponse> {
+  return apiPost<DashboardFilters, import("./api.types").CbetTexturesResponse>(
+    "/api/dashboard/engines/cbet-textures",
+    filters,
+    signal,
+  )
+}
+
+export async function fetchRiverAudit(
+  filters: DashboardFilters = {},
+  signal?: AbortSignal,
+): Promise<import("./api.types").RiverAuditResponse> {
+  return apiPost<DashboardFilters, import("./api.types").RiverAuditResponse>(
+    "/api/dashboard/engines/river-audit",
+    filters,
+    signal,
+  )
+}
+
+export async function getVillainTag(player: string, signal?: AbortSignal): Promise<{ note: string }> {
+  return apiGet<{ note: string }>(
+    `/api/dashboard/villains/${encodeURIComponent(player)}/tag`,
+    undefined,
+    signal,
+  )
+}
+
+export async function saveVillainTag(player: string, note: string, signal?: AbortSignal): Promise<any> {
+  return apiPost<{ note: string }, any>(
+    `/api/dashboard/villains/${encodeURIComponent(player)}/tag`,
+    { note },
+    signal,
+  )
+}

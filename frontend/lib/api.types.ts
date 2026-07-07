@@ -177,3 +177,57 @@ export interface AuditCompleteResponse {
 export interface ApiError {
   detail: string | { msg: string; type: string }[]
 }
+
+export interface CbetScatterPoint {
+  hand_id: string
+  flop_suit_type: string
+  sizing_flop_pct: number
+}
+
+export interface ValueOwningPoint {
+  hand_id: string
+  flop_suit_type: string
+  sizing_flop_pct: number
+  pote_no_flop: number
+  hero_bet: number
+}
+
+export interface CbetTexturesResponse {
+  scatter: CbetScatterPoint[]
+  valueOwning: ValueOwningPoint[]
+}
+
+export interface RiverHeroBet {
+  hand_id: string
+  pote_final: number
+  investimento_total_river: number
+  hero_bet_amount: number
+  hero_all_in_river: boolean
+  qtd_calls_recebidos: number
+  pote_anterior: number
+  sizing_pct: number
+  hero_ganhou: boolean | null
+  resultado: string
+  bet_ideal_75: number
+  diferenca_dolares: number
+  impacto_no_caixa: string
+}
+
+export interface RiverHeroCall {
+  hand_id: string
+  valor_do_call: number
+  hero_ganhou: boolean | null
+  resultado: string
+}
+
+export interface RiverAuditSummary {
+  missed_value: number
+  saved_money: number
+  net_leak: number
+}
+
+export interface RiverAuditResponse {
+  hero_bets: RiverHeroBet[]
+  hero_calls: RiverHeroCall[]
+  summary: RiverAuditSummary
+}

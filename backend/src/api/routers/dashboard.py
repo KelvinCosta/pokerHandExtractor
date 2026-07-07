@@ -822,3 +822,234 @@ async def save_hand_note(hand_id: str, req: HandNoteRequest, current_user: User 
         return {"status": "success"}
     finally:
         db.close()
+
+class VillainNoteRequest(BaseModel):
+    note: str
+
+@router.get("/villains/{player}/tag")
+async def get_villain_tag(player: str, current_user: User = Depends(get_current_user)):
+    from src.database.models import get_session, VillainNoteRecord
+    db = get_session()
+    try:
+        record = db.query(VillainNoteRecord).filter_by(player=player, user_id=current_user.id).first()
+        return {"note": record.note if record else ""}
+    finally:
+        db.close()
+
+@router.post("/villains/{player}/tag")
+async def save_villain_tag(player: str, req: VillainNoteRequest, current_user: User = Depends(get_current_user)):
+    from src.database.models import get_session, VillainNoteRecord
+    import uuid
+    db = get_session()
+    try:
+        record = db.query(VillainNoteRecord).filter_by(player=player, user_id=current_user.id).first()
+        if record:
+            record.note = req.note
+        else:
+            record = VillainNoteRecord(
+                id=str(uuid.uuid4()),
+                player=player,
+                user_id=current_user.id,
+                note=req.note
+            )
+            db.add(record)
+        db.commit()
+        return {"status": "success"}
+    finally:
+        db.close()
+
+@router.post("/engines/cbet-textures")
+async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return {"scatter": [], "valueOwning": []}
+        
+    df_pfr_hero = (
+        df.filter(
+            (pl.col("player") == pl.col("player_nickname")) & 
+            (pl.col("street") == "PRE_FLOP") & 
+            (pl.col("action_type") == "RAISE")
+        )
+        .select("hand_id").unique()
+    )
+
+    df_flop_action_hero = (
+        df.filter(
+            (pl.col("player") == pl.col("player_nickname")) & 
+            (pl.col("street") == "FLOP")
+        )
+        .select("hand_id").unique()
+    )
+
+    df_cbet_oportunidades = df_pfr_hero.join(df_flop_action_hero, on="hand_id", how="inner")
+    
+    df_cbet_executada = (
+        df.filter(
+            (pl.col("player") == pl.col("player_nickname")) & 
+            (pl.col("street") == "FLOP") & 
+            (pl.col("action_type") == "BET")
+        )
+        .join(df_cbet_oportunidades, on="hand_id", how="inner") 
+    )
+
+    df_pot_flop = (
+        df.filter(pl.col("street") == "PRE_FLOP")
+        .group_by("hand_id")
+        .agg(pl.col("amount").sum().alias("pote_real_flop"))
+    )
+    
+    df_hero_flop_bet = (
+        df.filter((pl.col("player") == pl.col("player_nickname")) & (pl.col("street") == "FLOP") & (pl.col("action_type") == "BET"))
+        .select(["hand_id", "amount"])
+    )
+
+    if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
+        df_texturas = (
+            df.select(["hand_id", "flop_suit_type", "flop_pair_type"])
+            .drop_nulls(subset=["flop_suit_type", "flop_pair_type"])
+            .unique(subset=["hand_id"])
+        )
+    else:
+        df_texturas = pl.DataFrame({"hand_id": [], "flop_suit_type": [], "flop_pair_type": []}, schema={"hand_id": pl.Utf8, "flop_suit_type": pl.Utf8, "flop_pair_type": pl.Utf8})
+
+    df_cbet_range = (
+        df_cbet_executada.select("hand_id")
+        .unique()
+        .join(df_hero_flop_bet, on="hand_id", how="left")
+        .join(df_pot_flop, on="hand_id", how="left")
+        .join(df_texturas, on="hand_id", how="left")
+        .with_columns(
+            ((pl.col("amount") / pl.col("pote_real_flop")) * 100).round(1).alias("sizing_flop_pct")
+        )
+    )
+
+    scatter_df = df_cbet_range.drop_nulls(subset=["flop_suit_type", "sizing_flop_pct"]).select(["hand_id", "flop_suit_type", "sizing_flop_pct"]).to_dicts()
+
+    # Value Owning Tracker
+    flop_calls_raises = (
+        df.filter((pl.col("street") == "FLOP") & (pl.col("player") != pl.col("player_nickname")) & (pl.col("action_type").is_in(["CALL", "RAISE"])))
+        .select("hand_id").unique()
+    )
+    
+    showdown_hands = (
+        df.select(["hand_id", "player_cards"]).unique()
+        .filter(pl.col("player_cards").list.len() > 1)
+        .select("hand_id")
+    )
+
+    from src.dashboard.domain_data import get_vencedores_df
+    try:
+        vencedores_df = get_vencedores_df(df)
+        df_value_owning = (
+            df_cbet_range
+            .filter(pl.col("sizing_flop_pct") > 60.0)
+            .join(flop_calls_raises, on="hand_id", how="inner")
+            .join(showdown_hands, on="hand_id", how="inner")
+            .join(vencedores_df, on="hand_id", how="inner")
+            .filter(pl.col("hero_ganhou") == False)
+            .select(["hand_id", "flop_suit_type", "sizing_flop_pct", pl.col("pote_real_flop").alias("pote_no_flop"), pl.col("amount").alias("hero_bet")])
+            .sort("sizing_flop_pct", descending=True)
+        )
+        vo_list = df_value_owning.to_dicts()
+    except Exception:
+        vo_list = []
+
+    return {
+        "scatter": scatter_df,
+        "valueOwning": vo_list
+    }
+
+@router.post("/engines/river-audit")
+async def get_river_audit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    df = get_filtered_df(filters, current_user)
+    if df.height == 0:
+        return {"hero_bets": [], "hero_calls": [], "summary": {}}
+
+    auditoria_base = (
+        df
+        .filter(
+            (pl.col("hand_id").str.starts_with("RC")) & 
+            (pl.col("street") == "RIVER")
+        )
+        .group_by("hand_id")
+        .agg(
+            pl.col("current_pot").first().alias("pote_final"),
+            pl.col("invested_amount").filter(pl.col("action_type").is_in(["BET", "CALL", "RAISE"])).sum().alias("investimento_total_river"),
+            pl.col("invested_amount").filter((pl.col("player") == pl.col("player_nickname")) & (pl.col("action_type") == "BET")).sum().alias("hero_bet_amount"),
+            pl.col("is_all_in").filter((pl.col("player") == pl.col("player_nickname")) & (pl.col("action_type") == "BET")).any().alias("hero_all_in_river"),
+            pl.col("player").filter((pl.col("player") != pl.col("player_nickname")) & (pl.col("action_type") == "CALL")).count().alias("qtd_calls_recebidos")
+        )
+        .filter((pl.col("hero_bet_amount") > 0) & (pl.col("qtd_calls_recebidos") > 0))
+        .with_columns((pl.col("pote_final") - pl.col("investimento_total_river")).alias("pote_anterior"))
+        .with_columns(((pl.col("hero_bet_amount") / pl.col("pote_anterior")) * 100).round(1).alias("sizing_pct"))
+    )
+
+    from src.dashboard.domain_data import get_vencedores_df
+    try:
+        vencedores_df = get_vencedores_df(df)
+        auditoria_ev = (
+            auditoria_base
+            .join(vencedores_df, on="hand_id", how="left")
+            .with_columns(
+                pl.when(pl.col("hero_ganhou") == True).then(pl.lit("WON")).otherwise(pl.lit("LOST")).alias("resultado")
+            )
+            .with_columns(
+                (pl.col("pote_anterior") * 0.75).round(2).alias("bet_ideal_75")
+            )
+            .with_columns(
+                (pl.col("bet_ideal_75") - pl.col("hero_bet_amount")).round(2).alias("diferenca_dolares")
+            )
+            .with_columns(
+                pl.when(pl.col("hero_all_in_river")).then(pl.lit("All-In"))
+                .when((pl.col("resultado") == "WON") & (pl.col("diferenca_dolares") > 0)).then(pl.lit("Missed Value"))
+                .when((pl.col("resultado") == "LOST") & (pl.col("diferenca_dolares") > 0)).then(pl.lit("Saved"))
+                .when((pl.col("resultado") == "WON") & (pl.col("diferenca_dolares") < 0)).then(pl.lit("Max Extraction"))
+                .when((pl.col("resultado") == "LOST") & (pl.col("diferenca_dolares") < 0)).then(pl.lit("Wasted"))
+                .otherwise(pl.lit("Optimal")).alias("impacto_no_caixa")
+            )
+            .sort("sizing_pct", descending=False)
+        )
+        
+        lucro_perdido = auditoria_ev.filter((pl.col("resultado") == "WON") & (pl.col("diferenca_dolares") > 0))["diferenca_dolares"].sum()
+        dinheiro_salvo = auditoria_ev.filter((pl.col("resultado") == "LOST") & (pl.col("diferenca_dolares") > 0))["diferenca_dolares"].sum()
+        balanco_real = lucro_perdido - dinheiro_salvo
+        
+        hero_bets = auditoria_ev.to_dicts()
+    except Exception:
+        hero_bets = []
+        lucro_perdido = 0
+        dinheiro_salvo = 0
+        balanco_real = 0
+
+    df_hero_calls_river = (
+        df.filter(
+            (pl.col("player") == pl.col("player_nickname")) & 
+            (pl.col("street") == "RIVER") & 
+            (pl.col("action_type") == "CALL")
+        )
+        .select(["hand_id", "amount"])
+        .rename({"amount": "valor_do_call"})
+    )
+
+    try:
+        auditoria_calls = (
+            df_hero_calls_river
+            .join(vencedores_df, on="hand_id", how="left")
+            .with_columns(
+                pl.when(pl.col("hero_ganhou") == True).then(pl.lit("Hero Call")).otherwise(pl.lit("Crying Call")).alias("resultado")
+            )
+            .sort("valor_do_call", descending=True)
+        )
+        hero_calls = auditoria_calls.to_dicts()
+    except Exception:
+        hero_calls = []
+
+    return {
+        "hero_bets": hero_bets,
+        "hero_calls": hero_calls,
+        "summary": {
+            "missed_value": lucro_perdido,
+            "saved_money": dinheiro_salvo,
+            "net_leak": balanco_real
+        }
+    }

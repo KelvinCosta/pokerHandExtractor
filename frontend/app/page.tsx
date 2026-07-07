@@ -15,6 +15,8 @@ import { BigPotsView } from "@/components/dashboard/views/bigpots-view"
 import { PopulationView } from "@/components/dashboard/views/population-view"
 import { AuditView } from "@/components/dashboard/views/audit-view"
 import { ImportView } from "@/components/dashboard/views/import-view"
+import { CbetAuditView } from "@/components/dashboard/views/cbet-audit-view"
+import { RiverAuditView } from "@/components/dashboard/views/river-audit-view"
 import { cn } from "@/lib/utils"
 import type { DashboardFilters } from "@/lib/api.types"
 import { Activity, BarChart2, Brain, Layers, Radar, Spade, Target, Users, Waves } from "lucide-react"
@@ -25,6 +27,8 @@ const meta: Record<ViewId, { title: string; subtitle: string; hasFilters: boolea
   analytics:  { title: "Analytics Dashboard",      subtitle: "Telemetry Bento · EV chart, leaks & rivals",   hasFilters: true  },
   ranges:     { title: "Preflop Ranges",           subtitle: "VPIP Matrix and Hand Frequencies",             hasFilters: true  },
   engines:    { title: "Pre / Post-Flop Engines",  subtitle: "Aggression, continuation & showdown metrics",  hasFilters: true  },
+  "cbet-audit":{ title: "C-Bet Analysis",           subtitle: "Flop texture sizing distribution",             hasFilters: true  },
+  "river-audit":{ title: "River Audit",             subtitle: "Bet sizing EV and Call efficiency",            hasFilters: true  },
   villains:   { title: "Villain Mapping",           subtitle: "Opponent pool, rivalry board & reads",         hasFilters: true },
   tournaments:{ title: "Tournaments",             subtitle: "Tournament summaries, ROI & results",          hasFilters: true },
   bigpots:    { title: "Hands Database",           subtitle: "Search, filter & review hand histories",       hasFilters: true  },
@@ -39,6 +43,8 @@ const mobileNav: { id: ViewId; label: string; icon: React.ElementType }[] = [
   { id: "analytics",  label: "Analytics", icon: BarChart2  },
   { id: "ranges",     label: "Ranges",    icon: Radar      },
   { id: "engines",    label: "Engines",   icon: Layers     },
+  { id: "cbet-audit", label: "C-Bet",     icon: Target     },
+  { id: "river-audit",label: "River",     icon: Waves      },
   { id: "villains",   label: "Villains",  icon: Users      },
   { id: "tournaments",label: "Tourneys",  icon: Target     },
   { id: "bigpots",    label: "Hands",     icon: Spade      },
@@ -127,6 +133,8 @@ export default function Page() {
           {view === "analytics"  && <AnalyticsView filters={filters} />}
           {view === "ranges"     && <RangesView filters={filters} />}
           {view === "engines"    && <EnginesView filters={filters} />}
+          {view === "cbet-audit" && <CbetAuditView filters={filters} />}
+          {view === "river-audit"&& <RiverAuditView filters={filters} />}
           {view === "villains"   && <VillainsView filters={filters} setFilters={setFilters} setView={setView} />}
           {view === "tournaments"&& <TournamentsView filters={filters} setFilters={setFilters} setView={setView} />}
           {view === "bigpots"    && <BigPotsView filters={filters} />}
