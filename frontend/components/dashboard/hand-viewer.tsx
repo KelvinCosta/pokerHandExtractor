@@ -186,9 +186,23 @@ function CopyButton({ data, isCash }: { data: HandDetails; isCash: boolean }) {
       grouped[street].push(act)
     }
     
+    const heroCards = data.player_cards?.find(p => p.player === data.player_nickname)?.cards ?? ""
+    const board = data.board_cards ?? []
+    
     for (const street of STREET_ORDER) {
       if (grouped[street]) {
         out += `--- ${street} ---\n`
+        
+        if (street === "PREFLOP" && heroCards) {
+          out += `Dealt to Hero [${heroCards}]\n`
+        } else if (street === "FLOP" && board.length >= 3) {
+          out += `Board [${board.slice(0, 3).join(" ")}]\n`
+        } else if (street === "TURN" && board.length >= 4) {
+          out += `Board [${board.slice(0, 4).join(" ")}]\n`
+        } else if (street === "RIVER" && board.length >= 5) {
+          out += `Board [${board.slice(0, 5).join(" ")}]\n`
+        }
+        
         for (const act of grouped[street]) {
           const isAllIn = act.is_all_in ? " (All-in)" : ""
           let line = `${act.player}: ${act.action_type || act.action}`
