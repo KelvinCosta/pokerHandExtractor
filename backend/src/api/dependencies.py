@@ -265,6 +265,19 @@ def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.Dat
                 combined_expr = combined_expr | e
             df_t = df_t.filter(combined_expr)
 
+    # Adiciona coluna de data baseada no source_file para filtro de data
+    if "source_file" in df_t.columns and df_t.height > 0:
+        df_t = df_t.with_columns(
+            pl.when(pl.col("source_file").str.contains(r"\d{8}"))
+              .then(pl.col("source_file").str.extract(r"(\d{8})").str.to_date("%Y%m%d", strict=False))
+              .otherwise(None).alias("tourney_date")
+        )
+        
+        if filters.start_date:
+            df_t = df_t.filter(pl.col("tourney_date") >= filters.start_date)
+        if filters.end_date:
+            df_t = df_t.filter(pl.col("tourney_date") <= filters.end_date)
+
     if filters.search_query:
         sq = filters.search_query.lower()
         if "source_file" in df_t.columns:
