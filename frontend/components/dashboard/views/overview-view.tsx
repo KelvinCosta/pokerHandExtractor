@@ -16,7 +16,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { KpiCard } from "@/components/dashboard/kpi-card"
+import { KpiCard, KpiCardSkeleton } from "@/components/dashboard/kpi-card"
 import {
   currency,
 } from "@/lib/poker-data"
@@ -158,9 +158,9 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {loading && !liveKpis ? (
-          // Skeleton placeholders while the first fetch is in flight
+          // Rich skeleton placeholders while the first fetch is in flight
           Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-lg border border-border bg-card" />
+            <KpiCardSkeleton key={i} />
           ))
         ) : (
           displayKpis.map((k) => (
