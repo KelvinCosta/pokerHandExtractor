@@ -18,15 +18,14 @@ class LlmPromptAnalyzer(IHandAnalyzer):
 A sua missão é analisar históricos de mãos. Você NUNCA deve dar conselhos genéricos. Seja estrito, matemático e encontre vazamentos (leaks).
 
 <regras_inquebraveis>
-1. Leia a 'Relative Position' no bloco [GTO METRICS].
-2. Leia o SPR e o Effective Stack fornecidos no bloco [GTO METRICS].
-3. Valores no log estão em Dinheiro ($). Leia o "Big Blind" no [GTO METRICS] para converter mentalmente as apostas para BBs e saber se o sizing foi alto ou baixo. NUNCA ache que $0.02 são "0.02 BBs".
-4. NUNCA chame um Segundo Par de "mão forte" num pote grande.
-5. Identifique corretamente os Atores: "Hero" é o jogador analisado. Os outros são os Vilões. Preste atenção a QUEM fez a aposta e NÃO INVENTE AÇÕES QUE NÃO ACONTECERAM.
-5. O idioma da resposta DEVE SER Português do Brasil (pt-BR).
-6. Sunk Cost Fallacy: Avalie as [Pot Odds: X%] listadas nas ações de CALL do Hero.
-7. Se SPR <= 1 no Flop, o Hero está COMMITADO. Nunca sugira fold ou apostar pequeno.
-8. NÃO repita os nomes destas regras e nem imprima diretrizes na saída.
+1. PROIBIDO USAR FRASES GENÉRICAS: Nunca diga "isso é suspeito", "isso é razoável", "não tem informação". Fale de Ranges, Equidade e Força da Mão.
+2. CITE AS CARTAS: Você DEVE citar explicitamente quais são as cartas do Hero e do Bordo, e dizer qual é a Força da Mão exata (ex: Top Pair, Gutshot, Air).
+3. Seja AGRESSIVO nas críticas. Se o Hero pagou apostas grandes apenas com A-High ou mãos fracas, chame a jogada de "Fish" ou "Doação de fichas".
+4. Leia a 'Relative Position' no bloco [GTO METRICS].
+5. Valores de aposta já estão calculados em BIG BLINDS (BBs).
+6. A ação "BLIND" é uma aposta obrigatória. NUNCA critique um BLIND.
+7. Identifique os Atores: "Hero" é o jogador analisado. NÃO INVENTE AÇÕES.
+8. Se SPR <= 1 no Flop, o Hero está COMMITADO. Nunca sugira fold ou apostar pequeno.
 </regras_inquebraveis>
 
 FORMATO DE SAÍDA EXIGIDO:
@@ -96,11 +95,11 @@ MÃO:
         
         # Calculate GTO Metrics if available
         eff_stack = self._calculate_effective_stack(hand)
-        eff_stack_bb = round(eff_stack / hand.stake_level, 1) if hand.stake_level > 0 else 0
+        bb = hand.stake_level if hand.stake_level and hand.stake_level > 0 else 1.0
+        eff_stack_bb = round(eff_stack / bb, 1)
         rel_pos = self._determine_relative_position(hand)
         
         out += "\n[GTO METRICS]\n"
-        out += f"Big Blind: ${hand.stake_level}\n"
         out += f"Effective Stack: {eff_stack_bb} BBs\n"
         out += f"Relative Position: {rel_pos}\n"
         
@@ -127,7 +126,8 @@ MÃO:
             out += f"SPR (Flop): {spr}\n"
             
         out += "\n"
-        out += f"Final Pot: {hand.total_pot}\n\n"
+        total_pot_bb = round(hand.total_pot / bb, 1)
+        out += f"Final Pot: {total_pot_bb} BBs\n\n"
         
         hero_cards_val = hand.player_cards.get(hand.player_nickname, "")
         board_cards = hand.board_cards or ()
@@ -149,9 +149,14 @@ MÃO:
                 for act in grouped[street]:
                     is_all_in = " (All-in)" if act.is_all_in else ""
                     mapped_player = player_map.get(act.player, act.player)
-                    line = f"{mapped_player}: {act.action_type.name}"
+                    act_name = act.action_type.name
+                    if act_name == "POST":
+                        act_name = "BLIND"
+                        
+                    line = f"{mapped_player}: {act_name}"
                     if act.amount > 0:
-                        line += f" {act.amount}"
+                        amt_bb = round(act.amount / bb, 1)
+                        line += f" {amt_bb} BBs"
                         
                     # Pot odds calculation (very naive approach based on invested amount)
                     invested = getattr(act, "invested_amount", 0.0)
