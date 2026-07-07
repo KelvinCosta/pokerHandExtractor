@@ -12,7 +12,7 @@ from src.domain.hand_evaluator import HandEvaluator
 class LlmPromptAnalyzer(IHandAnalyzer):
     def __init__(self, model_name: str = "llama3"):
         self.model_name = model_name
-        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=512)
+        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=1024, num_predict=512)
         
         system_template = """Você é um Arquiteto de Software e Jogador Profissional de Poker de High Stakes, especialista em GTO (Game Theory Optimal).
 
