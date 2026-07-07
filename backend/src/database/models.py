@@ -113,6 +113,14 @@ class ChatMessage(Base):
 
     session = relationship("AuditSession", back_populates="messages")
 
+class HandAnalysisRecord(Base):
+    __tablename__ = 'hand_analyses'
+    id = Column(String, primary_key=True)
+    hand_id = Column(String, index=True, unique=True)
+    raw_analysis = Column(Text)
+    agent_version = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 # ==========================================
 # UTILITÁRIOS (HELPERS DE REPOSITÓRIO)

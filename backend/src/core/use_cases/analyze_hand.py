@@ -13,6 +13,11 @@ class AnalyzeHandUseCase:
         self.repository = repository
         
     async def execute(self, hand: HandContext) -> HandAnalysis:
+        # Check if we already have an analysis for this hand
+        existing_analysis = await self.repository.get_analysis(hand.hand_id)
+        if existing_analysis:
+            return existing_analysis
+            
         # Generate the analysis from the AI adapter.
         # The adapter returns a raw HandAnalysis (without an ID or properly set timestamps).
         # We ensure the Domain Entity gets a proper UUID and timestamp here.

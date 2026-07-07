@@ -135,9 +135,10 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                       <TableCell className="pl-4">
                         <button 
                           onClick={() => setSelectedHandId(h.hand_id)}
-                          className="font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline"
+                          className="font-mono text-xs text-primary transition-colors hover:text-primary/80 hover:underline flex items-center gap-1.5"
                         >
-                          {h.hand_id.split("-")[0]}
+                          <span>{h.hand_id.split("-")[0]}</span>
+                          {h.has_analysis && <span title="AI Analyzed" className="text-sm">🧠</span>}
                         </button>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">

@@ -99,6 +99,7 @@ export interface BigPotHand {
   pot_in_bb: number
   net_profit: number
   is_cash?: boolean
+  has_analysis?: boolean
 }
 
 export interface HandsListResponse {

@@ -475,14 +475,28 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
     offset = (filters.page - 1) * filters.limit
     df_hands_stats = df_hands_stats.slice(offset, filters.limit)
 
+    data = df_hands_stats.select([
+        "hand_id", "timestamp", "game_type", "bb_size", 
+        "pot_size_usd", "pot_in_bb", "net_profit", "is_cash"
+    ]).to_dicts()
+
+    # Query DB to check which hands have AI analysis
+    hand_ids = [row["hand_id"] for row in data]
+    from src.database.models import get_session, HandAnalysisRecord
+    db = get_session()
+    try:
+        analyzed_records = db.query(HandAnalysisRecord.hand_id).filter(HandAnalysisRecord.hand_id.in_(hand_ids)).all()
+        analyzed_ids = {r[0] for r in analyzed_records}
+    except Exception:
+        analyzed_ids = set()
+    finally:
+        db.close()
+        
+    for row in data:
+        row["has_analysis"] = row["hand_id"] in analyzed_ids
+
     return {
-        "data": df_hands_stats.select([
-            "hand_id",
-            "timestamp",
-            "pot_in_bb",
-            "net_profit",
-            "is_cash"
-        ]).to_dicts(),
+        "data": data,
         "total": total_items,
         "page": filters.page,
         "limit": filters.limit

@@ -6,7 +6,7 @@ import polars as pl
 
 from src.core.use_cases.analyze_hand import AnalyzeHandUseCase, ProvideFeedbackUseCase
 from src.llm.hand_analyzer_adapter import LlmPromptAnalyzer
-from src.database.in_memory_repository import InMemoryAnalysisRepository
+from src.database.analysis_repository import SQLiteAnalysisRepository
 from src.api.dependencies import _load_user_datalake, get_current_user
 from src.database.models import User
 from src.domain.models import HandContext
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/ai", tags=["AI Analysis"])
 
 # Simple dependency injection for the MVP
 # In a real app with proper DI, we'd use FastAPI Depends or a DI container
-repository = InMemoryAnalysisRepository()
+repository = SQLiteAnalysisRepository()
 analyzer = LlmPromptAnalyzer(model_name="llama3")
 
 class AnalysisFeedbackRequest(BaseModel):
