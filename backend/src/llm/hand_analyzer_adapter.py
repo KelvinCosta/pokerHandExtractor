@@ -7,20 +7,21 @@ from langchain_core.prompts import (
 from src.domain.ports import IHandAnalyzer
 from src.domain.models import HandContext
 from src.domain.ai_models import HandAnalysis
+from src.domain.hand_evaluator import HandEvaluator
 
 class LlmPromptAnalyzer(IHandAnalyzer):
     def __init__(self, model_name: str = "llama3"):
         self.model_name = model_name
-        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=1024)
+        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=512)
         
         system_template = """Você é um Arquiteto de Software e Jogador Profissional de Poker de High Stakes, especialista em GTO (Game Theory Optimal).
 
 A sua missão é analisar históricos de mãos. Você NUNCA deve dar conselhos genéricos. Seja estrito, matemático e encontre vazamentos (leaks).
 
 <regras_inquebraveis>
-1. PROIBIDO USAR FRASES GENÉRICAS: Nunca diga "isso é suspeito", "isso é razoável", "não tem informação". Fale de Ranges, Equidade e Força da Mão.
-2. CITE AS CARTAS: Você DEVE citar explicitamente quais são as cartas do Hero e do Bordo, e dizer qual é a Força da Mão exata (ex: Top Pair, Gutshot, Air).
-3. Seja AGRESSIVO nas críticas. Se o Hero pagou apostas grandes apenas com A-High ou mãos fracas, chame a jogada de "Fish" ou "Doação de fichas".
+1. PROIBIDO USAR FRASES GENÉRICAS: Nunca diga "isso é suspeito", "isso é razoável", "não tem informação". Fale de Ranges e Equidade.
+2. CITE A FORÇA DA MÃO: O sistema (Python) já calculou a Força da Mão (Hero Strength) para você no log. Use EXATAMENTE essa força na sua análise. NÃO INVENTE MÃOS.
+3. Seja AGRESSIVO nas críticas. Se o Hero pagou apostas grandes com "High Card" ou mãos fracas, chame a jogada de "Fish" ou "Doação de fichas".
 4. Leia a 'Relative Position' no bloco [GTO METRICS].
 5. Valores de aposta já estão calculados em BIG BLINDS (BBs).
 6. A ação "BLIND" é uma aposta obrigatória. NUNCA critique um BLIND.
@@ -141,6 +142,8 @@ MÃO:
         hero_cards_val = hand.player_cards.get(hand.player_nickname, "")
         board_cards = hand.board_cards or ()
         
+        evaluator = HandEvaluator()
+        
         street_order = ["PREFLOP", "FLOP", "TURN", "RIVER"]
         for street in street_order:
             if street in grouped:
@@ -149,11 +152,17 @@ MÃO:
                 if street == "PREFLOP" and hero_cards_val:
                     out += f"Dealt to Hero [{hero_cards_val}]\n"
                 elif street == "FLOP" and len(board_cards) >= 3:
-                    out += f"Board [{' '.join(board_cards[:3])}]\n"
+                    current_board = board_cards[:3]
+                    strength = evaluator.evaluate_street(hero_cards_val, current_board)
+                    out += f"Board [{' '.join(current_board)}] (Hero Strength: {strength})\n"
                 elif street == "TURN" and len(board_cards) >= 4:
-                    out += f"Board [{' '.join(board_cards[:4])}]\n"
+                    current_board = board_cards[:4]
+                    strength = evaluator.evaluate_street(hero_cards_val, current_board)
+                    out += f"Board [{' '.join(current_board)}] (Hero Strength: {strength})\n"
                 elif street == "RIVER" and len(board_cards) >= 5:
-                    out += f"Board [{' '.join(board_cards[:5])}]\n"
+                    current_board = board_cards[:5]
+                    strength = evaluator.evaluate_street(hero_cards_val, current_board)
+                    out += f"Board [{' '.join(current_board)}] (Hero Strength: {strength})\n"
                 
                 for act in grouped[street]:
                     is_all_in = " (All-in)" if act.is_all_in else ""
