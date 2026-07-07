@@ -74,29 +74,6 @@ export function TournamentsView({
     }
   }, [filters])
 
-  const filteredData = useMemo(() => {
-    // The backend does NOT apply date filters to the tournaments parquet,
-    // so we filter client-side using the `date` field on each TournamentSummary.
-    let result = data
-
-    if (filters?.start_date) {
-      const from = new Date(filters.start_date)
-      result = result.filter((t) => {
-        if (!t.date) return false
-        return new Date(t.date) >= from
-      })
-    }
-    if (filters?.end_date) {
-      const to = new Date(filters.end_date)
-      result = result.filter((t) => {
-        if (!t.date) return false
-        return new Date(t.date) <= to
-      })
-    }
-
-    return result
-  }, [data, filters?.start_date, filters?.end_date])
-
   const handleSort = (column: keyof TournamentSummary) => {
     if (sortBy === column) {
       setSortDesc(!sortDesc)
@@ -111,7 +88,7 @@ export function TournamentsView({
     return sortDesc ? <ArrowDownIcon className="ml-1 inline-block h-3 w-3" /> : <ArrowUpIcon className="ml-1 inline-block h-3 w-3" />
   }
 
-  const sortedData = [...filteredData].sort((a, b) => {
+  const sortedData = [...data].sort((a, b) => {
     let valA = a[sortBy] ?? ""
     let valB = b[sortBy] ?? ""
     
@@ -145,7 +122,7 @@ export function TournamentsView({
                 </span>
               )}
               <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                {filteredData.length}{data.length !== filteredData.length ? ` / ${data.length}` : ""} events
+                {data.length} events
               </span>
             </div>
           </div>
