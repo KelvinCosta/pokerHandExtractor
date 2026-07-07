@@ -208,12 +208,16 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                minTickGap={24}
+                minTickGap={32}
                 className="font-mono text-[10px]"
                 tickFormatter={(value) => {
                   if (typeof value !== "string") return ""
-                  // Se for mock, mostra "week", se for real, mostra só HH:MM
-                  if (value.includes(" ")) return value.split(" ")[1].slice(0, 5)
+                  // Backend returns "YYYY/MM/DD HH:MM:SS" — show only the date portion
+                  if (value.includes(" ")) {
+                    const datePart = value.split(" ")[0] // "YYYY/MM/DD"
+                    const [y, m, d] = datePart.split("/")
+                    return `${d}/${m}`  // "DD/MM"
+                  }
                   return value
                 }}
               />
