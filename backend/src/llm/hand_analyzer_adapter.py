@@ -26,6 +26,7 @@ A sua missão é analisar históricos de mãos. Você NUNCA deve dar conselhos g
 6. A ação "BLIND" é uma aposta obrigatória. NUNCA critique um BLIND.
 7. Identifique os Atores: "Hero" é o jogador analisado. NÃO INVENTE AÇÕES.
 8. Se SPR <= 1 no Flop, o Hero está COMMITADO. Nunca sugira fold ou apostar pequeno.
+9. VOCÊ DEVE RESPONDER EM PORTUGUÊS (PT-BR). QUALQUER RESPOSTA EM INGLÊS SERÁ DESCARTADA.
 </regras_inquebraveis>
 
 FORMATO DE SAÍDA EXIGIDO:
@@ -95,7 +96,15 @@ MÃO:
         
         # Calculate GTO Metrics if available
         eff_stack = self._calculate_effective_stack(hand)
-        bb = hand.stake_level if hand.stake_level and hand.stake_level > 0 else 1.0
+        
+        bb = getattr(hand, "stake_level", 0.0)
+        if not bb or bb == 0.0:
+            posts = [a.amount for a in hand.actions if a.action_type.name in ("POST", "BLIND")]
+            if posts:
+                bb = max(posts)
+        if not bb or bb == 0.0:
+            bb = 1.0
+            
         eff_stack_bb = round(eff_stack / bb, 1)
         rel_pos = self._determine_relative_position(hand)
         
