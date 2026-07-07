@@ -61,12 +61,12 @@ class PreflopAdvisor:
         
         if facing_3bet:
             if tier == "PREMIUM":
-                return f"{canonical} (Premium) vs 3-Bet: GTO é 4-Bet ou Call."
+                return f"O Call/4-Bet na 3-Bet com {canonical} (Premium) foi correto segundo o GTO."
             elif tier == "STRONG":
-                return f"{canonical} (Forte) vs 3-Bet: GTO é Call na maioria das vezes."
+                return f"O Call na 3-Bet com {canonical} (Forte) é aceitável na maioria das vezes."
             elif tier == "MARGINAL":
-                return f"{canonical} (Marginal) vs 3-Bet: GTO é FOLD."
+                return f"O Open Raise do Hero com {canonical} foi ok, mas dar CALL na 3-Bet com mão Marginal é um ERRO. GTO exige FOLD."
             else:
-                return f"{canonical} (Fraca) vs 3-Bet: GTO é FOLD."
+                return f"Dar CALL na 3-Bet com {canonical} (Fraca) é um erro gravíssimo. GTO exige FOLD."
         
         return ""
