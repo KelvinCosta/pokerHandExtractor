@@ -11,7 +11,7 @@ from src.api.dependencies import _load_user_datalake, get_current_user
 from src.database.models import User
 from src.domain.models import HandContext
 
-router = APIRouter(prefix="/ai", tags=["AI Analysis"])
+router = APIRouter(prefix="/api/ai", tags=["AI Analysis"])
 
 # Simple dependency injection for the MVP
 # In a real app with proper DI, we'd use FastAPI Depends or a DI container

@@ -7,13 +7,20 @@ from src.domain.ai_models import HandAnalysis
 class LlmPromptAnalyzer(IHandAnalyzer):
     def __init__(self, model_name: str = "llama3"):
         self.model_name = model_name
-        self.llm = ChatOllama(model=model_name, temperature=0.2)
+        self.llm = ChatOllama(model=model_name, temperature=0.2, num_ctx=2048, num_predict=512)
         self.prompt = PromptTemplate.from_template(
-            "Você é um jogador profissional de poker experiente analisando um histórico de mão. "
-            "Seja direto e objetivo. Indique o principal erro ou acerto do 'Hero' nesta mão.\n\n"
-            "MÃO:\n{hand_history}\n\n"
-            "ANÁLISE:"
+            """
+            Você é um jogador profissional de poker experiente analisando um histórico de mão de Cash Game. "
+            Sua análise deve ser rigorosa e focar nestes 3 pontos:
+            1. Posição: Avalie se o Hero jogou bem considerando sua posição na mesa.
+            2. Sizing: Os tamanhos das apostas foram adequados para extrair valor ou blefar?
+            3. Veredicto: Qual foi o erro grave (se houver) e o que ele deveria ter feito no lugar.
+            Seja direto. MÃO:
+            {hand_history}
+            ANÁLISE:
+            """
         )
+
         self.chain = self.prompt | self.llm
         
     async def analyze(self, hand: HandContext) -> HandAnalysis:
