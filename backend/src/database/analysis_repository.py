@@ -38,7 +38,8 @@ class SQLiteAnalysisRepository(IAnalysisRepository):
                     id=record.id,
                     hand_id=record.hand_id,
                     raw_analysis=record.raw_analysis,
-                    agent_version=record.agent_version
+                    agent_version=record.agent_version,
+                    created_at=record.created_at
                 )
             return None
         finally:
