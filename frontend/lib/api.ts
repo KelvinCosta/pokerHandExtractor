@@ -418,3 +418,19 @@ export async function submitAnalysisFeedback(
     signal,
   )
 }
+
+export async function getHandNote(handId: string, signal?: AbortSignal): Promise<{ note: string }> {
+  return apiGet<{ note: string }>(
+    `/api/dashboard/hand/${handId}/note`,
+    undefined,
+    signal,
+  )
+}
+
+export async function saveHandNote(handId: string, note: string, signal?: AbortSignal): Promise<any> {
+  return apiPost<{ note: string }, any>(
+    `/api/dashboard/hand/${handId}/note`,
+    { note },
+    signal,
+  )
+}

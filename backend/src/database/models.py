@@ -121,6 +121,14 @@ class HandAnalysisRecord(Base):
     agent_version = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class HandNoteRecord(Base):
+    __tablename__ = 'hand_notes'
+    id = Column(String, primary_key=True)
+    hand_id = Column(String, index=True)
+    user_id = Column(String, index=True)
+    note = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 # ==========================================
 # UTILITÁRIOS (HELPERS DE REPOSITÓRIO)

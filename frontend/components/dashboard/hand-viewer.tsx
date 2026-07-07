@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { fetchHandDetails, analyzeHand, submitAnalysisFeedback } from "@/lib/api"
+import { fetchHandDetails, analyzeHand, submitAnalysisFeedback, getHandNote, saveHandNote } from "@/lib/api"
 import type { HandDetails } from "@/lib/api.types"
-import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check, Sparkles, ThumbsUp, ThumbsDown } from "lucide-react"
+import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check, Sparkles, ThumbsUp, ThumbsDown, FileText } from "lucide-react"
 import { currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -99,6 +99,7 @@ const STREET_STYLE: Record<string, string> = {
 }
 
 const STREET_ORDER = ["PREFLOP", "FLOP", "TURN", "RIVER"]
+
 
 // ─── Felt Table ───────────────────────────────────────────────────────────────
 function PokerTable({ data, isCash }: { data: HandDetails; isCash: boolean }) {
@@ -346,6 +347,11 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
   const [feedbackSent, setFeedbackSent] = useState<"up" | "down" | null>(null)
   const [aiCopied, setAiCopied] = useState(false)
 
+  // Notes State
+  const [note, setNote] = useState("")
+  const [savedNote, setSavedNote] = useState("")
+  const [isSavingNote, setIsSavingNote] = useState(false)
+
   useEffect(() => {
     if (!handId) { setData(null); return }
     let cancelled = false
@@ -355,13 +361,38 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
     setAiError(null)
     setFeedbackSent(null)
     setAiCopied(false)
+    setNote("")
+    setSavedNote("")
     
     fetchHandDetails(handId)
       .then(res  => { if (!cancelled) setData(res) })
       .catch(err => { if (!cancelled) setError(err.message || "Failed to load hand") })
       .finally(()  => { if (!cancelled) setLoading(false) })
+      
+    getHandNote(handId)
+      .then(res => {
+        if (!cancelled && res.note) {
+          setNote(res.note)
+          setSavedNote(res.note)
+        }
+      })
+      .catch(err => console.error("Failed to load note", err))
+      
     return () => { cancelled = true }
   }, [handId])
+
+  const handleSaveNote = async () => {
+    if (!handId) return
+    setIsSavingNote(true)
+    try {
+      await saveHandNote(handId, note)
+      setSavedNote(note)
+    } catch (err) {
+      console.error("Failed to save note", err)
+    } finally {
+      setIsSavingNote(false)
+    }
+  }
 
   const handleAskAI = async () => {
     if (!handId) return
@@ -479,6 +510,31 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+
+              {/* ── Hand Notes Panel ─────────────────────────────────────────── */}
+              <div className="rounded-xl border border-white/5 bg-zinc-900/40 p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="size-4 text-zinc-400" />
+                  <h3 className="font-semibold text-sm text-zinc-200">My Notes</h3>
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Write your notes for this hand..."
+                    className="min-h-[80px] w-full resize-y rounded-md border border-white/10 bg-zinc-950 px-3 py-2 text-sm text-zinc-300 placeholder:text-zinc-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 scrollbar-thin"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      onClick={handleSaveNote}
+                      disabled={isSavingNote || note === savedNote}
+                      className="rounded-md bg-zinc-800 px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-700 disabled:opacity-50"
+                    >
+                      {isSavingNote ? "Saving..." : (note === savedNote && note !== "" ? "Saved" : "Save Note")}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* ── AI Analysis Panel ─────────────────────────────────────────── */}

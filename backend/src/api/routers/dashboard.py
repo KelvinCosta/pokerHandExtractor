@@ -779,5 +779,37 @@ def get_ranges(filters: DashboardFilters, user_id: str = "335f7c35-320e-4671-a90
 
 # trigger 3
 
+class HandNoteRequest(BaseModel):
+    note: str
 
+@router.get("/hand/{hand_id}/note")
+async def get_hand_note(hand_id: str, current_user: User = Depends(get_current_user)):
+    from src.database.models import get_session, HandNoteRecord
+    db = get_session()
+    try:
+        record = db.query(HandNoteRecord).filter_by(hand_id=hand_id, user_id=current_user.id).first()
+        return {"note": record.note if record else ""}
+    finally:
+        db.close()
 
+@router.post("/hand/{hand_id}/note")
+async def save_hand_note(hand_id: str, req: HandNoteRequest, current_user: User = Depends(get_current_user)):
+    from src.database.models import get_session, HandNoteRecord
+    import uuid
+    db = get_session()
+    try:
+        record = db.query(HandNoteRecord).filter_by(hand_id=hand_id, user_id=current_user.id).first()
+        if record:
+            record.note = req.note
+        else:
+            record = HandNoteRecord(
+                id=str(uuid.uuid4()),
+                hand_id=hand_id,
+                user_id=current_user.id,
+                note=req.note
+            )
+            db.add(record)
+        db.commit()
+        return {"status": "success"}
+    finally:
+        db.close()
