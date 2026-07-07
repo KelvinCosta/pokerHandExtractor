@@ -8,6 +8,7 @@ from src.domain.ports import IHandAnalyzer
 from src.domain.models import HandContext
 from src.domain.ai_models import HandAnalysis
 from src.domain.hand_evaluator import HandEvaluator
+from src.domain.preflop_advisor import PreflopAdvisor
 
 class LlmPromptAnalyzer(IHandAnalyzer):
     def __init__(self, model_name: str = "llama3"):
@@ -20,7 +21,7 @@ A sua missão é analisar históricos de mãos. Você NUNCA deve dar conselhos g
 
 <regras_inquebraveis>
 1. PROIBIDO ESCREVER PARÁGRAFOS. Você DEVE responder usando EXCLUSIVAMENTE BULLET POINTS curtos e diretos (máximo 15 palavras por tópico). Sem texto motivacional ou genérico.
-2. CITE A FORÇA DA MÃO: O sistema (Python) já calculou a Força da Mão (Hero Strength) para você no log. Use EXATAMENTE essa força na sua análise (ex: "Acertou Top Pair", "Hero com High Card").
+2. CITE A FORÇA DA MÃO E A REGRA PRÉ-FLOP: O sistema (Python) já calculou a Força da Mão (Hero Strength) e as Regras GTO Pré-flop para você no bloco [GTO METRICS]. Use EXATAMENTE essa força e obedeça ao conselho pré-flop na sua análise.
 3. Seja AGRESSIVO nas críticas. Dê o feedback como tópicos curtos e rudes. Use OS NÚMEROS REAIS da mão.
 4. Leia a 'Relative Position' no bloco [GTO METRICS].
 5. Valores de aposta já estão calculados em BIG BLINDS (BBs).
@@ -132,6 +133,23 @@ MÃO:
             if street not in grouped:
                 grouped[street] = []
             grouped[street].append(act)
+            
+        # Determine if Hero faced a 3-bet
+        facing_3bet = False
+        raise_count = 0
+        if "PREFLOP" in grouped:
+            for act in grouped["PREFLOP"]:
+                if act.action_type.name == "RAISE":
+                    raise_count += 1
+                if act.player == hand.player_nickname and raise_count >= 2:
+                    facing_3bet = True
+                    break
+
+        hero_cards_val = hand.player_cards.get(hand.player_nickname, "")
+        advisor = PreflopAdvisor()
+        pf_advice = advisor.get_preflop_advice(hero_cards_val, facing_3bet)
+        if pf_advice:
+            out += f"Pre-flop Advice: {pf_advice}\n"
             
         # Calculate Pot before Flop actions (for SPR)
         for act in grouped.get("PREFLOP", []):
