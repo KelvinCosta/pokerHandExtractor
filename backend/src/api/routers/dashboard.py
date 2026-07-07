@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 import polars as pl
 from typing import Any, Dict, List
 from ..dependencies import get_filtered_df, get_filtered_hands_df, get_current_user
@@ -480,20 +481,28 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
         "pot_size_usd", "pot_in_bb", "net_profit", "is_cash"
     ]).to_dicts()
 
-    # Query DB to check which hands have AI analysis
+    # Query DB to check which hands have AI analysis or Notes
     hand_ids = [row["hand_id"] for row in data]
-    from src.database.models import get_session, HandAnalysisRecord
+    from src.database.models import get_session, HandAnalysisRecord, HandNoteRecord
     db = get_session()
     try:
         analyzed_records = db.query(HandAnalysisRecord.hand_id).filter(HandAnalysisRecord.hand_id.in_(hand_ids)).all()
         analyzed_ids = {r[0] for r in analyzed_records}
+        
+        note_records = db.query(HandNoteRecord.hand_id).filter(
+            HandNoteRecord.hand_id.in_(hand_ids),
+            HandNoteRecord.user_id == current_user.id
+        ).all()
+        note_ids = {r[0] for r in note_records}
     except Exception:
         analyzed_ids = set()
+        note_ids = set()
     finally:
         db.close()
         
     for row in data:
         row["has_analysis"] = row["hand_id"] in analyzed_ids
+        row["has_note"] = row["hand_id"] in note_ids
 
     return {
         "data": data,

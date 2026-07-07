@@ -139,6 +139,7 @@ export function BigPotsView({ filters }: { filters?: DashboardFilters }) {
                         >
                           <span>{h.hand_id.split("-")[0]}</span>
                           {h.has_analysis && <span title="AI Analyzed" className="text-sm">🧠</span>}
+                          {h.has_note && <span title="Has Note" className="text-sm">📝</span>}
                         </button>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">
