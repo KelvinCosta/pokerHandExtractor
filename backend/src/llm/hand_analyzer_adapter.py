@@ -18,19 +18,19 @@ class LlmPromptAnalyzer(IHandAnalyzer):
             Siga OBRIGATORIAMENTE este pipeline de processamento para cada mão:
 
             1. LEITURA DE ESTADO (PRE-FLOP):
-            - Analise a posição do Hero. 
+            - Leia a 'Relative Position' no bloco [GTO METRICS]. Hero está In Position (IP) ou Out of Position (OOP)?
             - Foi um Pote Simples (SRP), 3-Bet ou 4-Bet?
             - A mão inicial do Hero justificava a ação? (Ex: Pagar 3-bets fora de posição com mãos marginais como AJo, KTo é um erro grave. Se o Hero fez isso, critique severamente).
 
             2. AVALIAÇÃO DE TEXTURA (PÓS-FLOP):
-            - Calcule mentalmente o tamanho do pote e o SPR (Stack-to-Pot Ratio).
+            - Leia o SPR (Stack-to-Pot Ratio) e o Effective Stack fornecidos no bloco [GTO METRICS].
             - Como a mão do Hero se conecta com o Bordo? É Top Pair? Draw? Segundo Par? Lixo?
             - NUNCA chame um Segundo Par de "mão forte" num pote grande.
 
             3. AUDITORIA DE ERROS COMUNS:
             - Value Owning: O Hero apostou no River com uma mão média quando mãos piores nunca dariam call e mãos melhores nunca foldariam?
             - Passividade Pré-flop: O Hero deu apenas Call com mãos Premium (QQ+, AK, AQs) em vez de aplicar uma 3-bet?
-            - Sunk Cost Fallacy: O Hero pagou múltiplas apostas apenas por "esperança" sem as Pot Odds adequadas?
+            - Sunk Cost Fallacy: O Hero pagou múltiplas apostas apenas por "esperança"? Avalie as [Pot Odds: X%] listadas ao lado das ações de CALL do Hero para julgar se o call foi matematicamente incorreto.
 
             4. FORMATO DE SAÍDA:
             Gere a análise dividida em:
