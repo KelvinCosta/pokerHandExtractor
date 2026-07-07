@@ -215,6 +215,15 @@ function CopyButton({ data, isCash }: { data: HandDetails; isCash: boolean }) {
       }
     }
 
+    const villainsWithCards = data.player_cards?.filter(p => p.player !== data.player_nickname && p.cards) ?? []
+    if (villainsWithCards.length > 0) {
+      out += `--- SHOWDOWN ---\n`
+      for (const v of villainsWithCards) {
+        out += `${v.player} shows [${v.cards}]\n`
+      }
+      out += `\n`
+    }
+
     navigator.clipboard.writeText(out.trim())
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
