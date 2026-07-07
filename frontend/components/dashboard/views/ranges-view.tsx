@@ -192,7 +192,7 @@ export function RangesView({ filters }: RangesViewProps) {
               <button onClick={() => setSelectedHand(null)} className="p-1 hover:bg-muted rounded-md transition-colors"><X className="size-5" /></button>
             </div>
             <div className="flex-1 overflow-auto p-4 bg-muted/20">
-              <BigPotsView filters={{ ...filters, hole_cards_range: selectedHand }} />
+              <BigPotsView filters={{ ...filters, hole_cards_range: selectedHand, hero_position: position === "ALL" ? undefined : position }} />
             </div>
           </div>
         </div>

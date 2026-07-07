@@ -20,6 +20,14 @@ export interface DashboardFilters {
   platforms?: string[]
   search_query?: string
   hole_cards_range?: string  // e.g. "AKs", "AA"
+  hero_position?: string     // e.g. "UTG", "BTN"
+}
+
+export interface HandsListFilters extends DashboardFilters {
+  page?: number
+  limit?: number
+  sort_by?: string
+  sort_desc?: boolean
 }
 
 export interface AuthResponse {

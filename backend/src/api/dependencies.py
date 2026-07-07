@@ -100,6 +100,9 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
             
         df = df.filter(pl.col("hero_hole_cards").map_elements(normalize_cards, return_dtype=pl.String) == filters.hole_cards_range)
 
+    if filters.hero_position and "hero_position" in df.columns:
+        df = df.filter(pl.col("hero_position") == filters.hero_position)
+
     # Filtro Dinâmico de Tipo de Jogo
     if filters.game_types:
         if "game_type" in df.columns:
