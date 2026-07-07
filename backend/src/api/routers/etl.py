@@ -13,6 +13,8 @@ from src.etl.repository import JsonProcessedHandsRepository
 from src.parser.summary_parser import SummaryParser
 from extractor import process_stream
 
+CURRENT_ETL_VERSION = "v5.00"
+
 router = APIRouter(prefix="/api/etl", tags=["ETL Upload"])
 
 @router.post("/upload")
@@ -96,7 +98,7 @@ async def upload_and_process(
 
     
     # 2.1 Checar Versão do ETL e resetar Silver se necessário
-    ETL_VERSION = "v4.02"
+    ETL_VERSION = CURRENT_ETL_VERSION
     from src.core.storage import get_s3_client
     s3 = get_s3_client()
     try:
@@ -197,7 +199,7 @@ async def get_processed_files(current_user: User = Depends(get_current_user)):
         except:
             current_version = "unknown"
             
-        ETL_VERSION = "v4.06"
+        ETL_VERSION = CURRENT_ETL_VERSION
         if current_version != ETL_VERSION:
             return {"processed": [], "version_mismatch": True}
 
@@ -230,7 +232,7 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     bronze_bucket = os.getenv("S3_BRONZE_BUCKET", "poker-bronze")
     silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
     user_id = str(current_user.id)
-    ETL_VERSION = "v4.06"
+    ETL_VERSION = CURRENT_ETL_VERSION
     
     temp_dir = Path("data/temp") / user_id
     silver_dir = Path("data/silver") / user_id
