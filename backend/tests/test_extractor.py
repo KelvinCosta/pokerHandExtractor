@@ -80,7 +80,8 @@ def test_main_no_files(tmp_path, capsys):
         if key == "DATALAKE_SILVER": return str(silver)
         return ""
         
-    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+    with patch("sys.argv", ["extractor.py"]), \
+         patch("extractor.os.getenv", side_effect=mock_getenv), \
          patch("extractor.HandLoader") as mock_loader:
         main()
         
@@ -103,7 +104,8 @@ def test_main_no_new_files(tmp_path, capsys):
         if key == "DATALAKE_SILVER": return str(silver)
         return ""
         
-    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+    with patch("sys.argv", ["extractor.py"]), \
+         patch("extractor.os.getenv", side_effect=mock_getenv), \
          patch("extractor.HandLoader") as mock_loader:
         main()
         
@@ -127,7 +129,8 @@ def test_main_with_new_files(tmp_path, capsys):
         if key == "DATALAKE_SILVER": return str(silver)
         return ""
         
-    with patch("extractor.os.getenv", side_effect=mock_getenv), \
+    with patch("sys.argv", ["extractor.py"]), \
+         patch("extractor.os.getenv", side_effect=mock_getenv), \
          patch("extractor.process_stream", return_value=iter([])) as mock_process, \
          patch("extractor.HandLoader") as mock_loader:
          

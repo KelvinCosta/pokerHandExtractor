@@ -57,7 +57,7 @@ def test_flop_to_turn_transition():
     state = FlopState()
     empty_context = HandContext(hand_id="1", timestamp="t", board_cards=("Ah", "Kh", "Qh"))
     
-    token = StreetChangeEvent(street_name="TURN", cards=["Jh"])
+    token = StreetChangeEvent(street_name="TURN", cards=["Ah", "Kh", "Qh", "Jh"])
     
     new_state, new_context = state.process(token, empty_context)
     
@@ -68,7 +68,7 @@ def test_turn_to_river_transition():
     state = TurnState()
     empty_context = HandContext(hand_id="1", timestamp="t", board_cards=("Ah", "Kh", "Qh", "Jh"))
     
-    token = StreetChangeEvent(street_name="RIVER", cards=["Th"])
+    token = StreetChangeEvent(street_name="RIVER", cards=["Ah", "Kh", "Qh", "Jh", "Th"])
     
     new_state, new_context = state.process(token, empty_context)
     

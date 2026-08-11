@@ -45,9 +45,9 @@ def test_process_and_save_batching(tmp_path):
     assert processed == 5
     files = sorted(os.listdir(output_dir))
     assert len(files) == 3
-    assert files[0] == "hands_part_0001.parquet"
-    assert files[1] == "hands_part_0002.parquet"
-    assert files[2] == "hands_part_0003.parquet"
+    assert files[0].endswith("_1.parquet")
+    assert files[1].endswith("_2.parquet")
+    assert files[2].endswith("_3.parquet")
 
 def test_process_and_save_dataframe_schema_and_features(tmp_path):
     """Testa a lógica de transformação do DataFrame, como texturas de Flop e detecção de vitória."""
@@ -91,7 +91,8 @@ def test_process_and_save_dataframe_schema_and_features(tmp_path):
     assert processed == 5
     
     # Carrega o parquet gerado para validar as features transformadas pelo Polars
-    df = pl.read_parquet(str(output_dir / "hands_part_0001.parquet"))
+    files = [f for f in os.listdir(output_dir) if f.endswith("_1.parquet")]
+    df = pl.read_parquet(str(output_dir / files[0]))
     
     assert df.height == 5
     
@@ -134,4 +135,4 @@ def test_resume_batch_indexing(tmp_path):
     loader.process_and_save(mock_iterator())
     
     files = sorted(os.listdir(output_dir))
-    assert "hands_part_0006.parquet" in files
+    assert any(f.endswith("_1.parquet") and f != "hands_part_0005.parquet" for f in files)

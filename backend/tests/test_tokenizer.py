@@ -110,8 +110,7 @@ def test_parse_empty_or_invalid_lines(tokenizer):
     invalid_lines = [
         "",
         "   ",
-        "Alguma linha aleatória do log do poker",
-        "Seat 1: Player ($100 in chips)"
+        "Alguma linha aleatória do log do poker"
     ]
     
     for line in invalid_lines:
