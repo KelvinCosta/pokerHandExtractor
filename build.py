@@ -79,7 +79,10 @@ class StreamToLogger(object):
     def write(self, buf):
         with open(log_path, "a", encoding="utf-8") as log_file:
             log_file.write(buf)
-        self.original_stream.write(buf)
+        try:
+            self.original_stream.write(buf)
+        except UnicodeEncodeError:
+            self.original_stream.write(buf.encode('ascii', errors='replace').decode('ascii'))
     def flush(self):
         self.original_stream.flush()
     def isatty(self):
