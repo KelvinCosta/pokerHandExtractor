@@ -82,7 +82,7 @@ def test_process_and_save_dataframe_schema_and_features(tmp_path):
     a1 = Action(player="Hero", action_type=ActionType.COLLECT, street=Street.RIVER, amount=50.0)
     h5 = HandContext(
         hand_id="5", timestamp="t1", source_file="file.txt",
-        actions=(a1,)
+        actions=(a1,), player_nickname="Hero"
     )
 
     iterator = iter([h1, h2, h3, h4, h5])
