@@ -14,7 +14,6 @@ from src.dashboard.views.preflop import render_preflop
 from src.dashboard.views.postflop import render_postflop
 from src.dashboard.views.population import render_population_range
 from src.dashboard.views.big_pots import render_big_pots
-from src.dashboard.views.llm_state import render_llm_state
 
 st.set_page_config(layout="wide")
 st.title("📊 Poker Telemetry Dashboard")
@@ -73,12 +72,9 @@ def page_big_pots():
     villains_cards_df = get_villains_cards_shown(df_clean)
     render_big_pots(df_clean, hero_cards_df, board_df, villains_cards_df)
 
-def page_llm_state():
-    render_llm_state(df_clean)
 
 pg = st.navigation({
     "Painéis Detalhados": [
-        st.Page(page_llm_state, title="Estado do Jogador (LLM)", icon="🤖"),
         st.Page(page_health, title="Saúde Geral", icon="❤️"),
         st.Page(page_preflop, title="Motor Pré-Flop", icon="🔥"),
         st.Page(page_postflop, title="Agressão Pós-Flop", icon="⚔️"),

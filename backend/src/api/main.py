@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     yield
     print("[INFO] Servidor encerrado.")
 
-from src.api.routers import dashboard, chat, auth, etl, team, ai
+from src.api.routers import dashboard, auth, etl, team
 
 app = FastAPI(
     title="Poker Analytics API",
@@ -43,9 +43,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(etl.router)
 app.include_router(dashboard.router)
-app.include_router(chat.router)
 app.include_router(team.router)
-app.include_router(ai.router)
 
 @app.get("/")
 def health_check():
