@@ -82,6 +82,10 @@ class StreamToLogger(object):
         self.original_stream.write(buf)
     def flush(self):
         self.original_stream.flush()
+    def isatty(self):
+        return False
+    def __getattr__(self, name):
+        return getattr(self.original_stream, name)
 
 sys.stdout = StreamToLogger(sys.stdout)
 sys.stderr = StreamToLogger(sys.stderr)
