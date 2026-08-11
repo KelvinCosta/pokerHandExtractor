@@ -2,6 +2,7 @@ import os
 import subprocess
 import shutil
 import sys
+import argparse
 from pathlib import Path
 
 def run_command(command, cwd=None):
@@ -13,14 +14,24 @@ def run_command(command, cwd=None):
         sys.exit(1)
 
 def main():
+    parser = argparse.ArgumentParser(description="Build script for PokerApp")
+    parser.add_argument("--skip-frontend", action="store_true", help="Pula o build do frontend (Next.js)")
+    parser.add_argument("--skip-deps", action="store_true", help="Pula a instalação de dependências (pnpm e pip)")
+    parser.add_argument("--onedir", action="store_true", help="Gera uma pasta com os arquivos em vez de um único .exe (Build muito mais rápido e inicialização instantânea do app)")
+    args = parser.parse_args()
+
     root_dir = Path(__file__).resolve().parent
     frontend_dir = root_dir / "frontend"
     backend_dir = root_dir / "backend"
     
     # 1. Build do Frontend
-    print("\n=== Compilando Frontend (Next.js) ===")
-    run_command("pnpm install", cwd=str(frontend_dir))
-    run_command("pnpm run build", cwd=str(frontend_dir))
+    if not args.skip_frontend:
+        print("\n=== Compilando Frontend (Next.js) ===")
+        if not args.skip_deps:
+            run_command("pnpm install", cwd=str(frontend_dir))
+        run_command("pnpm run build", cwd=str(frontend_dir))
+    else:
+        print("\n=== Pulando Build do Frontend ===")
     
     frontend_out = frontend_dir / "out"
     if not frontend_out.exists():
@@ -28,16 +39,19 @@ def main():
         sys.exit(1)
         
     # 2. Instalar dependências de build no Backend
-    print("\n=== Instalando PyInstaller e PyWebview ===")
-    run_command(f'"{sys.executable}" -m pip install pyinstaller pywebview', cwd=str(backend_dir))
+    if not args.skip_deps:
+        print("\n=== Instalando PyInstaller e PyWebview ===")
+        run_command(f'"{sys.executable}" -m pip install pyinstaller pywebview', cwd=str(backend_dir))
+    else:
+        print("\n=== Pulando Instalação de Dependências ===")
     
     # 3. Empacotar com PyInstaller
     print("\n=== Empacotando Backend + Frontend (PyInstaller) ===")
     
     # Monta o comando do pyinstaller
-    # Adicionamos a pasta do frontend embutida, e incluímos as dependências escondidas do uvicorn/fastapi
+    build_type = "--onedir" if args.onedir else "--onefile"
     pyinstaller_command = (
-        f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed --onefile '
+        f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed {build_type} '
         '--add-data "../frontend/out;frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
@@ -132,8 +146,12 @@ if __name__ == "__main__":
         spec_file.unlink()
         
     print("\n=== Build Concluída com Sucesso! ===")
-    print(f"O executável está disponível em: {backend_dir / 'dist' / 'PokerApp.exe'}")
-    print("Basta executar esse arquivo! Uma janela de aplicativo nativa se abrirá.")
+    if args.onedir:
+        print(f"O aplicativo está disponível em: {backend_dir / 'dist' / 'PokerApp'}")
+        print("Basta acessar a pasta e executar o PokerApp.exe!")
+    else:
+        print(f"O executável está disponível em: {backend_dir / 'dist' / 'PokerApp.exe'}")
+        print("Basta executar esse arquivo! Uma janela de aplicativo nativa se abrirá.")
 
 if __name__ == "__main__":
     main()
