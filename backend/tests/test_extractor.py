@@ -133,14 +133,18 @@ def test_main_with_new_files(tmp_path, capsys):
         if key == "DATALAKE_SILVER": return str(silver)
         return ""
         
+    mock_future = MagicMock()
+    mock_future.result.return_value = [{"dummy": "hand"}]
+
     with patch("sys.argv", ["extractor.py", "--platform", "GG", "--hero_name", "Hero", "--user_id", "123"]), \
          patch("extractor.os.getenv", side_effect=mock_getenv), \
-         patch("extractor.process_stream", return_value=iter([])) as mock_process, \
+         patch("extractor.concurrent.futures.ProcessPoolExecutor"), \
+         patch("extractor.concurrent.futures.as_completed", return_value=[mock_future]), \
          patch("extractor.HandLoader") as mock_loader:
          
         mock_loader_instance = MagicMock()
         mock_loader.return_value = mock_loader_instance
-        mock_loader_instance.process_and_save.return_value = 1
+        mock_loader_instance.save_dict_batch.return_value = 1
         
         main()
         
@@ -149,7 +153,7 @@ def test_main_with_new_files(tmp_path, capsys):
     assert "ETL incremental concluído com sucesso!" in captured.out
     
     mock_loader.assert_called_once_with(output_dir=str(silver / "123"))
-    mock_loader_instance.process_and_save.assert_called_once()
+    mock_loader_instance.save_dict_batch.assert_called_once()
     
     assert (silver / "123" / "processed_files.json").exists()
     saved = json.loads((silver / "123" / "processed_files.json").read_text(encoding="utf-8"))
