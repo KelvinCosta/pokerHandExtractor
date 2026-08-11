@@ -29,7 +29,7 @@ def main():
         
     # 2. Instalar dependências de build no Backend
     print("\n=== Instalando PyInstaller ===")
-    run_command(f"{sys.executable} -m pip install pyinstaller", cwd=str(backend_dir))
+    run_command(f'"{sys.executable}" -m pip install pyinstaller', cwd=str(backend_dir))
     
     # 3. Empacotar com PyInstaller
     print("\n=== Empacotando Backend + Frontend (PyInstaller) ===")
@@ -37,7 +37,7 @@ def main():
     # Monta o comando do pyinstaller
     # Adicionamos a pasta do frontend embutida, e incluímos as dependências escondidas do uvicorn/fastapi
     pyinstaller_command = (
-        'pyinstaller --name PokerApp --clean --noconfirm '
+        f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm '
         '--add-data "../frontend/out;frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
