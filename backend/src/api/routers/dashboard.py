@@ -12,7 +12,7 @@ from ..dependencies import _load_user_datalake
 
 @router.post("/metadata")
 async def get_dashboard_metadata(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
-    cache_entry = _load_user_datalake(current_user.id, "silver-layer")
+    cache_entry = _load_user_datalake(current_user.id)
     df = cache_entry.get("df_hands")
     
     if df is None or df.height == 0:
@@ -56,9 +56,7 @@ async def get_dashboard_metadata(filters: DashboardFilters, current_user: User =
 
 @router.get("/hand/{hand_id}")
 async def get_hand_details(hand_id: str, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
-    import os
-    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
-    cache_entry = _load_user_datalake(current_user.id, silver_bucket)
+    cache_entry = _load_user_datalake(current_user.id)
     df = cache_entry.get("df_hands")
     
     if df is None or df.height == 0:
@@ -664,7 +662,7 @@ async def get_tournaments_list(filters: DashboardFilters, current_user: User = D
 def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a"):
     try:
         from src.api.dependencies import _load_user_datalake
-        cache = _load_user_datalake(user_id, "poker-silver")
+        cache = _load_user_datalake(user_id)
         import polars as pl
         df_hands = cache.get("df_hands")
         
@@ -714,7 +712,7 @@ def get_ranges(filters: DashboardFilters, user_id: str = "335f7c35-320e-4671-a90
         import polars as pl
         import re
 
-        cache = _load_user_datalake(user_id, "poker-silver")
+        cache = _load_user_datalake(user_id)
         df_hands = cache.get("df_hands")
         if df_hands is None or df_hands.height == 0:
             return {"matrix": {}}
