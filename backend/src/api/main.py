@@ -12,6 +12,8 @@ if str(root_dir) not in sys.path:
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from src.database.session import init_db
 
 @asynccontextmanager
@@ -40,11 +42,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount API routes
 app.include_router(auth.router)
 app.include_router(etl.router)
 app.include_router(dashboard.router)
 app.include_router(team.router)
 
-@app.get("/")
-def health_check():
-    return {"status": "ok", "message": "API rodando e pronta!"}
+# Resolve path to frontend 'out' directory
+if getattr(sys, 'frozen', False):
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+    frontend_dir = os.path.join(sys._MEIPASS, "frontend_out")
+else:
+    # Normal execution
+    frontend_dir = os.path.join(os.path.dirname(__file__), "../../../frontend/out")
+
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+else:
+    @app.get("/")
+    def health_check():
+        return {"status": "ok", "message": "API rodando, mas frontend não encontrado (execute o build do frontend e coloque na pasta frontend/out)."}

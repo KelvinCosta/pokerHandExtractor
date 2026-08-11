@@ -65,21 +65,6 @@ export default function Page() {
 
   const currentMeta = meta[view]
 
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4 text-muted-foreground">
-          <Spade className="size-8 animate-pulse text-primary" />
-          <p className="text-sm font-medium">Validando credenciais...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (isAuthenticated === false) {
-    return null // O useEffect do useAuth vai redirecionar
-  }
-
   return (
     <div className="flex h-dvh overflow-hidden bg-background text-foreground">
       <Sidebar active={view} onSelect={setView} />
