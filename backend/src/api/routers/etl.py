@@ -76,12 +76,19 @@ async def upload_and_process(
         # Rename UUID file to final basename
         final_file_path = bronze_dir / final_basename
         
-        # Se já existir, removemos antes de renomear (pode ser o usuário subindo o mesmo log de novo para atualizar)
-        if final_file_path.exists():
-            final_file_path.unlink()
-            
-        temp_uuid_path.rename(final_file_path)
-        saved_files.append(final_file_path)
+        try:
+            # Em sistemas Windows, se o arquivo estiver bloqueado por outro processo (ex: GC ainda não fechou, ou antivírus)
+            if final_file_path.exists():
+                final_file_path.unlink()
+            temp_uuid_path.rename(final_file_path)
+            saved_files.append(final_file_path)
+        except PermissionError:
+            # Se falhar por bloqueio de permissão, geramos um novo nome com sufixo
+            import time
+            final_basename = f"{base_stem}_{int(time.time()*1000)}{base_ext}"
+            final_file_path = bronze_dir / final_basename
+            temp_uuid_path.rename(final_file_path)
+            saved_files.append(final_file_path)
         
     # 2. Configurar ETL Incremental
     processed_log_path = silver_dir / "processed_files.json"
