@@ -13,7 +13,9 @@ def test_upload_and_process_permission_error_fallback():
     import asyncio
     
     # Este teste é conceitual para validar que o bloco try/except PermissionError está no código
-    with open("src/api/routers/etl.py", "r", encoding="utf-8") as f:
+    from pathlib import Path
+    etl_path = Path(__file__).resolve().parent.parent / "src" / "api" / "routers" / "etl.py"
+    with open(etl_path, "r", encoding="utf-8") as f:
         content = f.read()
         
     assert "except PermissionError:" in content
