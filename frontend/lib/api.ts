@@ -28,7 +28,8 @@ import type {
 
 // ─── Base configuration ───────────────────────────────────────────────────────
 const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8000"
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? 
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:8000")
 
 export function getHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" }

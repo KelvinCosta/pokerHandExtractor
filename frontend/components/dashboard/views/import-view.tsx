@@ -89,14 +89,23 @@ export function ImportView() {
     setErrorMsg(null)
     setSuccessMsg(null)
 
-    const formData = new FormData()
-    formData.append("platform",  platform)
-    formData.append("hero_name", heroName)
-    files.forEach((file) => formData.append("files", file))
+    const CHUNK_SIZE = 500;
+    let totalUploaded = 0;
+    let totalProcessed = 0;
 
     try {
-      const result = await apiUpload("/api/etl/upload", formData)
-      setSuccessMsg(`${result.message} — ${result.new_files} files uploaded, ${result.hands_processed} hands processed.`)
+      for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+        const chunk = files.slice(i, i + CHUNK_SIZE);
+        const formData = new FormData()
+        formData.append("platform",  platform)
+        formData.append("hero_name", heroName)
+        chunk.forEach((file) => formData.append("files", file))
+
+        const result = await apiUpload("/api/etl/upload", formData)
+        totalUploaded += result.new_files || 0;
+        totalProcessed += result.hands_processed || 0;
+      }
+      setSuccessMsg(`ETL completed successfully — ${totalUploaded} files uploaded, ${totalProcessed} hands processed.`)
       setFiles([])
     } catch (err: any) {
       setErrorMsg(err.message || "Upload error")
