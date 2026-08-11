@@ -17,14 +17,25 @@ export default function LoginPage() {
     setLoading(true)
     setError(null)
     
-    const url = isLogin ? "http://localhost:8000/api/auth/login" : "http://localhost:8000/api/auth/register"
-    
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      })
+      let res;
+      if (isLogin) {
+        const formData = new URLSearchParams()
+        formData.append("username", email)
+        formData.append("password", password)
+        
+        res = await fetch("http://localhost:8000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData
+        })
+      } else {
+        res = await fetch("http://localhost:8000/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        })
+      }
       
       const data = await res.json()
       
