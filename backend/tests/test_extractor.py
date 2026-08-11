@@ -97,7 +97,9 @@ def test_main_no_new_files(tmp_path, capsys):
     silver.mkdir()
     
     (bronze / "file1.txt").write_text("dummy", encoding="utf-8")
-    (silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
+    user_silver = silver / "123"
+    user_silver.mkdir(parents=True, exist_ok=True)
+    (user_silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
     
     def mock_getenv(key):
         if key == "DATALAKE_BRONZE": return str(bronze)
@@ -122,7 +124,9 @@ def test_main_with_new_files(tmp_path, capsys):
     
     (bronze / "file1.txt").write_text("dummy", encoding="utf-8")
     (bronze / "new_file.txt").write_text("dummy log", encoding="utf-8")
-    (silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
+    user_silver = silver / "123"
+    user_silver.mkdir(parents=True, exist_ok=True)
+    (user_silver / "processed_files.json").write_text('["file1.txt"]', encoding="utf-8")
     
     def mock_getenv(key):
         if key == "DATALAKE_BRONZE": return str(bronze)
@@ -144,10 +148,9 @@ def test_main_with_new_files(tmp_path, capsys):
     assert "Iniciando Processamento Stream (1 novos arquivos encontrados)" in captured.out
     assert "ETL incremental concluído com sucesso!" in captured.out
     
-    mock_loader.assert_called_once_with(output_dir=str(silver))
+    mock_loader.assert_called_once_with(output_dir=str(silver / "123"))
     mock_loader_instance.process_and_save.assert_called_once()
     
-    # Verifica se salvou o log final
-    assert (silver / "processed_files.json").exists()
-    saved = json.loads((silver / "processed_files.json").read_text(encoding="utf-8"))
+    assert (silver / "123" / "processed_files.json").exists()
+    saved = json.loads((silver / "123" / "processed_files.json").read_text(encoding="utf-8"))
     assert set(saved) == {"file1.txt", "new_file.txt"}
