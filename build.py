@@ -37,7 +37,7 @@ def main():
     # Monta o comando do pyinstaller
     # Adicionamos a pasta do frontend embutida, e incluímos as dependências escondidas do uvicorn/fastapi
     pyinstaller_command = (
-        f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed '
+        f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed --onefile '
         '--add-data "../frontend/out;frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         spec_file.unlink()
         
     print("\n=== Build Concluída com Sucesso! ===")
-    print(f"O executável está disponível em: {backend_dir / 'dist' / 'PokerApp' / 'PokerApp.exe'}")
+    print(f"O executável está disponível em: {backend_dir / 'dist' / 'PokerApp.exe'}")
     print("Basta executar esse arquivo! Uma janela de aplicativo nativa se abrirá.")
 
 if __name__ == "__main__":
