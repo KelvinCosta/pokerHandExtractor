@@ -147,7 +147,7 @@ def _apply_filters(df: pl.DataFrame, filters: DashboardFilters) -> pl.DataFrame:
 
     return df
 
-def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
+def _load_user_datalake(user_id: str) -> dict:
     # Fast path sem lock
     if user_id in _DATALAKE_CACHE:
         return _DATALAKE_CACHE[user_id]
@@ -158,25 +158,17 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
             return _DATALAKE_CACHE[user_id]
 
         try:
-            storage_options = {
-                "endpoint_url": os.getenv("S3_ENDPOINT_URL", "http://localhost:9000"),
-                "aws_access_key_id": os.getenv("S3_ACCESS_KEY", "admin"),
-                "aws_secret_access_key": os.getenv("S3_SECRET_KEY", "password123"),
-                "aws_region": "us-east-1"
-            }
+            silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / str(user_id)
+            parquet_files = list(silver_dir.glob("hands_part_*.parquet"))
             
-            s3_path = f"s3://{silver_bucket}/{user_id}/hands_part_*.parquet"
-            from src.core.storage import get_s3_client
-            s3 = get_s3_client()
-            response = s3.list_objects_v2(Bucket=silver_bucket, Prefix=f"{user_id}/hands_part_")
-            
-            if "Contents" not in response:
+            if not parquet_files:
                 empty_df = pl.DataFrame(schema={"hand_id": pl.Utf8, "platform": pl.Utf8})
                 cache_entry = {"df_hands": empty_df, "df_actions": empty_df, "timestamp": time.time()}
                 _DATALAKE_CACHE[user_id] = cache_entry
                 return cache_entry
 
-            df_hands = pl.scan_parquet(s3_path, storage_options=storage_options).collect()
+            local_path = str(silver_dir / "hands_part_*.parquet")
+            df_hands = pl.scan_parquet(local_path).collect()
             df_hands = df_hands.unique(subset=["hand_id"], keep="last", maintain_order=True)
 
             nome_coluna_data = "date" if "date" in df_hands.columns else "timestamp" if "timestamp" in df_hands.columns else None
@@ -184,22 +176,17 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
                 df_hands = df_hands.with_columns(
                     pl.col(nome_coluna_data).str.to_datetime("%Y/%m/%d %H:%M:%S", strict=False).dt.date().alias("data_limpa")
                 )
-                
-            # TODO: Filtro removido (Milestone 6) - O ETL agora separa hero_net_profit_usd de hero_net_chips corretamente
-            # if "game_type" in df_hands.columns:
-            #     df_hands = df_hands.filter(
-            #         ~pl.col("game_type").is_in(["Tournament", "Spin & Gold", "Mystery Battle Royale"])
-            #     )
 
             df_actions = df_hands.explode("actions").unnest("actions")
             
             # Carregar sumários de torneios se existirem
             df_tournaments = pl.DataFrame()
             try:
-                s3_tournaments_path = f"s3://{silver_bucket}/{user_id}/tournaments.parquet"
-                df_tournaments = pl.scan_parquet(s3_tournaments_path, storage_options=storage_options).collect()
-                if "tournament_id" in df_tournaments.columns:
-                    df_tournaments = df_tournaments.unique(subset=["tournament_id"], keep="last", maintain_order=True)
+                local_tournaments_path = silver_dir / "tournaments.parquet"
+                if local_tournaments_path.exists():
+                    df_tournaments = pl.scan_parquet(str(local_tournaments_path)).collect()
+                    if "tournament_id" in df_tournaments.columns:
+                        df_tournaments = df_tournaments.unique(subset=["tournament_id"], keep="last", maintain_order=True)
             except Exception:
                 pass # Se não houver arquivo de torneios, segue normalmente com df vazio
             
@@ -207,24 +194,21 @@ def _load_user_datalake(user_id: str, silver_bucket: str) -> dict:
             _DATALAKE_CACHE[user_id] = cache_entry
             return cache_entry
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake do S3: {e}")
+            raise HTTPException(status_code=500, detail=f"Erro ao ler o datalake local: {e}")
 
 def get_filtered_df(filters: DashboardFilters, user: User) -> pl.DataFrame:
     """Retorna o Datalake EXPLODIDO no nível da Ação (usado por Analytics/Postflop/BigPots)"""
-    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
-    cache_entry = _load_user_datalake(user.id, silver_bucket)
+    cache_entry = _load_user_datalake(user.id)
     return _apply_filters(cache_entry["df_actions"], filters)
 
 def get_filtered_hands_df(filters: DashboardFilters, user: User) -> pl.DataFrame:
     """Retorna o Datalake base SEM explodir (Otimizado! Usado por Health/Preflop/Trend)"""
-    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
-    cache_entry = _load_user_datalake(user.id, silver_bucket)
+    cache_entry = _load_user_datalake(user.id)
     return _apply_filters(cache_entry["df_hands"], filters)
 
 def get_filtered_tournaments_df(filters: DashboardFilters, user: User) -> pl.DataFrame:
     """Retorna os Sumários de Torneios filtrados (usado para compor o Profit total)"""
-    silver_bucket = os.getenv("S3_SILVER_BUCKET", "poker-silver")
-    cache_entry = _load_user_datalake(user.id, silver_bucket)
+    cache_entry = _load_user_datalake(user.id)
     df_t = cache_entry.get("df_tournaments", pl.DataFrame())
     
     if df_t.height == 0:
