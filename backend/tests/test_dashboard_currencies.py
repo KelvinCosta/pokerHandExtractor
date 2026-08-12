@@ -20,10 +20,11 @@ def mock_df():
         "stake_tier": ["Tournament", "NL100", "NL100"],
         "street": ["PRE_FLOP", "PRE_FLOP", "PRE_FLOP"],
         "action_type": ["FOLD", "FOLD", "FOLD"],
-        "game_type": ["Tournament", "Regular Cash", "Regular Cash"]
+        "game_type": ["Tournament", "Regular Cash", "Regular Cash"],
+        "player_cards": [["Ah", "Kh"], ["2s", "3s"], ["4d", "5d"]]
     })
 
-@patch("src.api.routers.dashboard.get_filtered_df")
+@patch("src.api.routers.dashboard.get_filtered_hands_df")
 def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
     from src.api.routers.dashboard import get_stake_breakdown
     from src.api.schemas.filters import DashboardFilters

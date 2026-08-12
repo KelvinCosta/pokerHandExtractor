@@ -585,14 +585,15 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
         (pl.col("player") != pl.col("player_nickname")) & pl.col("player").is_not_null()
     )
 
+    # Para somar o net profit corretamente, precisamos garantir que só contabilizamos 
+    # o hero_net_profit uma vez por mão por vilão.
+    df_villains_unique_hands = df_villains.unique(subset=["hand_id", "player"])
+
     # Agrupa por vilão para extrair estatísticas
     df_rivals = (
         df_villains.group_by("player")
         .agg(
             pl.col("hand_id").n_unique().alias("hands"),
-            pl.col("hero_net_profit_usd").first().sum().alias("hero_net_usd"),
-            pl.col("hero_net_chips").first().sum().alias("hero_net_chips"),
-            
             # VPIP: % de mãos onde o vilão deu CALL ou RAISE pre-flop
             (
                 pl.col("hand_id").filter((pl.col("street") == "PRE_FLOP") & pl.col("action_type").is_in(["CALL", "RAISE"])).n_unique()
@@ -603,7 +604,21 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
                 pl.col("hand_id").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "RAISE")).n_unique()
             ).alias("pfr_hands"),
         )
-        .with_columns(
+    )
+    
+    # E junta com os lucros calculados a partir da base deduplicada
+    df_rivals_profits = (
+        df_villains_unique_hands.group_by("player")
+        .agg(
+            pl.col("hero_net_profit_usd").sum().alias("hero_net_usd"),
+            pl.col("hero_net_chips").sum().alias("hero_net_chips"),
+        )
+    )
+    
+    df_rivals = df_rivals.join(df_rivals_profits, on="player", how="inner")
+
+    df_rivals = (
+        df_rivals.with_columns(
             (pl.col("vpip_hands") / pl.col("hands") * 100).alias("vpip"),
             (pl.col("pfr_hands") / pl.col("hands") * 100).alias("pfr"),
         )
