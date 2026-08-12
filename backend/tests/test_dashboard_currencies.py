@@ -23,9 +23,8 @@ def mock_df():
         "game_type": ["Tournament", "Regular Cash", "Regular Cash"]
     })
 
-@pytest.mark.asyncio
 @patch("src.api.routers.dashboard.get_filtered_df")
-async def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
+def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
     from src.api.routers.dashboard import get_stake_breakdown
     from src.api.schemas.filters import DashboardFilters
     from src.database.models import User
@@ -35,7 +34,7 @@ async def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = await get_stake_breakdown(filters, user)
+    result = asyncio.run(get_stake_breakdown(filters, user))
     
     # Devemos ter 2 stakes: "Tournament" e "NL100"
     assert len(result) == 2
@@ -52,9 +51,8 @@ async def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
     assert nl100["profit_usd"] == 10.5  # 15.5 - 5.0
     assert nl100["profit_chips"] == 0.0
 
-@pytest.mark.asyncio
 @patch("src.api.routers.dashboard.get_filtered_df")
-async def test_biggest_rivals_currencies(mock_get_filtered, mock_df):
+def test_biggest_rivals_currencies(mock_get_filtered, mock_df):
     from src.api.routers.dashboard import get_biggest_rivals
     from src.api.schemas.filters import DashboardFilters
     from src.database.models import User
@@ -64,7 +62,7 @@ async def test_biggest_rivals_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = await get_biggest_rivals(filters, user)
+    result = asyncio.run(get_biggest_rivals(filters, user))
     
     # Devemos ter 2 vilões: "Vilao" e "Outro"
     assert len(result) == 2
@@ -81,9 +79,8 @@ async def test_biggest_rivals_currencies(mock_get_filtered, mock_df):
     assert outro["net_usd"] == 5.0
     assert outro["net_chips"] == 0.0
 
-@pytest.mark.asyncio
 @patch("src.api.routers.dashboard.get_filtered_df")
-async def test_analytics_currencies(mock_get_filtered, mock_df):
+def test_analytics_currencies(mock_get_filtered, mock_df):
     from src.api.routers.dashboard import get_analytics_bento
     from src.api.schemas.filters import DashboardFilters
     from src.database.models import User
@@ -93,7 +90,7 @@ async def test_analytics_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = await get_analytics_bento(filters, user)
+    result = asyncio.run(get_analytics_bento(filters, user))
     
     # O mock_df original não tem lógica avançada de WTSD, WWSF (requer action_type específicos), 
     # mas a red line profit por padrão agrupa tudo se hero_went_to_sd estiver vazio.
