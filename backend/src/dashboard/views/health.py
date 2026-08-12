@@ -21,6 +21,7 @@ def render_health(df):
             pl.col("amount").filter((pl.col("street") == "PRE_FLOP") & (pl.col("action_type") == "POST")).max().fill_null(0.02).alias("bb_size"),
             pl.col("invested_amount").filter((pl.col("player") == "Hero") & (~pl.col("action_type").is_in(["COLLECT", "FOLD", "CHECK"]))).sum().fill_null(0.0).alias("investido"),
             pl.col("amount").filter((pl.col("player") == "Hero") & (pl.col("action_type") == "COLLECT")).sum().fill_null(0.0).alias("coletado"),
+            pl.col("hero_expected_value_bb").first().fill_null(0.0).alias("ev_bb"),
             pl.col("date").first().alias("timestamp"),
             pl.col("game_type").first().alias("game_type"),
             pl.col("game_info").first().alias("game_info")
@@ -107,9 +108,15 @@ def render_health(df):
     # inevitáveis em torneios (perda de todas as fichas/BBs) não puxem a média financeira para baixo.
     if df_cash.height > 0:
         total_profit_bb = df_cash["profit_in_bb"].sum()
+        total_ev_bb = df_cash["ev_bb"].sum()
+        
         win_rate_bb100 = (total_profit_bb / df_cash.height) * 100
+        ev_bb100 = (total_ev_bb / df_cash.height) * 100
+        ev_diff_bb = total_ev_bb - total_profit_bb
     else:
         win_rate_bb100 = 0.0
+        ev_bb100 = 0.0
+        ev_diff_bb = 0.0
 
     col1, col2, col3, col4, col5 = st.columns(5)
     
@@ -131,14 +138,16 @@ def render_health(df):
 
     col4.metric(
         "🎯 EV bb/100",
-        "0.00 bb",
-        help="⚠️ Temporariamente fixado em 0.00 no MVP offline. O cálculo do All-In Expected Value (EV) será integrado ao parser nas próximas atualizações."
+        f"{ev_bb100:.2f} bb",
+        help="All-In Expected Value extraído nativamente das Hand Histories."
     )
 
     col5.metric(
         "⚖️ Sorte vs EV (Diff)",
-        "0.00 bb",
-        help="⚠️ Temporariamente fixado em 0.00 no MVP offline. Exibirá o quão acima ou abaixo da matemática (sorte/azar) você esteve."
+        f"{ev_diff_bb:.2f} bb",
+        delta=f"{ev_diff_bb:.2f} bb",
+        delta_color="normal" if ev_diff_bb >= 0 else "inverse",
+        help="Diferença entre o seu EV e o lucro real. Valores positivos indicam que você deveria ter ganho mais do que ganhou (azar). Valores negativos indicam que você ganhou mais do que a matemática previa (sorte)."
     )
 
     st.divider()

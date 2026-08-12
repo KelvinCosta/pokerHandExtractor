@@ -1,7 +1,7 @@
 from typing import Tuple, Optional
 from dataclasses import replace
 from src.domain.models import HandContext, Action, Street, ActionType
-from src.parser.tokenizer import Token, HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent
+from src.parser.tokenizer import Token, HandStartEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent, EVEvent
 
 def _map_action_type(raw_action: str) -> ActionType:
     try:
@@ -39,6 +39,11 @@ class TerminalState(State):
                     invested_amount=token.amount
                 )
                 new_context = context.add_action(action)
+                return self, new_context
+
+        if type(token).__name__ == "EVEvent" and context is not None:
+            if token.player == context.player_nickname:
+                new_context = replace(context, hero_expected_value=token.ev_amount)
                 return self, new_context
 
         return self, context
@@ -102,6 +107,11 @@ class BaseStreetState(State):
                 tax=token.tax
             )
             return TerminalState(), new_context
+
+        elif type(token).__name__ == "EVEvent":
+            if token.player == context.player_nickname:
+                new_context = replace(context, hero_expected_value=token.ev_amount)
+                return self, new_context
 
         return self, context
 

@@ -45,6 +45,7 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
                 date as hand_timestamp,
                 stake_level,
                 hero_ganhou,
+                hero_expected_value_bb,
                 UNNEST(actions) as act
             FROM read_parquet('{parquet_path}')
             WHERE ABS(stake_level - {stake_level}) < 0.001
@@ -57,6 +58,7 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
                 hand_timestamp,
                 stake_level,
                 hero_ganhou,
+                hero_expected_value_bb,
                 act.player as player,
                 act.action_type as action_type,
                 act.invested_amount as invested_amount,
@@ -69,6 +71,7 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
             SELECT 
                 hand_id,
                 MAX(hand_timestamp) as hand_timestamp,
+                MAX(hero_expected_value_bb) as hero_expected_value_bb,
                 SUM(invested_amount) FILTER (WHERE player = '{player_id}' AND action_type NOT IN ('COLLECT', 'FOLD', 'CHECK')) as investido,
                 SUM(amount) FILTER (WHERE player = '{player_id}' AND action_type = 'COLLECT') as coletado,
                 COUNT(*) FILTER (WHERE player = '{player_id}' AND action_type IN ('BET', 'RAISE')) as agg_actions,
@@ -111,6 +114,8 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
                 '{player_id}' as player_id,
                 COUNT(*) as hands_played,
                 ROUND(CAST(COALESCE((SUM(profit) / {stake_level} / NULLIF(COUNT(*), 0)) * 100, 0) AS DOUBLE), 2) as win_rate_bb100,
+                ROUND(CAST(COALESCE((SUM(hero_expected_value_bb) / NULLIF(COUNT(*), 0)) * 100, 0) AS DOUBLE), 2) as ev_bb100,
+                ROUND(CAST(COALESCE(SUM(hero_expected_value_bb) - (SUM(profit) / {stake_level}), 0) AS DOUBLE), 2) as ev_diff_bb,
                 ROUND(CAST(COALESCE(SUM(profit) / {stake_level}, 0) AS DOUBLE), 2) as profit_bb,
                 ROUND(CAST(COALESCE(AVG(vpip_flag) * 100, 0) AS DOUBLE), 2) as vpip,
                 ROUND(CAST(COALESCE(AVG(pfr_flag) * 100, 0) AS DOUBLE), 2) as pfr,
@@ -128,6 +133,8 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
             g.player_id,
             g.hands_played,
             g.win_rate_bb100,
+            g.ev_bb100,
+            g.ev_diff_bb,
             g.profit_bb,
             g.vpip,
             g.pfr,
@@ -162,21 +169,23 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
             global_stats=GlobalStats(
                 hands_played=result[1],
                 win_rate_bb100=result[2],
-                profit_bb=result[3],
-                vpip=result[4],
-                pfr=result[5],
-                aggressiveness_factor=result[6],
-                all_in_freq=result[7],
-                wsd=result[8],
-                wwsf=result[9]
+                ev_bb100=result[3],
+                ev_diff_bb=result[4],
+                profit_bb=result[5],
+                vpip=result[6],
+                pfr=result[7],
+                aggressiveness_factor=result[8],
+                all_in_freq=result[9],
+                wsd=result[10],
+                wwsf=result[11]
             ),
             behavioral_triggers=BehavioralTriggers(
-                recent_trend_vpip=result[10],
-                recent_trend_pfr=result[11],
-                recent_profit_bb=result[12],
-                recent_aggressiveness_factor=result[13],
-                current_losing_streak_sessions=result[14],
-                max_session_downswing_bb=result[15]
+                recent_trend_vpip=result[12],
+                recent_trend_pfr=result[13],
+                recent_profit_bb=result[14],
+                recent_aggressiveness_factor=result[15],
+                current_losing_streak_sessions=result[16],
+                max_session_downswing_bb=result[17]
             )
         )
         return stats

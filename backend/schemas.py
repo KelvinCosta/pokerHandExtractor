@@ -11,6 +11,8 @@ class GlobalStats(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     hands_played: int = Field(0, description="Volume total de mãos")
     win_rate_bb100: float = Field(0.0, description="Lucro em BBs por 100 mãos")
+    ev_bb100: float = Field(0.0, description="EV All-In em BBs por 100 mãos")
+    ev_diff_bb: float = Field(0.0, description="Diferença entre Sorte e EV (bb)")
     profit_bb: float = Field(..., description="Lucro total (BB)")
     vpip: float = Field(0.0, description="Voluntarily Put Money in Pot (%)")
     pfr: float = Field(0.0, description="Pre-Flop Raise (%)")

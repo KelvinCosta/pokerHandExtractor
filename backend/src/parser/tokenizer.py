@@ -39,7 +39,11 @@ class PotSummaryEvent(BaseModel):
     fortune: float = 0.0
     tax: float = 0.0
 
-Token = Union[HandStartEvent, ButtonInfoEvent, SeatInfoEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent]
+class EVEvent(BaseModel):
+    player: str
+    ev_amount: float = 0.0
+
+Token = Union[HandStartEvent, ButtonInfoEvent, SeatInfoEvent, StreetChangeEvent, RawActionEvent, CardsRevealedEvent, PotSummaryEvent, EVEvent]
 
 class GGPokerTokenizer:
     def __init__(self, hero_name: str = "Hero"):
@@ -53,6 +57,7 @@ class GGPokerTokenizer:
         self.re_shows = re.compile(r"^([^:]+): shows \[([^\]]+)\]")
         self.re_mucks = re.compile(r"^([^:]+): mucks \[([^\]]+)\]")
         self.re_collect = re.compile(r"^([^:]+?) collected \$?([0-9,]+(?:\.[0-9]+)?) from (?:main )?pot")
+        self.re_ev = re.compile(r"([^:]+).*?(?:All-In EV|EV Cashout|Expected Value|Cashout|EV).*?\$?([0-9,]+(?:\.[0-9]+)?)")
 
     def parse_line(self, line: str) -> Optional[Token]:
         line = line.strip()
@@ -159,6 +164,14 @@ class GGPokerTokenizer:
             if player == "Hero":
                 player = self.hero_name
             return RawActionEvent(player=player, action_type="COLLECT", amount=amount)
+
+        match_ev = self.re_ev.search(line)
+        if match_ev and "Total pot" not in line and "Rake" not in line and "Jackpot" not in line:
+            player = match_ev.group(1).strip()
+            if player == "Hero":
+                player = self.hero_name
+            amount = float(match_ev.group(2).replace(",", ""))
+            return EVEvent(player=player, ev_amount=amount)
 
         if line.startswith("Total pot "):
             match_summary = re.search(r"Total pot \$?([0-9,]+(?:\.[0-9]+)?)", line)

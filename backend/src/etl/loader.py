@@ -90,6 +90,9 @@ class HandLoader:
         hero_net_profit_usd = raw_profit if is_cash else 0.0
         hero_net_chips = raw_profit if not is_cash else 0.0
         hero_net_profit_bb = round(raw_profit / stake_level, 2) if stake_level and stake_level > 0 else 0.0
+
+        hero_expected_value_usd = hand.hero_expected_value if hand.hero_expected_value > 0 else hero_net_profit_usd
+        hero_expected_value_bb = round(hero_expected_value_usd / stake_level, 2) if stake_level and stake_level > 0 else 0.0
         
         # 2. Extraindo Posição e Flags Pré-Flop
         preflop_actions = [a for a in hand.actions if (hasattr(a.street, "name") and a.street.name == "PRE_FLOP" or str(a.street) == "PRE_FLOP")]
@@ -139,6 +142,8 @@ class HandLoader:
             "hero_net_profit_usd": hero_net_profit_usd,
             "hero_net_chips": hero_net_chips,
             "hero_net_profit_bb": hero_net_profit_bb,
+            "hero_expected_value_usd": hero_expected_value_usd,
+            "hero_expected_value_bb": hero_expected_value_bb,
             "hero_position": hero_position,
             "hero_vpip": hero_vpip,
             "hero_pfr": hero_pfr,
@@ -190,6 +195,8 @@ class HandLoader:
             pl.col("hero_net_profit_usd").cast(pl.Float64),
             pl.col("hero_net_chips").cast(pl.Float64),
             pl.col("hero_net_profit_bb").cast(pl.Float64),
+            pl.col("hero_expected_value_usd").cast(pl.Float64),
+            pl.col("hero_expected_value_bb").cast(pl.Float64),
             pl.col("rake").cast(pl.Float64),
             pl.col("jackpot").cast(pl.Float64),
             pl.col("bingo").cast(pl.Float64),

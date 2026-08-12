@@ -58,6 +58,7 @@ class HandContext:
     hero_vpip: bool = False
     hero_pfr: bool = False
     hero_3bet: bool = False
+    hero_expected_value: float = 0.0
 
     @property
     def current_pot(self) -> float:
