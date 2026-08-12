@@ -23,6 +23,8 @@ class BehavioralTriggers(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     recent_trend_vpip: float = Field(..., description="VPIP nas mãos recentes (últimos 25%)")
     recent_trend_pfr: float = Field(..., description="PFR nas mãos recentes (últimos 25%)")
+    recent_profit_bb: float = Field(..., description="Lucro nas mãos recentes (últimos 25%)")
+    recent_aggressiveness_factor: float = Field(..., description="Fator de agressividade nas mãos recentes (últimos 25%)")
     current_losing_streak_sessions: int = Field(..., description="Sessões/Dias consecutivos no vermelho até hoje")
     max_session_downswing_bb: float = Field(..., description="Maior queda em uma única sessão/dia (BB)")
 

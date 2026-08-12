@@ -111,7 +111,7 @@ def render_health(df):
     else:
         win_rate_bb100 = 0.0
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     col1.metric("🃏 Total de Mãos", f"{total_maos:,}")
     
@@ -128,6 +128,40 @@ def render_health(df):
         delta=f"{win_rate_bb100:.2f} bb",
         delta_color="normal" if win_rate_bb100 >= 0 else "inverse"
     )
+
+    col4.metric(
+        "🎯 EV bb/100",
+        "0.00 bb",
+        help="⚠️ Temporariamente fixado em 0.00 no MVP offline. O cálculo do All-In Expected Value (EV) será integrado ao parser nas próximas atualizações."
+    )
+
+    col5.metric(
+        "⚖️ Sorte vs EV (Diff)",
+        "0.00 bb",
+        help="⚠️ Temporariamente fixado em 0.00 no MVP offline. Exibirá o quão acima ou abaixo da matemática (sorte/azar) você esteve."
+    )
+
+    st.divider()
+
+    st.subheader("🕵️‍♂️ Dissecação Extrema (Mãos do Período)")
+    col_ext1, col_ext2 = st.columns(2)
+    
+    if lucro_por_mao.height > 0:
+        mao_maior_lucro = lucro_por_mao.filter(pl.col("net_profit") == pl.col("net_profit").max()).head(1)
+        mao_maior_prejuizo = lucro_por_mao.filter(pl.col("net_profit") == pl.col("net_profit").min()).head(1)
+        
+        lucro_max = mao_maior_lucro["net_profit"].item() if mao_maior_lucro.height > 0 else 0
+        preju_max = mao_maior_prejuizo["net_profit"].item() if mao_maior_prejuizo.height > 0 else 0
+        
+        hand_id_lucro = mao_maior_lucro["hand_id"].item() if mao_maior_lucro.height > 0 else "N/A"
+        hand_id_preju = mao_maior_prejuizo["hand_id"].item() if mao_maior_prejuizo.height > 0 else "N/A"
+
+        with col_ext1:
+            st.success(f"**🟢 Maior Lucro em Única Mão**\n\nLucro: **${lucro_max:.2f}**\n\nID: `{hand_id_lucro}`")
+        with col_ext2:
+            st.error(f"**🔴 Maior Prejuízo em Única Mão**\n\nPrejuízo: **${preju_max:.2f}**\n\nID: `{hand_id_preju}`")
+    else:
+        st.info("Não há dados suficientes para a dissecação extrema.")
 
     st.divider()
     

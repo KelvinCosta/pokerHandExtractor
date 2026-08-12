@@ -77,6 +77,8 @@ class PokerStatsSnapshot(Base):
     profit_bb = Column(Float)
     max_session_downswing_bb = Column(Float)
     current_losing_streak_sessions = Column(Integer)
+    recent_profit_bb = Column(Float)
+    recent_aggressiveness_factor = Column(Float)
     
     raw_state_json = Column(Text, nullable=True) # Payload completo extraído do DuckDB
 
@@ -185,6 +187,8 @@ def create_audit_session(player_id, initial_diagnostic, stats=None):
             profit_bb=stats.global_stats.profit_bb,
             max_session_downswing_bb=stats.behavioral_triggers.max_session_downswing_bb,
             current_losing_streak_sessions=stats.behavioral_triggers.current_losing_streak_sessions,
+            recent_profit_bb=stats.behavioral_triggers.recent_profit_bb,
+            recent_aggressiveness_factor=stats.behavioral_triggers.recent_aggressiveness_factor,
             raw_state_json=stats.model_dump_json() # Salva o payload completo
         )
         db.add(snapshot)

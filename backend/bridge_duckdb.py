@@ -119,7 +119,9 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
                 ROUND(CAST(COALESCE(SUM(CASE WHEN went_to_showdown = 1 AND profit > 0 THEN 1 ELSE 0 END) / CAST(NULLIF(SUM(went_to_showdown), 0) AS DOUBLE) * 100, 0) AS DOUBLE), 2) as wsd,
                 ROUND(CAST(COALESCE(SUM(CASE WHEN saw_flop_flag = 1 AND profit > 0 THEN 1 ELSE 0 END) / CAST(NULLIF(SUM(saw_flop_flag), 0) AS DOUBLE) * 100, 0) AS DOUBLE), 2) as wwsf,
                 ROUND(CAST(COALESCE(AVG(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN vpip_flag ELSE NULL END) * 100, 0) AS DOUBLE), 2) as recent_trend_vpip,
-                ROUND(CAST(COALESCE(AVG(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN pfr_flag ELSE NULL END) * 100, 0) AS DOUBLE), 2) as recent_trend_pfr
+                ROUND(CAST(COALESCE(AVG(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN pfr_flag ELSE NULL END) * 100, 0) AS DOUBLE), 2) as recent_trend_pfr,
+                ROUND(CAST(COALESCE(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN profit ELSE 0 END) / {stake_level}, 0) AS DOUBLE), 2) as recent_profit_bb,
+                ROUND(CAST(COALESCE(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN agg_actions ELSE 0 END) / NULLIF(SUM(CASE WHEN rn_desc <= CEIL(total_hands * 0.25) THEN call_actions ELSE 0 END), 0), 0) AS DOUBLE), 2) as recent_aggressiveness_factor
             FROM base_calc
         )
         SELECT 
@@ -135,6 +137,8 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
             g.wwsf,
             g.recent_trend_vpip,
             g.recent_trend_pfr,
+            g.recent_profit_bb,
+            g.recent_aggressiveness_factor,
             CAST(COALESCE((SELECT COUNT(*) FROM daily_streaks WHERE is_loss_day = 1 AND day_rn_desc = day_rn_loss_desc), 0) AS INTEGER) as current_losing_streak_sessions,
             ROUND(CAST(COALESCE((SELECT MIN(daily_profit_bb) FROM daily_streaks WHERE daily_profit_bb < 0), 0.0) AS DOUBLE), 2) as max_session_downswing_bb
         FROM global_aggs g
@@ -169,8 +173,10 @@ def extract_player_metrics(parquet_path: str, player_id: str, days_limit: int, s
             behavioral_triggers=BehavioralTriggers(
                 recent_trend_vpip=result[10],
                 recent_trend_pfr=result[11],
-                current_losing_streak_sessions=result[12],
-                max_session_downswing_bb=result[13]
+                recent_profit_bb=result[12],
+                recent_aggressiveness_factor=result[13],
+                current_losing_streak_sessions=result[14],
+                max_session_downswing_bb=result[15]
             )
         )
         return stats

@@ -11,6 +11,7 @@ from src.dashboard.config import carregar_tags
 from src.dashboard.views.river_audit import render_river_audit
 from src.dashboard.views.cbet_audit import render_cbet_audit
 from src.dashboard.views.preflop import render_preflop
+from src.dashboard.views.positional import render_positional
 from src.dashboard.views.postflop import render_postflop
 from src.dashboard.views.population import render_population_range
 from src.dashboard.views.big_pots import render_big_pots
@@ -57,6 +58,9 @@ def page_cbet():
 def page_preflop():
     render_preflop(df_clean)
 
+def page_positional():
+    render_positional(df_clean)
+
 
 def page_postflop():
     render_postflop(df_clean)
@@ -76,6 +80,7 @@ def page_big_pots():
 pg = st.navigation({
     "Painéis Detalhados": [
         st.Page(page_health, title="Saúde Geral", icon="❤️"),
+        st.Page(page_positional, title="Consciência Posicional", icon="🪑"),
         st.Page(page_preflop, title="Motor Pré-Flop", icon="🔥"),
         st.Page(page_postflop, title="Agressão Pós-Flop", icon="⚔️"),
         st.Page(page_overview, title="Visão Geral (Ações)", icon="📊"),
