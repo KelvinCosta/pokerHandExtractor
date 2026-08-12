@@ -151,12 +151,38 @@ export function VillainsView({
 
                   {/* Net */}
                   <TableCell>
-                    <span className={cn(
-                      "font-mono text-sm font-bold tabular-nums",
-                      v.net < 0 ? "text-[#FF3B3B]" : "text-[#10B981]",
-                    )}>
-                      {v.net < 0 ? "" : "+"}{currency(v.net)}
-                    </span>
+                    <div className="flex flex-col gap-0 items-start">
+                      {v.net_usd !== undefined ? (
+                        <>
+                          {v.net_usd !== 0 && (
+                            <span className={cn(
+                              "font-mono text-sm font-bold tabular-nums",
+                              v.net_usd < 0 ? "text-[#FF3B3B]" : "text-[#10B981]",
+                            )}>
+                              {v.net_usd < 0 ? "" : "+"}{currency(v.net_usd)}
+                            </span>
+                          )}
+                          {v.net_chips !== 0 && (
+                            <span className={cn(
+                              "font-mono text-[10px] font-medium tabular-nums",
+                              v.net_chips !== undefined && v.net_chips < 0 ? "text-[#FF3B3B]/80" : "text-[#10B981]/80",
+                            )}>
+                              {v.net_chips !== undefined && v.net_chips < 0 ? "" : "+"}{Math.round(v.net_chips || 0).toLocaleString()} chips
+                            </span>
+                          )}
+                          {v.net_usd === 0 && v.net_chips === 0 && (
+                            <span className="font-mono text-sm font-bold tabular-nums text-muted-foreground">$0</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className={cn(
+                          "font-mono text-sm font-bold tabular-nums",
+                          v.net < 0 ? "text-[#FF3B3B]" : "text-[#10B981]",
+                        )}>
+                          {v.net < 0 ? "" : "+"}{currency(v.net)}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
 
                   {/* Stats */}
@@ -214,9 +240,24 @@ export function VillainsView({
                 </div>
 
                 <div className="flex flex-col items-end gap-1">
-                  <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
-                    {currency(v.net)}
-                  </span>
+                  {v.net_usd !== undefined ? (
+                    <div className="flex flex-col items-end gap-0">
+                      {v.net_usd !== 0 && (
+                        <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
+                          {currency(v.net_usd)}
+                        </span>
+                      )}
+                      {v.net_chips !== 0 && (
+                        <span className="font-mono text-[10px] font-medium tabular-nums text-[#FF3B3B]/80">
+                          {Math.round(v.net_chips || 0).toLocaleString()} chips
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
+                      {currency(v.net)}
+                    </span>
+                  )}
                   <span className={cn(
                     "rounded-full border px-1.5 py-px font-mono text-[9px] uppercase tracking-wide",
                     STYLE_BADGE[v.style],

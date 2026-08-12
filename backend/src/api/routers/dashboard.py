@@ -168,7 +168,9 @@ async def get_stake_breakdown(filters: DashboardFilters, current_user: User = De
         result.append({
             "stake": stake_str,
             "hands": row["hands"] or 0,
-            "profit": round(profit, 2),
+            "profit": round(row["profit_usd"], 2), # Maintain "profit" for backwards compatibility if needed, but it's now just USD
+            "profit_usd": round(row["profit_usd"], 2),
+            "profit_chips": round(row["profit_chips"], 2),
             "winrate": round(winrate, 2)
         })
     return result
@@ -360,16 +362,23 @@ async def get_analytics_bento(filters: DashboardFilters, current_user: User = De
     wssd_pct = (wssd_success / wtsd_success * 100) if wtsd_success > 0 else 0.0
 
     # 4. Linhas Azul (Showdown) e Vermelha (Non-Showdown)
-    df_hero_pnl = df.group_by("hand_id").agg((pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().alias("net_profit"))
-    blue_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="inner")["net_profit"].sum()
-    red_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="anti")["net_profit"].sum()
+    df_hero_pnl = df.group_by("hand_id").agg([
+        pl.col("hero_net_profit_usd").first().alias("net_usd"),
+        pl.col("hero_net_chips").first().alias("net_chips")
+    ])
+    blue_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="inner")["net_usd"].sum()
+    red_line_profit = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="anti")["net_usd"].sum()
+    blue_line_chips = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="inner")["net_chips"].sum()
+    red_line_chips = df_hero_pnl.join(hero_went_to_sd, on="hand_id", how="anti")["net_chips"].sum()
 
     return {
         "wwsf_pct": round(wwsf_pct, 1),
         "wtsd_pct": round(wtsd_pct, 1),
         "wssd_pct": round(wssd_pct, 1),
         "blue_line_profit": round(blue_line_profit, 2),
-        "red_line_profit": round(red_line_profit, 2)
+        "red_line_profit": round(red_line_profit, 2),
+        "blue_line_chips": round(blue_line_chips, 2),
+        "red_line_chips": round(red_line_chips, 2)
     }
 
 @router.post("/engines/postflop")
@@ -581,12 +590,8 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
         df_villains.group_by("player")
         .agg(
             pl.col("hand_id").n_unique().alias("hands"),
-            # Para net profit do vilão, se o hero perdeu X na mão, o vilão não necessariamente ganhou X 
-            # (pode ter sido um pote multiway). Mas para simplificar a rivalidade, consideramos o 
-            # (net profit do hero invertido) caso a mão tenha ido pra showdown entre os dois, ou apenas 
-            # o sum(hero_net_profit) de quando eles estavam na mesma mesa.
-            # O jeito certo é agregar o net profit do Hero por mão, e inverter
-            (pl.col("hero_net_profit_usd") + pl.col("hero_net_chips")).first().sum().alias("hero_net_total"),
+            pl.col("hero_net_profit_usd").first().sum().alias("hero_net_usd"),
+            pl.col("hero_net_chips").first().sum().alias("hero_net_chips"),
             
             # VPIP: % de mãos onde o vilão deu CALL ou RAISE pre-flop
             (
@@ -622,7 +627,9 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
             "id": f"v_{i}",
             "alias": row["player"],
             "hands": row["hands"],
-            "net": round(-row["hero_net_total"], 2), # Inverte para "net do vilão" (negativo = ele nos tirou dinheiro)
+            "net": round(-row["hero_net_usd"], 2), # Backward compat
+            "net_usd": round(-row["hero_net_usd"], 2),
+            "net_chips": round(-row["hero_net_chips"], 2),
             "vpip": round(vpip, 1),
             "pfr": round(pfr, 1),
             "threeBet": round(pfr * 0.35, 1), # mock heurístico derivado do PFR por enquanto

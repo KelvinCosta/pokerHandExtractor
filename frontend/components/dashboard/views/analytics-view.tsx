@@ -344,9 +344,24 @@ function BiggestRivals({ rivals }: { rivals: any[] }) {
               </div>
 
               <div className="flex flex-col items-end gap-1">
-                <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
-                  {currency(rival.net)}
-                </span>
+                {rival.net_usd !== undefined ? (
+                  <div className="flex flex-col items-end gap-0">
+                    {rival.net_usd !== 0 && (
+                      <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
+                        {currency(rival.net_usd)}
+                      </span>
+                    )}
+                    {rival.net_chips !== 0 && (
+                      <span className="font-mono text-[10px] font-medium tabular-nums text-[#FF3B3B]/80">
+                        {Math.round(rival.net_chips || 0).toLocaleString()} chips
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="font-mono text-base font-bold tabular-nums text-[#FF3B3B]">
+                    {currency(rival.net)}
+                  </span>
+                )}
                 <span
                   className={cn(
                     "rounded-full border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide",
@@ -404,9 +419,11 @@ export function AnalyticsView({ filters }: { filters?: DashboardFilters }) {
     {
       id: "red_line",
       label: "Red Line (Non-Showdown)",
-      value: `$${analytics.red_line_profit.toFixed(2)}`,
-      trend: analytics.red_line_profit >= 0 ? "up" : "down",
-      delta: analytics.red_line_profit >= 0 ? "Aggressive" : "Passive",
+      value: (analytics.red_line_profit !== 0 || analytics.red_line_chips === 0) 
+             ? `$${analytics.red_line_profit.toFixed(2)}` 
+             : `${Math.round(analytics.red_line_chips).toLocaleString()} chips`,
+      trend: (analytics.red_line_profit >= 0 || analytics.red_line_chips >= 0) ? "up" : "down",
+      delta: (analytics.red_line_profit >= 0 || analytics.red_line_chips >= 0) ? "Aggressive" : "Passive",
       hint: "Profit won before SD",
     }
   ] : [];

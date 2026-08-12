@@ -147,6 +147,8 @@ export interface Villain {
   alias: string
   hands: number
   net: number // negative = villain took money from hero
+  net_usd?: number
+  net_chips?: number
   vpip: number
   pfr: number
   threeBet: number

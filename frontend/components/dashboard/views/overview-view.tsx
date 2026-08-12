@@ -285,15 +285,29 @@ export function OverviewView({ filters }: { filters?: DashboardFilters }) {
                     >
                       {s.winrate} bb/100
                     </span>
-                    <span className="w-16 text-right font-mono tabular-nums text-foreground">
-                      {currency(s.profit)}
-                    </span>
+                  <div className="flex flex-col items-end gap-0">
+                    {s.profit_usd !== 0 && (
+                      <span className="w-16 text-right font-mono tabular-nums text-foreground">
+                        {currency(s.profit_usd)}
+                      </span>
+                    )}
+                    {s.profit_chips !== 0 && (
+                      <span className="text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+                        {Math.round(s.profit_chips).toLocaleString("en-US")} chips
+                      </span>
+                    )}
+                    {s.profit_usd === 0 && s.profit_chips === 0 && (
+                      <span className="w-16 text-right font-mono tabular-nums text-foreground">
+                        $0
+                      </span>
+                    )}
+                  </div>
                   </div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary/80"
-                    style={{ width: `${(s.profit / maxProfit) * 100}%` }}
+                    style={{ width: `${((Math.abs(s.profit_usd) || Math.abs(s.profit_chips)) / maxProfit) * 100}%` }}
                   />
                 </div>
                 <p className="mt-1 font-mono text-[10px] text-muted-foreground">
