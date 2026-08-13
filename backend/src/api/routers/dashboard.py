@@ -998,7 +998,12 @@ async def get_river_audit(filters: DashboardFilters, current_user: User = Depend
             pl.col("player").filter((pl.col("player") != pl.col("player_nickname")) & (pl.col("action_type") == "CALL")).count().alias("qtd_calls_recebidos")
         )
         .filter((pl.col("hero_bet_amount") > 0) & (pl.col("qtd_calls_recebidos") > 0))
-        .with_columns((pl.col("pote_final") - pl.col("investimento_total_river")).alias("pote_anterior"))
+        .with_columns(
+            pl.when(pl.col("pote_final") - pl.col("investimento_total_river") <= 0)
+            .then(0.01)
+            .otherwise(pl.col("pote_final") - pl.col("investimento_total_river"))
+            .alias("pote_anterior")
+        )
         .with_columns(((pl.col("hero_bet_amount") / pl.col("pote_anterior")) * 100).round(1).alias("sizing_pct"))
     )
 
@@ -1028,16 +1033,32 @@ async def get_river_audit(filters: DashboardFilters, current_user: User = Depend
             .sort("sizing_pct", descending=False)
         )
         
+        
+        # Fill NaN to avoid returning math.nan
+        auditoria_ev = auditoria_ev.with_columns(
+            pl.col("diferenca_dolares").fill_nan(0.0).fill_null(0.0)
+        )
+        
         lucro_perdido = auditoria_ev.filter((pl.col("resultado") == "WON") & (pl.col("diferenca_dolares") > 0))["diferenca_dolares"].sum()
         dinheiro_salvo = auditoria_ev.filter((pl.col("resultado") == "LOST") & (pl.col("diferenca_dolares") > 0))["diferenca_dolares"].sum()
+        
+        lucro_perdido = float(lucro_perdido) if lucro_perdido is not None else 0.0
+        dinheiro_salvo = float(dinheiro_salvo) if dinheiro_salvo is not None else 0.0
+        
+        import math
+        if math.isnan(lucro_perdido): lucro_perdido = 0.0
+        if math.isnan(dinheiro_salvo): dinheiro_salvo = 0.0
+        
         balanco_real = lucro_perdido - dinheiro_salvo
         
         hero_bets = auditoria_ev.to_dicts()
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.error(f"Error in river-audit: {e}")
         hero_bets = []
-        lucro_perdido = 0
-        dinheiro_salvo = 0
-        balanco_real = 0
+        lucro_perdido = 0.0
+        dinheiro_salvo = 0.0
+        balanco_real = 0.0
 
     df_hero_calls_river = (
         df.filter(
