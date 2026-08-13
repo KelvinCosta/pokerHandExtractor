@@ -17,9 +17,25 @@ from src.parser.summary_parser import SummaryParser
 from extractor import process_stream
 from src.api.dependencies import invalidate_cache
 
-CURRENT_ETL_VERSION = "v5.00"
+CURRENT_ETL_VERSION = "v6.00"
 
 router = APIRouter(prefix="/api/etl", tags=["ETL Upload"])
+
+def migrate_bronze_layer(bronze_dir: Path):
+    """
+    Migrates flat files in the bronze directory to a hierarchical structure:
+    bronze/{user_id}/{platform}/{hero_name}/file.txt
+    Legacy files will be placed into 'ggpoker/Hero' by default.
+    """
+    flat_files = [f for f in bronze_dir.iterdir() if f.is_file() and f.suffix.lower() == '.txt']
+    if flat_files:
+        default_dir = bronze_dir / "ggpoker" / "Hero"
+        default_dir.mkdir(parents=True, exist_ok=True)
+        for f in flat_files:
+            try:
+                shutil.move(str(f), str(default_dir / f.name))
+            except Exception as e:
+                print(f"Error moving legacy file {f.name}: {e}")
 
 @router.post("/upload")
 async def upload_and_process(
@@ -39,6 +55,11 @@ async def upload_and_process(
     bronze_dir.mkdir(parents=True, exist_ok=True)
     silver_dir.mkdir(parents=True, exist_ok=True)
     
+    migrate_bronze_layer(bronze_dir)
+    
+    target_dir = bronze_dir / platform.lower() / hero_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    
     summary_parser = SummaryParser()
     
     saved_files = []
@@ -50,7 +71,7 @@ async def upload_and_process(
         
         # Save to a temporary UUID file first to prevent mid-upload collisions
         temp_uuid_name = f"{uuid.uuid4()}.txt"
-        temp_uuid_path = bronze_dir / temp_uuid_name
+        temp_uuid_path = target_dir / temp_uuid_name
         
         with open(temp_uuid_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -74,7 +95,7 @@ async def upload_and_process(
         used_basenames.add(final_basename)
         
         # Rename UUID file to final basename
-        final_file_path = bronze_dir / final_basename
+        final_file_path = target_dir / final_basename
         
         try:
             # Em sistemas Windows, se o arquivo estiver bloqueado por outro processo (ex: GC ainda não fechou, ou antivírus)
@@ -86,7 +107,7 @@ async def upload_and_process(
             # Se falhar por bloqueio de permissão, geramos um novo nome com sufixo
             import time
             final_basename = f"{base_stem}_{int(time.time()*1000)}{base_ext}"
-            final_file_path = bronze_dir / final_basename
+            final_file_path = target_dir / final_basename
             temp_uuid_path.rename(final_file_path)
             saved_files.append(final_file_path)
         
@@ -192,10 +213,6 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.parser.tokenizer import TokenizerFactory
     from src.fsm.states import InitState
     
-    tokenizer = TokenizerFactory.get_tokenizer("ggpoker")
-    initial_state = InitState()
-    summary_parser = SummaryParser()
-    
     user_id = str(current_user.id)
     ETL_VERSION = CURRENT_ETL_VERSION
     
@@ -212,9 +229,12 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
             
     (silver_dir / "etl_version.txt").write_text(ETL_VERSION, encoding='utf-8')
     
+    # Migrar arquivos antigos antes de reprocessar
+    migrate_bronze_layer(bronze_dir)
+    
     # Pegar todos os arquivos do Bronze
     print("Buscando arquivos locais na camada Bronze...")
-    new_txt_files = list(bronze_dir.glob("*.txt"))
+    new_txt_files = list(bronze_dir.rglob("*.txt"))
         
     if not new_txt_files:
         return {"message": "Nenhum arquivo encontrado na camada Bronze.", "new_files": 0, "hands_processed": 0}
@@ -222,37 +242,63 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.etl.repository import JsonProcessedHandsRepository
     repo = JsonProcessedHandsRepository(silver_dir / "processed_files.json")
     
-    summaries_to_save = []
-    hands_files_to_process = []
+    summary_parser = SummaryParser()
+    files_by_config = {}
     
     for file_path in new_txt_files:
+        # Esperado: bronze/{user_id}/{platform}/{hero_name}/file.txt
+        hero = file_path.parent.name
+        plat = file_path.parent.parent.name
+        
+        # Fallback de segurança se algo estiver fora do padrão
+        if plat == bronze_dir.name or plat == user_id:
+            plat = "ggpoker"
+            hero = "Hero"
+            
+        config = (plat.lower(), hero)
+        if config not in files_by_config:
+            files_by_config[config] = {"summaries": [], "hands": []}
+            
         if summary_parser.is_summary_file(str(file_path)):
             summary = summary_parser.parse_file(str(file_path))
             if summary:
-                summaries_to_save.append(summary)
+                files_by_config[config]["summaries"].append(summary)
         else:
-            hands_files_to_process.append(file_path)
-
-    def hand_stream_pipeline():
-        for file_path in hands_files_to_process:
-            with open(file_path, 'r', encoding='utf-8-sig') as f:
-                yield from process_stream(f, file_path.name, tokenizer, initial_state)
+            files_by_config[config]["hands"].append(file_path)
 
     loader = HandLoader(output_dir=str(silver_dir))
+    total_processed_count = 0
+    all_summaries = []
     
-    if summaries_to_save:
-        loader.save_summaries(summaries_to_save)
+    for (plat, hero), files_dict in files_by_config.items():
+        try:
+            tokenizer = TokenizerFactory.get_tokenizer(plat, hero_name=hero)
+            initial_state = InitState(platform=plat, hero_name=hero)
+        except ValueError:
+            print(f"Plataforma não suportada ignorada durante reprocessamento: {plat}")
+            continue
+            
+        all_summaries.extend(files_dict["summaries"])
         
-    processed_count = 0
-    if hands_files_to_process:
-        processed_count = loader.process_and_save(hand_stream_pipeline())
-    
-    if processed_count > 0 or summaries_to_save:
+        hands_files = files_dict["hands"]
+        if hands_files:
+            def hand_stream_pipeline():
+                for f_path in hands_files:
+                    with open(f_path, 'r', encoding='utf-8-sig') as f:
+                        yield from process_stream(f, f_path.name, tokenizer, initial_state)
+            
+            processed_count = loader.process_and_save(hand_stream_pipeline())
+            total_processed_count += processed_count
+
+    if all_summaries:
+        loader.save_summaries(all_summaries)
+        
+    if total_processed_count > 0 or all_summaries:
         repo.mark_as_processed([f.name for f in new_txt_files])
         invalidate_cache(user_id)
         
     return {
         "message": "ETL Reprocessado com sucesso",
         "new_files": len(new_txt_files),
-        "hands_processed": processed_count
+        "hands_processed": total_processed_count
     }
