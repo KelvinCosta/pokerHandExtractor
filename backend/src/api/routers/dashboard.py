@@ -878,7 +878,10 @@ async def save_villain_tag(player: str, req: VillainNoteRequest, current_user: U
 
 @router.post("/engines/cbet-textures")
 async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    from src.api.dependencies import get_filtered_df, get_filtered_hands_df
     df = get_filtered_df(filters, current_user)
+    df_hands = get_filtered_hands_df(filters, current_user)
+    
     if df.height == 0:
         return {"scatter": [], "valueOwning": []}
         
@@ -921,11 +924,10 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
         .select(["hand_id", "amount"])
     )
 
-    if "flop_suit_type" in df.columns and "flop_pair_type" in df.columns:
+    if "flop_suit_type" in df_hands.columns and "flop_pair_type" in df_hands.columns:
         df_texturas = (
-            df.select(["hand_id", "flop_suit_type", "flop_pair_type"])
+            df_hands.select(["hand_id", "flop_suit_type", "flop_pair_type"])
             .drop_nulls(subset=["flop_suit_type", "flop_pair_type"])
-            .unique(subset=["hand_id"])
         )
     else:
         df_texturas = pl.DataFrame({"hand_id": [], "flop_suit_type": [], "flop_pair_type": []}, schema={"hand_id": pl.Utf8, "flop_suit_type": pl.Utf8, "flop_pair_type": pl.Utf8})
@@ -950,14 +952,14 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
     )
     
     showdown_hands = (
-        df.select(["hand_id", "player_cards"]).unique()
+        df_hands.select(["hand_id", "player_cards"])
         .filter(pl.col("player_cards").list.len() > 1)
         .select("hand_id")
     )
 
     from src.dashboard.domain_data import get_vencedores_df
     try:
-        vencedores_df = get_vencedores_df(df)
+        vencedores_df = get_vencedores_df(df_hands)
         df_value_owning = (
             df_cbet_range
             .filter(pl.col("sizing_flop_pct") > 60.0)
@@ -979,7 +981,10 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
 
 @router.post("/engines/river-audit")
 async def get_river_audit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+    from src.api.dependencies import get_filtered_df, get_filtered_hands_df
     df = get_filtered_df(filters, current_user)
+    df_hands = get_filtered_hands_df(filters, current_user)
+    
     if df.height == 0:
         return {"hero_bets": [], "hero_calls": [], "summary": {}}
 
@@ -1009,7 +1014,7 @@ async def get_river_audit(filters: DashboardFilters, current_user: User = Depend
 
     from src.dashboard.domain_data import get_vencedores_df
     try:
-        vencedores_df = get_vencedores_df(df)
+        vencedores_df = get_vencedores_df(df_hands)
         auditoria_ev = (
             auditoria_base
             .join(vencedores_df, on="hand_id", how="left")
