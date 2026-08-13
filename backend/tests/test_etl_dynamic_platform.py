@@ -63,15 +63,14 @@ def test_migrate_bronze_layer(setup_datalake):
     assert (bronze_dir / "ggpoker" / "Hero" / "legacy_hand_1.txt").exists()
     assert (bronze_dir / "ggpoker" / "Hero" / "legacy_hand_2.txt").exists()
 
-@patch("src.api.routers.etl.HandLoader")
+@patch("src.etl.loader.HandLoader.process_and_save")
 @patch("src.api.routers.etl.process_stream")
-@patch("src.api.routers.etl.TokenizerFactory.get_tokenizer")
-def test_reprocess_datalake_dynamic_grouping(mock_get_tokenizer, mock_process_stream, mock_loader, setup_datalake):
+@patch("src.parser.tokenizer.TokenizerFactory.get_tokenizer")
+def test_reprocess_datalake_dynamic_grouping(mock_get_tokenizer, mock_process_stream, mock_process_and_save, setup_datalake):
     bronze_dir, _ = setup_datalake
     
     # Prepara o Mock do Loader para não quebrar
-    mock_loader_instance = mock_loader.return_value
-    mock_loader_instance.process_and_save.return_value = 5 # simulando 5 mãos processadas
+    mock_process_and_save.return_value = 5 # simulando 5 mãos processadas
     
     # Simula 3 arquivos em pastas diferentes (2 plataformas)
     gg_hero1_dir = bronze_dir / "ggpoker" / "Lorkel"
@@ -92,7 +91,7 @@ def test_reprocess_datalake_dynamic_grouping(mock_get_tokenizer, mock_process_st
     data = response.json()
     assert data["message"] == "ETL Reprocessado com sucesso"
     assert data["new_files"] == 3
-    # 5 mãos por arquivo de loader (são iterados juntos caso do grouping)
+    # 5 mãos por chamada do process_and_save.
     # Temos 3 arquivos em 3 configs (ggpoker/Lorkel, pokerstars/OtherLorkel, ggpoker/Hero -> migrado)
     # mock foi chamado 3 vezes (uma para cada platform/hero combo), então 3 * 5 = 15
     
