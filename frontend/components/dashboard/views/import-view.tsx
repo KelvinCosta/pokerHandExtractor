@@ -197,7 +197,6 @@ export function ImportView() {
                 className="w-full rounded-lg border border-input bg-zinc-900/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
               >
                 <option value="ggpoker">GGPoker</option>
-                <option value="pokerstars" disabled>PokerStars (coming soon)</option>
               </select>
             </div>
             <div className="space-y-1.5">

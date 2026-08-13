@@ -36,11 +36,11 @@ const nav: {
     group: "Telemetry",
     items: [
       { id: "overview",     label: "General Health",          icon: Activity  },
-      { id: "analytics",    label: "Analytics Dashboard",     icon: BarChart2, badge: "NEW" },
-      { id: "ranges",       label: "Preflop Ranges",          icon: Radar,     badge: "NEW" },
+      { id: "analytics",    label: "Analytics Dashboard",     icon: BarChart2 },
+      { id: "ranges",       label: "Preflop Ranges",          icon: Radar     },
       { id: "engines",      label: "Pre / Post-Flop Engines", icon: Layers    },
-      { id: "cbet-audit",   label: "C-Bet Analysis",          icon: Target,    badge: "NEW" },
-      { id: "river-audit",  label: "River Audit",             icon: Waves,     badge: "NEW" },
+      { id: "cbet-audit",   label: "C-Bet Analysis",          icon: Target    },
+      { id: "river-audit",  label: "River Audit",             icon: Waves     },
       { id: "villains",     label: "Villain Mapping",         icon: Users     },
       { id: "tournaments",  label: "Tournaments",             icon: Target    },
       { id: "bigpots",      label: "Hands Database",          icon: Spade     },
@@ -146,26 +146,7 @@ export function Sidebar({
           </div>
         ))}
 
-        {/* ── AI Auditor teaser (coming soon) ──────────────────────────────── */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 px-2 mb-1.5">
-            <div className="h-px flex-1 bg-sidebar-border" />
-            <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground/50">Audit</p>
-            <div className="h-px flex-1 bg-sidebar-border" />
-          </div>
-          <div className="rounded-lg border border-dashed border-violet-500/20 bg-violet-500/5 p-3">
-            <div className="mb-1.5 flex items-center gap-2">
-              <BrainCircuit className="size-4 text-violet-400" />
-              <span className="text-sm font-medium text-foreground">Behavioral Auditor</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              AI tilt detection & Socratic review.
-            </p>
-            <span className="mt-2.5 inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wide text-violet-400">
-              <Crosshair className="size-3" /> Module B
-            </span>
-          </div>
-        </div>
+
       </nav>
 
       {/* ── Footer — data layer status ──────────────────────────────────────── */}
