@@ -932,14 +932,22 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
     else:
         df_texturas = pl.DataFrame({"hand_id": [], "flop_suit_type": [], "flop_pair_type": []}, schema={"hand_id": pl.Utf8, "flop_suit_type": pl.Utf8, "flop_pair_type": pl.Utf8})
 
+    df_stake = df_hands.select(["hand_id", "stake_level"])
+
     df_cbet_range = (
         df_cbet_executada.select("hand_id")
         .unique()
         .join(df_hero_flop_bet, on="hand_id", how="left")
         .join(df_pot_flop, on="hand_id", how="left")
         .join(df_texturas, on="hand_id", how="left")
+        .join(df_stake, on="hand_id", how="left")
         .with_columns(
-            ((pl.col("amount") / pl.col("pote_real_flop")) * 100).round(1).alias("sizing_flop_pct")
+            ((pl.col("amount") / pl.col("pote_real_flop")) * 100).round(1).alias("sizing_flop_pct"),
+            pl.when(pl.col("stake_level") > 0)
+            .then((pl.col("amount") / pl.col("stake_level")))
+            .otherwise(0.0)
+            .round(1)
+            .alias("hero_bet_bb")
         )
     )
 
@@ -967,7 +975,7 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
             .join(showdown_hands, on="hand_id", how="inner")
             .join(vencedores_df, on="hand_id", how="inner")
             .filter(pl.col("hero_ganhou") == False)
-            .select(["hand_id", "flop_suit_type", "sizing_flop_pct", pl.col("pote_real_flop").alias("pote_no_flop"), pl.col("amount").alias("hero_bet")])
+            .select(["hand_id", "flop_suit_type", "sizing_flop_pct", pl.col("pote_real_flop").alias("pote_no_flop"), pl.col("amount").alias("hero_bet"), "hero_bet_bb"])
             .sort("sizing_flop_pct", descending=True)
         )
         vo_list = df_value_owning.to_dicts()

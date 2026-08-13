@@ -135,11 +135,11 @@ export function CbetAuditView({
                   <TableHead className="text-xs">Hand ID</TableHead>
                   <TableHead className="text-xs">Texture</TableHead>
                   <TableHead className="text-right text-xs">Sizing</TableHead>
-                  <TableHead className="text-right text-xs">Bet</TableHead>
+                  <TableHead className="text-right text-xs">Bet (BB)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.valueOwning.length > 0 ? data.valueOwning.map((vo) => (
+                {data.valueOwning.length > 0 ? data.valueOwning.map((vo: any) => (
                   <TableRow key={vo.hand_id} className="border-border/50 hover:bg-rose-500/10 transition-colors">
                     <TableCell className="font-mono text-xs">{vo.hand_id}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{vo.flop_suit_type}</TableCell>
@@ -147,7 +147,7 @@ export function CbetAuditView({
                       {vo.sizing_flop_pct}%
                     </TableCell>
                     <TableCell className="text-right font-mono text-xs text-foreground">
-                      {currency(vo.hero_bet)}
+                      {vo.hero_bet_bb} BB
                     </TableCell>
                   </TableRow>
                 )) : (
