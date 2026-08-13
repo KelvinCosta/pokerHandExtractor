@@ -1,9 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { fetchHandDetails, analyzeHand, submitAnalysisFeedback, getHandNote, saveHandNote } from "@/lib/api"
+import { fetchHandDetails, getHandNote, saveHandNote } from "@/lib/api"
 import type { HandDetails } from "@/lib/api.types"
-import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check, Sparkles, ThumbsUp, ThumbsDown, FileText } from "lucide-react"
+import { X, Loader2, AlertCircle, Trophy, TrendingDown, Copy, Check, FileText } from "lucide-react"
 import { currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -206,7 +206,7 @@ function CopyButton({ data, isCash }: { data: HandDetails; isCash: boolean }) {
         
         for (const act of grouped[street]) {
           const isAllIn = act.is_all_in ? " (All-in)" : ""
-          let line = `${act.player}: ${act.action_type || act.action}`
+          let line = `${act.player}: ${act.action_type}`
           if (act.amount > 0) {
             line += ` ${isCash ? currency(act.amount) : Math.round(act.amount).toLocaleString()}`
           }
@@ -340,13 +340,6 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // AI State
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState<string | null>(null)
-  const [aiResult, setAiResult] = useState<{ analysis_id: string; raw_analysis: string; agent_version: string } | null>(null)
-  const [feedbackSent, setFeedbackSent] = useState<"up" | "down" | null>(null)
-  const [aiCopied, setAiCopied] = useState(false)
-
   // Notes State
   const [note, setNote] = useState("")
   const [savedNote, setSavedNote] = useState("")
@@ -357,10 +350,6 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
     let cancelled = false
     setLoading(true)
     setError(null)
-    setAiResult(null)
-    setAiError(null)
-    setFeedbackSent(null)
-    setAiCopied(false)
     setNote("")
     setSavedNote("")
     
@@ -391,20 +380,6 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
       console.error("Failed to save note", err)
     } finally {
       setIsSavingNote(false)
-    }
-  }
-
-  const handleAskAI = async () => {
-    if (!handId) return
-    setAiLoading(true)
-    setAiError(null)
-    try {
-      const res = await analyzeHand(handId)
-      setAiResult(res)
-    } catch (err: any) {
-      setAiError(err.message || "Failed to analyze hand")
-    } finally {
-      setAiLoading(false)
     }
   }
 
@@ -472,7 +447,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
           )}
 
           {!loading && !error && data && (() => {
-            const isWin = (data.hero_net_profit_usd + data.hero_net_chips) > 0
+            const isWin = data.hero_net_profit > 0
             const isCash = data.game_type === "Rush & Cash" || data.game_type === "Regular Cash" || data.game_type === "All-In or Fold"
             
             return (
@@ -486,7 +461,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                   { label: "Final Pot",  value: isCash ? currency(data.total_pot_final) : Math.round(data.total_pot_final).toLocaleString() },
                   {
                     label: "Hero Result",
-                    value: `${isWin ? "+" : ""}${isCash ? currency(data.hero_net_profit_usd + data.hero_net_chips) : Math.round(data.hero_net_profit_usd + data.hero_net_chips).toLocaleString()}`,
+                    value: `${isWin ? "+" : ""}${isCash ? currency(data.hero_net_profit) : Math.round(data.hero_net_profit).toLocaleString()}`,
                     highlight: true,
                     win: isWin,
                   },
@@ -535,82 +510,6 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* ── AI Analysis Panel ─────────────────────────────────────────── */}
-              <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="size-4 text-indigo-400" />
-                    <h3 className="font-semibold text-sm text-indigo-100">AI Hand Analysis</h3>
-                  </div>
-                  {!aiResult && !aiLoading && (
-                    <button
-                      onClick={handleAskAI}
-                      className="flex items-center gap-2 rounded-md bg-indigo-500 hover:bg-indigo-600 transition-colors px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/20"
-                    >
-                      Ask AI
-                    </button>
-                  )}
-                </div>
-                
-                {aiLoading && (
-                  <div className="flex items-center gap-2 text-indigo-400/70 text-xs font-mono">
-                    <Loader2 className="size-3 animate-spin" />
-                    Analyzing hand with AI...
-                  </div>
-                )}
-                
-                {aiError && (
-                  <p className="text-xs text-rose-400 font-mono bg-rose-500/10 p-2 rounded-md border border-rose-500/20">
-                    {aiError}
-                  </p>
-                )}
-                
-                {aiResult && (
-                  <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
-                    <div className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                      {aiResult.raw_analysis}
-                    </div>
-                    
-                    <div className="flex items-center justify-between mt-2 pt-3 border-t border-indigo-500/20">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-mono text-indigo-400/50">Model: {aiResult.agent_version}</span>
-                        <button
-                          onClick={handleCopyAiResponse}
-                          className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-medium text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-200"
-                        >
-                          {aiCopied ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
-                          {aiCopied ? "Copied" : "Copy"}
-                        </button>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-widest mr-1">Was this useful?</span>
-                        <button 
-                          onClick={() => handleFeedback(true)}
-                          disabled={feedbackSent !== null}
-                          className={cn(
-                            "p-1.5 rounded-md transition-colors",
-                            feedbackSent === "up" ? "bg-emerald-500/20 text-emerald-400" : "hover:bg-zinc-800 text-zinc-400 disabled:opacity-50"
-                          )}
-                        >
-                          <ThumbsUp className="size-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleFeedback(false)}
-                          disabled={feedbackSent !== null}
-                          className={cn(
-                            "p-1.5 rounded-md transition-colors",
-                            feedbackSent === "down" ? "bg-rose-500/20 text-rose-400" : "hover:bg-zinc-800 text-zinc-400 disabled:opacity-50"
-                          )}
-                        >
-                          <ThumbsDown className="size-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* ── Poker Table ───────────────────────────────────────────── */}
