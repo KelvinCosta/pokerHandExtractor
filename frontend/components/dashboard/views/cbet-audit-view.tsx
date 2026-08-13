@@ -8,7 +8,8 @@ import {
 } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { currency } from "@/lib/poker-data"
-import { AlertCircle, Target, TrendingDown } from "lucide-react"
+import { HandViewer } from "@/components/dashboard/hand-viewer"
+import { AlertCircle, Target, TrendingDown, ExternalLink } from "lucide-react"
 
 export function CbetAuditView({
   filters,
@@ -19,6 +20,7 @@ export function CbetAuditView({
 }) {
   const [data, setData] = useState<CbetTexturesResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedHandId, setSelectedHandId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -141,7 +143,15 @@ export function CbetAuditView({
               <TableBody>
                 {data.valueOwning.length > 0 ? data.valueOwning.map((vo: any) => (
                   <TableRow key={vo.hand_id} className="border-border/50 hover:bg-rose-500/10 transition-colors">
-                    <TableCell className="font-mono text-xs">{vo.hand_id}</TableCell>
+                    <TableCell className="pl-5">
+                      <button
+                        onClick={() => setSelectedHandId(vo.hand_id)}
+                        className="group/btn flex items-center gap-1.5 font-mono text-xs text-primary transition-colors hover:text-primary/80"
+                      >
+                        <span>{vo.hand_id.split("-")[0] ?? vo.hand_id}</span>
+                        <ExternalLink className="size-3 opacity-0 transition-opacity group-hover/btn:opacity-100" />
+                      </button>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{vo.flop_suit_type}</TableCell>
                     <TableCell className="text-right font-mono text-xs text-rose-400 font-medium">
                       {vo.sizing_flop_pct}%
@@ -166,6 +176,10 @@ export function CbetAuditView({
         </section>
 
       </div>
+
+      {selectedHandId && (
+        <HandViewer handId={selectedHandId} onClose={() => setSelectedHandId(null)} />
+      )}
     </div>
   )
 }

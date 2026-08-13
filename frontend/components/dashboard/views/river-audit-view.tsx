@@ -6,7 +6,8 @@ import type { DashboardFilters, RiverAuditResponse } from "@/lib/api.types"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { currency } from "@/lib/poker-data"
 import { cn } from "@/lib/utils"
-import { Anchor, ArrowDownRight, ArrowUpRight, Ban, CheckCircle2, ShieldCheck, Waves } from "lucide-react"
+import { HandViewer } from "@/components/dashboard/hand-viewer"
+import { Anchor, ArrowDownRight, ArrowUpRight, Ban, CheckCircle2, ShieldCheck, Waves, ExternalLink } from "lucide-react"
 
 export function RiverAuditView({
   filters,
@@ -17,6 +18,7 @@ export function RiverAuditView({
 }) {
   const [data, setData] = useState<RiverAuditResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedHandId, setSelectedHandId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -108,7 +110,15 @@ export function RiverAuditView({
               <TableBody>
                 {hero_bets.length > 0 ? hero_bets.map((bet) => (
                   <TableRow key={bet.hand_id} className="border-border/50 transition-colors">
-                    <TableCell className="font-mono text-xs pl-5">{bet.hand_id}</TableCell>
+                    <TableCell className="pl-5">
+                      <button
+                        onClick={() => setSelectedHandId(bet.hand_id)}
+                        className="group/btn flex items-center gap-1.5 font-mono text-xs text-primary transition-colors hover:text-primary/80"
+                      >
+                        <span>{bet.hand_id.split("-")[0] ?? bet.hand_id}</span>
+                        <ExternalLink className="size-3 opacity-0 transition-opacity group-hover/btn:opacity-100" />
+                      </button>
+                    </TableCell>
                     <TableCell className="text-right font-mono text-xs font-medium">
                       {bet.sizing_pct}%
                     </TableCell>
@@ -162,7 +172,15 @@ export function RiverAuditView({
               <TableBody>
                 {hero_calls.length > 0 ? hero_calls.map((call) => (
                   <TableRow key={call.hand_id} className="border-border/50 transition-colors">
-                    <TableCell className="font-mono text-xs pl-5">{call.hand_id}</TableCell>
+                    <TableCell className="pl-5">
+                      <button
+                        onClick={() => setSelectedHandId(call.hand_id)}
+                        className="group/btn flex items-center gap-1.5 font-mono text-xs text-primary transition-colors hover:text-primary/80"
+                      >
+                        <span>{call.hand_id.split("-")[0] ?? call.hand_id}</span>
+                        <ExternalLink className="size-3 opacity-0 transition-opacity group-hover/btn:opacity-100" />
+                      </button>
+                    </TableCell>
                     <TableCell className="text-right font-mono text-xs font-medium">
                       {currency(call.valor_do_call)}
                     </TableCell>
@@ -195,6 +213,10 @@ export function RiverAuditView({
         </section>
 
       </div>
+
+      {selectedHandId && (
+        <HandViewer handId={selectedHandId} onClose={() => setSelectedHandId(null)} />
+      )}
     </div>
   )
 }
