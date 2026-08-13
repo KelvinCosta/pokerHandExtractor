@@ -447,7 +447,8 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
           )}
 
           {!loading && !error && data && (() => {
-            const isWin = data.hero_net_profit > 0
+            const heroResult = (data.hero_net_profit_usd || 0) + (data.hero_net_chips || 0)
+            const isWin = heroResult > 0
             const isCash = data.game_type === "Rush & Cash" || data.game_type === "Regular Cash" || data.game_type === "All-In or Fold"
             
             return (
@@ -461,7 +462,7 @@ export function HandViewer({ handId, onClose }: HandViewerProps) {
                   { label: "Final Pot",  value: isCash ? currency(data.total_pot_final) : Math.round(data.total_pot_final).toLocaleString() },
                   {
                     label: "Hero Result",
-                    value: `${isWin ? "+" : ""}${isCash ? currency(data.hero_net_profit) : Math.round(data.hero_net_profit).toLocaleString()}`,
+                    value: `${isWin ? "+" : ""}${isCash ? currency(heroResult) : Math.round(heroResult).toLocaleString()}`,
                     highlight: true,
                     win: isWin,
                   },

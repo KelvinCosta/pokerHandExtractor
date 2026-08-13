@@ -128,7 +128,8 @@ export interface HandDetails {
   stake_level: number
   platform: string
   player_nickname: string
-  hero_net_profit: number
+  hero_net_profit_usd?: number
+  hero_net_chips?: number
   total_pot_final: number
   board_cards: string[]
   player_cards: { player: string; cards: string }[]
