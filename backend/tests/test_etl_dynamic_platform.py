@@ -99,12 +99,12 @@ def test_reprocess_datalake_dynamic_grouping(mock_get_tokenizer, mock_process_st
     
     # Verifica se os tokenizers corretos foram solicitados!
     # Tem que ter chamado ggpoker/Hero (migrado), ggpoker/Lorkel, e pokerstars/OtherLorkel
-    calls = [call_args[0] for call_args, _ in mock_get_tokenizer.call_args_list]
+    calls = [call_args[0][0] for call_args in mock_get_tokenizer.call_args_list]
     kwargs = [call_args[1] for call_args in mock_get_tokenizer.call_args_list]
     
     # Validando chamadas ao TokenizerFactory para garantir extração dinâmica
-    assert ("ggpoker",) in calls
-    assert ("pokerstars",) in calls
+    assert "ggpoker" in calls
+    assert "pokerstars" in calls
     
     hero_names_passed = [kw.get('hero_name') for kw in kwargs]
     assert "Hero" in hero_names_passed
