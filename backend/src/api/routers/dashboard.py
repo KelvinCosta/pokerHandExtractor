@@ -647,8 +647,6 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
             "net_chips": round(-row["hero_net_chips"], 2),
             "vpip": round(vpip, 1),
             "pfr": round(pfr, 1),
-            "threeBet": round(pfr * 0.35, 1), # mock heurístico derivado do PFR por enquanto
-            "wtsd": 25.0, # mock
             "style": style,
             "tags": []
         })

@@ -151,23 +151,21 @@ export interface Villain {
   net_chips?: number
   vpip: number
   pfr: number
-  threeBet: number
-  wtsd: number
   style: "TAG" | "LAG" | "Nit" | "Fish" | "Reg" | "Maniac"
   tags: string[]
 }
 
 export const villains: Villain[] = [
-  { id: "v1", alias: "GTO_Slayer", hands: 8420, net: -14280, vpip: 21, pfr: 18, threeBet: 9.4, wtsd: 26, style: "TAG", tags: ["3-bets light", "tough river"] },
-  { id: "v2", alias: "riverRat88", hands: 6110, net: -9840, vpip: 34, pfr: 12, threeBet: 4.1, wtsd: 33, style: "Fish", tags: ["calls too much", "bluff-catches"] },
-  { id: "v3", alias: "PolishHammer", hands: 5230, net: -7620, vpip: 28, pfr: 24, threeBet: 12.8, wtsd: 24, style: "LAG", tags: ["over-aggro turn", "capped ranges"] },
-  { id: "v4", alias: "quietNit_x", hands: 4970, net: 6210, vpip: 15, pfr: 13, threeBet: 5.2, wtsd: 21, style: "Nit", tags: ["folds to pressure"] },
-  { id: "v5", alias: "TiltedTom", hands: 3880, net: 8420, vpip: 41, pfr: 29, threeBet: 15.1, wtsd: 38, style: "Maniac", tags: ["spew on tilt", "target"] },
-  { id: "v6", alias: "solverBot99", hands: 7340, net: -3110, vpip: 23, pfr: 20, threeBet: 10.2, wtsd: 27, style: "Reg", tags: ["balanced", "avoid"] },
-  { id: "v7", alias: "callingStation", hands: 2960, net: 11240, vpip: 47, pfr: 8, threeBet: 2.3, wtsd: 44, style: "Fish", tags: ["value target", "never folds"] },
-  { id: "v8", alias: "eu_grinder", hands: 5610, net: -5320, vpip: 22, pfr: 19, threeBet: 8.8, wtsd: 25, style: "TAG", tags: ["solid", "small edge"] },
-  { id: "v9", alias: "shortStackSam", hands: 3410, net: 2180, vpip: 19, pfr: 17, threeBet: 7.1, wtsd: 22, style: "Reg", tags: ["short-stack push"] },
-  { id: "v10", alias: "AllInAnnie", hands: 2140, net: 6740, vpip: 52, pfr: 38, threeBet: 19.2, wtsd: 41, style: "Maniac", tags: ["target", "isolate wide"] },
+  { id: "v1", alias: "GTO_Slayer", hands: 8420, net: -14280, vpip: 21, pfr: 18, style: "TAG", tags: ["3-bets light", "tough river"] },
+  { id: "v2", alias: "riverRat88", hands: 6110, net: -9840, vpip: 34, pfr: 12, style: "Fish", tags: ["calls too much", "bluff-catches"] },
+  { id: "v3", alias: "PolishHammer", hands: 5230, net: -7620, vpip: 28, pfr: 24, style: "LAG", tags: ["over-aggro turn", "capped ranges"] },
+  { id: "v4", alias: "quietNit_x", hands: 4970, net: 6210, vpip: 15, pfr: 13, style: "Nit", tags: ["folds to pressure"] },
+  { id: "v5", alias: "TiltedTom", hands: 3880, net: 8420, vpip: 41, pfr: 29, style: "Maniac", tags: ["spew on tilt", "target"] },
+  { id: "v6", alias: "solverBot99", hands: 7340, net: -3110, vpip: 23, pfr: 20, style: "Reg", tags: ["balanced", "avoid"] },
+  { id: "v7", alias: "callingStation", hands: 2960, net: 11240, vpip: 47, pfr: 8, style: "Fish", tags: ["value target", "never folds"] },
+  { id: "v8", alias: "eu_grinder", hands: 5610, net: -5320, vpip: 22, pfr: 19, style: "TAG", tags: ["solid", "small edge"] },
+  { id: "v9", alias: "shortStackSam", hands: 3410, net: 2180, vpip: 19, pfr: 17, style: "Reg", tags: ["short-stack push"] },
+  { id: "v10", alias: "AllInAnnie", hands: 2140, net: 6740, vpip: 52, pfr: 38, style: "Maniac", tags: ["target", "isolate wide"] },
 ]
 
 // Big pots & river audit

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useEffect } from "react"
 
-type SortKey = keyof Pick<Villain, "hands" | "net" | "vpip" | "pfr" | "threeBet" | "wtsd">
+type SortKey = keyof Pick<Villain, "hands" | "net" | "vpip" | "pfr">
 
 // Color systems for villain archetypes
 const STYLE_BADGE: Record<Villain["style"], string> = {
@@ -48,8 +48,6 @@ const columns: { key: SortKey; label: string; fmt: (v: Villain) => string }[] = 
   { key: "hands",    label: "Hands",  fmt: (v) => v.hands.toLocaleString() },
   { key: "vpip",     label: "VPIP",   fmt: (v) => `${v.vpip}%` },
   { key: "pfr",      label: "PFR",    fmt: (v) => `${v.pfr}%` },
-  { key: "threeBet", label: "3-Bet",  fmt: (v) => `${v.threeBet}%` },
-  { key: "wtsd",     label: "WTSD",   fmt: (v) => `${v.wtsd}%` },
 ]
 
 export function VillainsView({
