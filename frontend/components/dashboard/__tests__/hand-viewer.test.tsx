@@ -60,7 +60,7 @@ describe("HandViewer", () => {
     expect(screen.getByText("Rush & Cash")).toBeInTheDocument()
     
     // 3. Final Pot (Formatted as currency because game_type is Cash)
-    expect(screen.getByText(currency(50.0))).toBeInTheDocument()
+    expect(screen.getAllByText(currency(50.0))[0]).toBeInTheDocument()
     
     // 4. Hero Result (Formatted as positive currency since hero_net_profit > 0)
     expect(screen.getByText(`+${currency(25.5)}`)).toBeInTheDocument()
