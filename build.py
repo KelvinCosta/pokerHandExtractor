@@ -64,20 +64,20 @@ def main():
         '--hidden-import "uvicorn.lifespan" '
         '--hidden-import "uvicorn.lifespan.on" '
         '--hidden-import "webview" '
+        '--hidden-import "src.api.main" '
         'boot.py'
     )
     
     # Cria um script de boot
     boot_script = backend_dir / "boot.py"
     with open(boot_script, "w", encoding="utf-8") as f:
-        f.write('''import uvicorn
-import webview
+        f.write('''import webview
 import threading
 import sys
 import time
 import os
 import traceback
-from src.api.main import app
+import urllib.request
 
 # Configuração de Logs de Erro
 if getattr(sys, 'frozen', False):
@@ -114,24 +114,86 @@ def exception_handler(exctype, value, tb):
 sys.excepthook = exception_handler
 
 def start_server():
+    # Imports pesados movidos para cá para não atrasar a tela de carregamento
+    import uvicorn
+    from src.api.main import app
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+
+def check_and_redirect(window):
+    url = "http://127.0.0.1:8000"
+    while True:
+        try:
+            with urllib.request.urlopen(url) as response:
+                if response.getcode() == 200:
+                    break
+        except Exception:
+            pass
+        time.sleep(0.5)
+    # Redireciona a janela para a aplicação
+    window.load_url(url)
 
 if __name__ == "__main__":
     with open(log_path, "a", encoding="utf-8") as log_file:
         log_file.write("\\n--- Iniciando PokerApp ---\\n")
 
+    loading_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Carregando PokerApp...</title>
+        <style>
+            body {
+                background-color: #0f172a;
+                color: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                font-family: system-ui, -apple-system, sans-serif;
+            }
+            .loader {
+                border: 4px solid #334155;
+                border-top: 4px solid #3b82f6;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+                margin-bottom: 24px;
+            }
+            h2 { font-weight: 500; margin-bottom: 8px; }
+            p { color: #94a3b8; margin: 0; }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="loader"></div>
+        <h2>Iniciando Poker Analytics Dashboard</h2>
+        <p>Carregando base de dados e componentes em memória...</p>
+    </body>
+    </html>
+    """
+
+    # Abre a janela nativa imediatamente com a tela de carregamento HTML
+    window = webview.create_window("Poker Analytics Dashboard", html=loading_html, width=1280, height=800)
+
     # Inicia o FastAPI em uma thread secundária
     server_thread = threading.Thread(target=start_server, daemon=True)
     server_thread.start()
     
-    # Dá 1 segundo para o servidor subir antes de mostrar a janela
-    time.sleep(1)
+    # Inicia o monitor do servidor para redirecionar quando estiver pronto
+    monitor_thread = threading.Thread(target=check_and_redirect, args=(window,), daemon=True)
+    monitor_thread.start()
     
-    # Abre a janela nativa com pywebview
-    webview.create_window("Poker Analytics Dashboard", "http://127.0.0.1:8000", width=1280, height=800)
-    webview.start(debug=True)
+    # Bloqueia o processo principal aqui até a janela ser fechada
+    webview.start(debug=False)
     
-    # Quando o usuário fechar a janela, o processo é encerrado limpando a porta
+    # Quando o usuário fechar a janela, o processo é encerrado
     sys.exit(0)
 ''')
     
