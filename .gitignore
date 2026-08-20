@@ -8,3 +8,29 @@ __pycache__/
 *.parquet
 .env
 tags_viloes.json
+notas_maos.json
+chroma_db/
+current_state.json
+diagnostic_Hero.json
+final_report*.json
+diagnostic_Hero*.json
+
+# v0 sandbox internal files
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+
+# Environment variables
+.env*.local
+
+# Common ignores
+node_modules
+.next/
+.DS_Store
+backend/data/silver/335f7c35-320e-4671-a90e-e57062792e5a/processed_files.json
+frontend/out/*
+backend/build/*
+backend/dist/*

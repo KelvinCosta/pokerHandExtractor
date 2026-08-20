@@ -1,0 +1,330 @@
+// Realistic mock telemetry for the poker BI dashboard.
+// All monetary values in USD. Rates in bb/100 (big blinds per 100 hands).
+
+export type Trend = "up" | "down" | "flat"
+
+export interface Kpi {
+  id: string
+  label: string
+  value: string
+  raw: number
+  delta: string
+  trend: Trend
+  hint: string
+}
+
+export const healthKpis: Kpi[] = [
+  {
+    id: "profit",
+    label: "Net Profit",
+    value: "$184,920",
+    raw: 184920,
+    delta: "+12.4%",
+    trend: "up",
+    hint: "Lifetime tracked winnings",
+  },
+  {
+    id: "winrate",
+    label: "Win Rate",
+    value: "6.8 bb/100",
+    raw: 6.8,
+    delta: "+0.9",
+    trend: "up",
+    hint: "Big blinds per 100 hands",
+  },
+  {
+    id: "hands",
+    label: "Hands Played",
+    value: "1.42M",
+    raw: 1420000,
+    delta: "+38.2k",
+    trend: "up",
+    hint: "Total tracked hands",
+  },
+  {
+    id: "ev",
+    label: "All-in Adj. (EV)",
+    value: "+$9,410",
+    raw: 9410,
+    delta: "Run-good",
+    trend: "up",
+    hint: "Actual vs expected all-in",
+  },
+  {
+    id: "std",
+    label: "Std Deviation",
+    value: "84 bb/100",
+    raw: 84,
+    delta: "-3.1",
+    trend: "down",
+    hint: "Variance of results",
+  },
+  {
+    id: "sessions",
+    label: "Sessions",
+    value: "2,184",
+    raw: 2184,
+    delta: "+41",
+    trend: "up",
+    hint: "Distinct sessions logged",
+  },
+]
+
+// Cumulative profit time-series (last 26 weeks). Green profit / EV overlay.
+export interface ProfitPoint {
+  week: string
+  profit: number
+  ev: number
+}
+
+export const profitSeries: ProfitPoint[] = (() => {
+  const out: ProfitPoint[] = []
+  let profit = 92000
+  let ev = 92000
+  for (let i = 0; i < 26; i++) {
+    const swing = Math.round((Math.sin(i / 2.1) + Math.random() * 1.4 - 0.35) * 6200)
+    profit += swing
+    ev += Math.round(swing * 0.86 + 900)
+    const d = new Date(2025, 0, 6 + i * 7)
+    out.push({
+      week: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      profit,
+      ev,
+    })
+  }
+  return out
+})()
+
+// bb/100 by stake level
+export const stakeBreakdown = [
+  { stake: "NL100", hands: 412000, winrate: 8.4, profit: 41800 },
+  { stake: "NL200", hands: 388000, winrate: 7.1, profit: 55100 },
+  { stake: "NL500", hands: 306000, winrate: 5.9, profit: 48200 },
+  { stake: "NL1000", hands: 214000, winrate: 4.2, profit: 31600 },
+  { stake: "NL2000", hands: 100000, winrate: 1.8, profit: 8220 },
+]
+
+// Pre-flop engine gauges (with healthy ranges)
+export interface Metric {
+  key: string
+  label: string
+  value: number
+  unit: string
+  optimalLow: number
+  optimalHigh: number
+  note: string
+}
+
+export const preflopMetrics: Metric[] = [
+  { key: "vpip", label: "VPIP", value: 24.1, unit: "%", optimalLow: 22, optimalHigh: 27, note: "Voluntarily put $ in pot" },
+  { key: "pfr", label: "PFR", value: 19.8, unit: "%", optimalLow: 18, optimalHigh: 23, note: "Pre-flop raise" },
+  { key: "gap", label: "VPIP–PFR Gap", value: 4.3, unit: "pts", optimalLow: 0, optimalHigh: 5, note: "Passive calling gap" },
+  { key: "3bet", label: "3-Bet", value: 8.9, unit: "%", optimalLow: 7, optimalHigh: 11, note: "Re-raise frequency" },
+  { key: "fold3bet", label: "Fold to 3-Bet", value: 52.4, unit: "%", optimalLow: 45, optimalHigh: 58, note: "Folding vs re-raise" },
+  { key: "steal", label: "Steal Attempt", value: 41.2, unit: "%", optimalLow: 38, optimalHigh: 48, note: "Late position raises" },
+]
+
+export const postflopMetrics: Metric[] = [
+  { key: "cbet", label: "Flop C-Bet", value: 62.5, unit: "%", optimalLow: 55, optimalHigh: 68, note: "Continuation bet" },
+  { key: "foldcbet", label: "Fold to C-Bet", value: 44.8, unit: "%", optimalLow: 40, optimalHigh: 52, note: "Folding vs c-bet" },
+  { key: "wwsf", label: "WWSF", value: 47.9, unit: "%", optimalLow: 45, optimalHigh: 52, note: "Won when saw flop" },
+  { key: "wsd", label: "W$SD", value: 53.6, unit: "%", optimalLow: 50, optimalHigh: 56, note: "Won $ at showdown" },
+  { key: "wtsd", label: "WTSD", value: 27.1, unit: "%", optimalLow: 24, optimalHigh: 30, note: "Went to showdown" },
+  { key: "aggr", label: "Aggression Factor", value: 2.8, unit: "x", optimalLow: 2.2, optimalHigh: 3.4, note: "Bets+raises / calls" },
+]
+
+// Action distribution by street (bar chart)
+export const actionDistribution = [
+  { street: "Preflop", fold: 62, call: 14, raise: 24 },
+  { street: "Flop", fold: 41, call: 27, raise: 32 },
+  { street: "Turn", fold: 38, call: 31, raise: 31 },
+  { street: "River", fold: 44, call: 34, raise: 22 },
+]
+
+// Villain mapping — who takes the hero's money
+export interface Villain {
+  id: string
+  alias: string
+  hands: number
+  net: number // negative = villain took money from hero
+  net_usd?: number
+  net_chips?: number
+  vpip: number
+  pfr: number
+  style: "TAG" | "LAG" | "Nit" | "Fish" | "Reg" | "Maniac"
+  tags: string[]
+}
+
+export const villains: Villain[] = [
+  { id: "v1", alias: "GTO_Slayer", hands: 8420, net: -14280, vpip: 21, pfr: 18, style: "TAG", tags: ["3-bets light", "tough river"] },
+  { id: "v2", alias: "riverRat88", hands: 6110, net: -9840, vpip: 34, pfr: 12, style: "Fish", tags: ["calls too much", "bluff-catches"] },
+  { id: "v3", alias: "PolishHammer", hands: 5230, net: -7620, vpip: 28, pfr: 24, style: "LAG", tags: ["over-aggro turn", "capped ranges"] },
+  { id: "v4", alias: "quietNit_x", hands: 4970, net: 6210, vpip: 15, pfr: 13, style: "Nit", tags: ["folds to pressure"] },
+  { id: "v5", alias: "TiltedTom", hands: 3880, net: 8420, vpip: 41, pfr: 29, style: "Maniac", tags: ["spew on tilt", "target"] },
+  { id: "v6", alias: "solverBot99", hands: 7340, net: -3110, vpip: 23, pfr: 20, style: "Reg", tags: ["balanced", "avoid"] },
+  { id: "v7", alias: "callingStation", hands: 2960, net: 11240, vpip: 47, pfr: 8, style: "Fish", tags: ["value target", "never folds"] },
+  { id: "v8", alias: "eu_grinder", hands: 5610, net: -5320, vpip: 22, pfr: 19, style: "TAG", tags: ["solid", "small edge"] },
+  { id: "v9", alias: "shortStackSam", hands: 3410, net: 2180, vpip: 19, pfr: 17, style: "Reg", tags: ["short-stack push"] },
+  { id: "v10", alias: "AllInAnnie", hands: 2140, net: 6740, vpip: 52, pfr: 38, style: "Maniac", tags: ["target", "isolate wide"] },
+]
+
+// Big pots & river audit
+export interface BigHand {
+  id: string
+  hand: string
+  board: string
+  potBB: number
+  netUSD: number
+  position: string
+  villain: string
+  riverAction: "Value Bet" | "Bluff" | "Call" | "Fold" | "Check"
+  result: "won" | "lost"
+  stake: string
+}
+
+export const bigHands: BigHand[] = [
+  { id: "h1", hand: "A♠ K♠", board: "A♦ K♥ 7♣ 2♠ Q♠", potBB: 412, netUSD: 4120, position: "BTN", villain: "riverRat88", riverAction: "Value Bet", result: "won", stake: "NL1000" },
+  { id: "h2", hand: "Q♣ Q♦", board: "K♠ 9♦ 4♣ 8♥ K♦", potBB: 388, netUSD: -3880, position: "CO", villain: "GTO_Slayer", riverAction: "Call", result: "lost", stake: "NL1000" },
+  { id: "h3", hand: "J♥ T♥", board: "9♥ 8♣ 2♥ 3♦ 7♠", potBB: 356, netUSD: 3560, position: "BB", villain: "PolishHammer", riverAction: "Bluff", result: "won", stake: "NL500" },
+  { id: "h4", hand: "A♣ A♦", board: "6♠ 5♠ 4♦ 7♣ 8♦", potBB: 502, netUSD: -5020, position: "SB", villain: "TiltedTom", riverAction: "Call", result: "lost", stake: "NL2000" },
+  { id: "h5", hand: "K♦ K♣", board: "K♠ T♦ 3♥ J♣ 2♠", potBB: 444, netUSD: 4440, position: "BTN", villain: "callingStation", riverAction: "Value Bet", result: "won", stake: "NL1000" },
+  { id: "h6", hand: "A♥ Q♦", board: "Q♥ 8♠ 5♣ 5♦ A♣", potBB: 298, netUSD: 2980, position: "MP", villain: "eu_grinder", riverAction: "Value Bet", result: "won", stake: "NL500" },
+  { id: "h7", hand: "7♠ 7♦", board: "A♦ K♣ Q♠ 2♥ 9♦", potBB: 210, netUSD: -2100, position: "CO", villain: "solverBot99", riverAction: "Fold", result: "lost", stake: "NL500" },
+  { id: "h8", hand: "T♣ T♠", board: "J♦ 9♣ 8♥ 7♦ 6♠", potBB: 336, netUSD: -3360, position: "BB", villain: "AllInAnnie", riverAction: "Call", result: "lost", stake: "NL2000" },
+]
+
+// River decision efficiency (radar-ish summarised as bars)
+export const riverDecisions = [
+  { action: "Value Bets", count: 1840, evPerBB: 0.42 },
+  { action: "Bluffs", count: 620, evPerBB: 0.18 },
+  { action: "Bluff-Catches", count: 980, evPerBB: -0.06 },
+  { action: "Folds", count: 2410, evPerBB: 0.11 },
+  { action: "Checks", count: 1320, evPerBB: 0.03 },
+]
+
+// Population / Mass Data Analysis — how the field plays on average
+export interface PopStyle {
+  style: string
+  share: number
+  avgVpip: number
+  avgWinrate: number
+}
+
+export const populationStyles: PopStyle[] = [
+  { style: "Regs (TAG/Reg)", share: 38, avgVpip: 22, avgWinrate: 1.2 },
+  { style: "Fish", share: 27, avgVpip: 43, avgWinrate: -14.6 },
+  { style: "LAG", share: 14, avgVpip: 30, avgWinrate: -2.1 },
+  { style: "Nits", share: 12, avgVpip: 15, avgWinrate: -0.8 },
+  { style: "Maniacs", share: 9, avgVpip: 51, avgWinrate: -21.3 },
+]
+
+// Population tendencies by position (fold to steal)
+export const popFoldToSteal = [
+  { pos: "UTG", fold: 74 },
+  { pos: "MP", fold: 71 },
+  { pos: "CO", fold: 66 },
+  { pos: "BTN", fold: 58 },
+  { pos: "SB", fold: 61 },
+  { pos: "BB", fold: 49 },
+]
+
+export const currency = (n: number) =>
+  (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString("en-US")
+
+// ──────────────────────────────────────────────────────────────
+// Analytics / Telemetry Dashboard — Phase 2 mock data
+// ──────────────────────────────────────────────────────────────
+
+/** 4 hero KPIs shown at the top of the Analytics Bento Box */
+export const analyticsKpis = [
+  {
+    id: "total_profit",
+    label: "Total Profit",
+    value: "$184,920",
+    raw: 184920,
+    delta: "+12.4%",
+    trend: "up" as Trend,
+    hint: "All-time tracked winnings",
+    accent: "#10B981", // neon green
+  },
+  {
+    id: "winrate",
+    label: "Winrate",
+    value: "6.8 bb/100",
+    raw: 6.8,
+    delta: "+0.9",
+    trend: "up" as Trend,
+    hint: "Big blinds per 100 hands",
+    accent: "#10B981",
+  },
+  {
+    id: "hands_played",
+    label: "Hands Played",
+    value: "1.42M",
+    raw: 1420000,
+    delta: "+38.2k",
+    trend: "up" as Trend,
+    hint: "Total tracked hands",
+    accent: "#6366F1",
+  },
+  {
+    id: "vpip_pfr",
+    label: "VPIP / PFR",
+    value: "24 / 20",
+    raw: 24,
+    delta: "Gap: 4",
+    trend: "flat" as Trend,
+    hint: "Pre-flop range tightness",
+    accent: "#F59E0B",
+  },
+] as const
+
+/** Weekly EV bars: actual profit vs all-in EV per session week (last 12 weeks) */
+export interface EvBarPoint {
+  week: string
+  actual: number
+  ev: number
+}
+
+export const evBarSeries: EvBarPoint[] = [
+  { week: "W1",  actual:  2100, ev:  2600 },
+  { week: "W2",  actual: -1400, ev: -800  },
+  { week: "W3",  actual:  3800, ev:  3200 },
+  { week: "W4",  actual:  1200, ev:  1900 },
+  { week: "W5",  actual: -2200, ev: -1500 },
+  { week: "W6",  actual:  4600, ev:  4100 },
+  { week: "W7",  actual:  3100, ev:  3800 },
+  { week: "W8",  actual: -800,  ev:  400  },
+  { week: "W9",  actual:  5200, ev:  4800 },
+  { week: "W10", actual:  1700, ev:  2200 },
+  { week: "W11", actual: -1100, ev: -600  },
+  { week: "W12", actual:  6400, ev:  5900 },
+]
+
+/** Top leaks: spots where the hero loses the most EV */
+export interface Leak {
+  id: string
+  spot: string
+  street: string
+  lostEv: number   // bb/100 lost vs optimal
+  hands: number    // sample size
+  severity: "critical" | "major" | "minor"
+}
+
+export const topLeaks: Leak[] = [
+  { id: "l1", spot: "3-Bet Pot, OOP, Check-Fold River",  street: "River",   lostEv: -0.48, hands: 1840, severity: "critical" },
+  { id: "l2", spot: "Single-Raised Pot, BTN vs BB, Overbet Bluff Catch", street: "River", lostEv: -0.31, hands: 2110, severity: "critical" },
+  { id: "l3", spot: "3-Bet Pot IP, Flop X/R vs C-Bet",  street: "Flop",    lostEv: -0.24, hands: 980,  severity: "major" },
+  { id: "l4", spot: "SRP BB defense, Turn donk-bet",     street: "Turn",    lostEv: -0.19, hands: 1570, severity: "major" },
+  { id: "l5", spot: "BTN open vs SB 3-Bet, fold too wide", street: "Preflop", lostEv: -0.14, hands: 3240, severity: "minor" },
+  { id: "l6", spot: "CO vs BTN, Flop C-Bet size too large", street: "Flop",  lostEv: -0.11, hands: 2890, severity: "minor" },
+]
+
+/** Biggest rivals sorted by net loss vs hero */
+export const biggestRivals = [
+  { alias: "GTO_Slayer",    net: -14280, style: "TAG",    hands: 8420 },
+  { alias: "riverRat88",    net: -9840,  style: "Fish",   hands: 6110 },
+  { alias: "PolishHammer",  net: -7620,  style: "LAG",    hands: 5230 },
+  { alias: "eu_grinder",    net: -5320,  style: "TAG",    hands: 5610 },
+] as const
+
