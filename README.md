@@ -1,81 +1,80 @@
 # Poker Analytics & Behavioral Audit SaaS 🃏
 
-Um sistema avançado de **Business Intelligence (BI)** e **Auditoria Comportamental via Inteligência Artificial** focado no ecossistema do Poker Profissional (jogadores, times e *stables*). 
+An advanced **Business Intelligence (BI)** and **Behavioral Audit via Artificial Intelligence** system focused on the Professional Poker ecosystem (players, teams, and stables).
 
-Este software foi projetado para processar grandes volumes de históricos de mãos, encontrar vazamentos técnicos (*leaks*) de dinheiro, e utilizar agentes de IA para conduzir entrevistas psicológicas focadas em avaliar o nível de negação e vitimismo (*Tilt*) do jogador após períodos de perda (*downswings*).
+This software was designed to process large volumes of hand histories, find technical leaks (money drains), and use AI agents to conduct psychological interviews focused on evaluating the player's level of denial and victimhood (Tilt) after losing periods (downswings).
 
 ---
 
-## 🎯 Principais Funcionalidades
+## 🎯 Key Features
 
 ### 📊 Telemetry Dashboard (BI)
-Painel denso focado em performance técnica com 11 visões, incluindo:
-- **Saúde Geral:** KPIs globais como Lucro Total, bb/100, Mãos Jogadas e Tendências.
-- **Motores Pré e Pós-Flop:** Métricas de agressividade e efetividade (VPIP, PFR, C-Bet, W$SD, WWSF).
-- **Mapeamento de Rivalidade:** Ranqueamento de oponentes que mais extraem valor do herói e sistema de anotações (Tags).
-- **Auditoria de Potes Grandes:** Filtros avançados para análise de decisões críticas no River.
-- **MDA (Mass Data Analysis):** Análise do comportamento e tendências gerais da população de jogadores (Field).
+A dense dashboard focused on technical performance with 11 views, including:
+- **General Health:** Global KPIs like Total Profit, bb/100, Hands Played, and Trends.
+- **Pre and Post-Flop Engines:** Aggression and effectiveness metrics (VPIP, PFR, C-Bet, W$SD, WWSF).
+- **Rivalry Mapping:** Ranking of opponents who extract the most value from the hero, along with a tagging system.
+- **Big Pots Audit:** Advanced filters for analyzing critical decisions on the River.
+- **MDA (Mass Data Analysis):** Analysis of general behavior and trends across the player population (Field).
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 How to Run the Project
 
-Existem duas formas de rodar o projeto: usando o Executável ou rodando a partir do código-fonte (Modo Desenvolvedor).
+There are two ways to run the project: using the Executable or running from source (Developer Mode).
 
-### 🟢 Opção 1: Usando os Executáveis (Recomendado para Usuários)
-Você não precisa configurar bancos de dados ou instalar Python/Node.js. Tudo já vem empacotado e pronto para rodar.
+### 🟢 Option 1: Using the Executables (Recommended for Users)
+You don't need to configure databases or install Python/Node.js. Everything comes packaged and ready to run.
 
-1. Acesse a aba de **[Releases](../../releases/latest)** no GitHub.
-2. Baixe o executável para o seu sistema operacional:
-   - **Windows:** Baixe e execute o `PokerApp.exe`
-   - **Ubuntu/Linux:** Baixe e execute o arquivo `PokerApp`
-3. O servidor backend será inicializado e uma janela nativa do aplicativo se abrirá automaticamente!
+1. Go to the **[Releases](../../releases/latest)** tab on GitHub.
+2. Download the executable for your operating system:
+   - **Windows:** Download and run `PokerApp.exe`
+   - **Ubuntu/Linux:** Download and run the `PokerApp` file
+3. The backend server will initialize and a native application window will open automatically!
 
 ---
 
-### 🛠️ Opção 2: A partir do Código-Fonte (Para Desenvolvedores)
+### 🛠️ Option 2: From Source Code (For Developers)
 
-O projeto é dividido em um frontend (Next.js) e um backend (Python/FastAPI).
+The project is split into a frontend (Next.js) and a backend (Python/FastAPI).
 
-**1. Preparando o Backend (Python):**
-Abra o terminal na pasta raiz e execute:
+**1. Setting up the Backend (Python):**
+Open a terminal in the root folder and run:
 ```bash
 cd backend
 python -m venv .venv
 ```
-Ative a máquina virtual (no Windows PowerShell):
+Activate the virtual environment (Windows PowerShell):
 ```bash
 .\.venv\Scripts\Activate.ps1
 ```
-*(No Linux use: `source .venv/bin/activate`)*
+*(On Linux use: `source .venv/bin/activate`)*
 
-Instale as dependências e rode o servidor:
+Install dependencies and start the server:
 ```bash
 pip install -r requirements.txt
 uvicorn src.api.main:app --reload
 ```
 
-**2. Preparando o Frontend (Next.js):**
-Abra um **novo terminal** na pasta raiz e execute:
+**2. Setting up the Frontend (Next.js):**
+Open a **new terminal** in the root folder and run:
 ```bash
 cd frontend
 pnpm install
 pnpm run dev
 ```
-*(O frontend será servido localmente e conectará automaticamente ao backend).*
+*(The frontend will be served locally and connect to the backend automatically).*
 
 ---
 
-## 🏗️ Stack Tecnológica
+## 🏗️ Tech Stack
 
-- **Frontend:** Next.js (React), Tailwind CSS, Shadcn/UI (Estética Premium Dark Mode B2B).
+- **Frontend:** Next.js (React), Tailwind CSS, Shadcn/UI (Premium Dark Mode B2B aesthetics).
 - **Backend:** Python, FastAPI.
-- **Processamento de Dados:** DuckDB e Polars (Agregação ultra-rápida em Parquet).
-- **Banco de Dados / Persistência:** SQLAlchemy.
-- **Orquestração de Inteligência Artificial:** LangGraph & LangChain.
-- **Empacotamento:** PyInstaller & PyWebView.
+- **Data Processing:** DuckDB and Polars (Ultra-fast aggregation in Parquet).
+- **Database / Persistence:** SQLAlchemy.
+- **Packaging:** PyInstaller & PyWebView.
 
-## 📄 Licença
+## 📄 License
 
-Este projeto é de código aberto e está licenciado sob a **GNU Affero General Public License v3.0 (AGPLv3)**.
-O uso, modificação e distribuição são permitidos, desde que todas as modificações ou serviços de rede derivados também sejam de código aberto sob a mesma licença. Esta licença garante a proteção do código enquanto o software é monetizado no modelo SaaS.
+This project is open-source and licensed under the **GNU Affero General Public License v3.0 (AGPLv3)**.
+Use, modification, and distribution are permitted as long as all modifications or derivative network services are also open-source under the same license. This license ensures code protection while the software is monetized under a SaaS model.
