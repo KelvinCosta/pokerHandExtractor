@@ -52,7 +52,7 @@ def main():
     build_type = "--onedir" if args.onedir else "--onefile"
     pyinstaller_command = (
         f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed {build_type} '
-        '--add-data "../frontend/out;frontend_out" '
+        f'--add-data "../frontend/out{os.pathsep}frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
         '--hidden-import "uvicorn.loops.auto" '
@@ -208,11 +208,12 @@ if __name__ == "__main__":
         spec_file.unlink()
         
     print("\n=== Build Concluída com Sucesso! ===")
+    exe_name = 'PokerApp.exe' if os.name == 'nt' else 'PokerApp'
     if args.onedir:
         print(f"O aplicativo está disponível em: {backend_dir / 'dist' / 'PokerApp'}")
-        print("Basta acessar a pasta e executar o PokerApp.exe!")
+        print(f"Basta acessar a pasta e executar o {exe_name}!")
     else:
-        print(f"O executável está disponível em: {backend_dir / 'dist' / 'PokerApp.exe'}")
+        print(f"O executável está disponível em: {backend_dir / 'dist' / exe_name}")
         print("Basta executar esse arquivo! Uma janela de aplicativo nativa se abrirá.")
 
 if __name__ == "__main__":
