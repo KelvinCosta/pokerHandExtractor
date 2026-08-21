@@ -1,3 +1,12 @@
 {
-  "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "KelvinCosta",
+      "id": 6100144,
+      "comment_id": 5371761585,
+      "created_at": "2026-08-21T15:16:27Z",
+      "repoId": 1225907442,
+      "pullRequestNo": 8
+    }
+  ]
 }
