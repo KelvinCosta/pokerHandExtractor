@@ -25,5 +25,5 @@ jobs:
           path-to-document: 'https://github.com/KelvinCosta/pokerHandExtractor/blob/master/CONTRIBUTING.md'
           branch: 'master'
           allowlist: 'bot*'
-          custom-notsigned-prcomment: '👋 Thank you for your contribution! To keep our project sustainable, we need you to accept our dual-licensing terms outlined in our `CONTRIBUTING.md` file.<br/><br/>Please sign the CLA by leaving a comment **exactly** with the text below in this PR:<br/><br/>`I have read the CLA Document and I hereby sign the CLA`'
+          custom-notsigned-prcomment: '👋 Thank you for your contribution! To keep our project sustainable, we need you to accept our dual-licensing terms outlined in our `CONTRIBUTING.md` file.<br/><br/>Please sign the CLA by leaving a comment **exactly** with the text below in this PR:<br/><br/>`I have read and signed the CLA. Thank you!`'
           custom-pr-sign-comment: 'I have read and signed the CLA. Thank you!'
