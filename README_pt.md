@@ -1,5 +1,6 @@
 # Poker Analytics & Behavioral Audit SaaS 🃏
 
+
 Um sistema avançado de **Business Intelligence (BI)** e **Auditoria Comportamental via Inteligência Artificial** focado no ecossistema do Poker Profissional (jogadores, times e *stables*). 
 
 Este software foi projetado para processar grandes volumes de históricos de mãos, encontrar vazamentos técnicos (*leaks*) de dinheiro, e utilizar agentes de IA para conduzir entrevistas psicológicas focadas em avaliar o nível de negação e vitimismo (*Tilt*) do jogador após períodos de perda (*downswings*).
