@@ -1,4 +1,4 @@
-# Poker Analytics & Behavioral Audit SaaS 🃏
+# Poker Analytics & Behavioral Audit SaaS 🃏 
 
 Um sistema avançado de **Business Intelligence (BI)** e **Auditoria Comportamental via Inteligência Artificial** focado no ecossistema do Poker Profissional (jogadores, times e *stables*). 
 
