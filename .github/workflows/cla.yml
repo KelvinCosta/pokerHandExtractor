@@ -23,7 +23,7 @@ jobs:
         with:
           path-to-signatures: '.github/signatures/version1/cla.json'
           path-to-document: 'https://github.com/KelvinCosta/pokerHandExtractor/blob/master/CONTRIBUTING.md'
-          branch: 'master'
+          branch: 'cla-signatures'
           allowlist: 'bot*'
           custom-notsigned-prcomment: '👋 Thank you for your contribution! To keep our project sustainable, we need you to accept our dual-licensing terms outlined in our `CONTRIBUTING.md` file.<br/><br/>Please sign the CLA by leaving a comment **exactly** with the text below in this PR:<br/><br/>`I have read and signed the CLA.`'
           custom-pr-sign-comment: 'I have read and signed the CLA.'
