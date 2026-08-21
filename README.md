@@ -4,6 +4,8 @@ An advanced **Business Intelligence (BI)** and **Behavioral Audit via Artificial
 
 This software was designed to process large volumes of hand histories, find technical leaks (money drains), and use AI agents to conduct psychological interviews focused on evaluating the player's level of denial and victimhood (Tilt) after losing periods (downswings).
 
+**[Click here to check the Supported Platforms](SUPPORTED_PLATFORMS.md)**
+
 ---
 
 ## 🎯 Key Features
