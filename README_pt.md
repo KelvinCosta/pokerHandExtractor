@@ -4,6 +4,8 @@ Um sistema avançado de **Business Intelligence (BI)** e **Auditoria Comportamen
 
 Este software foi projetado para processar grandes volumes de históricos de mãos, encontrar vazamentos técnicos (*leaks*) de dinheiro, e utilizar agentes de IA para conduzir entrevistas psicológicas focadas em avaliar o nível de negação e vitimismo (*Tilt*) do jogador após períodos de perda (*downswings*).
 
+**[Clique aqui para verificar as Plataformas Suportadas](SUPPORTED_PLATFORMS.md)**.
+
 ---
 
 ## 🎯 Principais Funcionalidades
