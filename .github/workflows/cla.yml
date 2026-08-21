@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "CLA Assistant"
-        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read and signed the CLA. Thank you!') || github.event_name == 'pull_request_target'
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read and signed the CLA.') || github.event_name == 'pull_request_target'
         uses: contributor-assistant/github-action@v2.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -25,5 +25,5 @@ jobs:
           path-to-document: 'https://github.com/KelvinCosta/pokerHandExtractor/blob/master/CONTRIBUTING.md'
           branch: 'master'
           allowlist: 'bot*'
-          custom-notsigned-prcomment: '👋 Thank you for your contribution! To keep our project sustainable, we need you to accept our dual-licensing terms outlined in our `CONTRIBUTING.md` file.<br/><br/>Please sign the CLA by leaving a comment **exactly** with the text below in this PR:<br/><br/>`I have read and signed the CLA. Thank you!`'
-          custom-pr-sign-comment: 'I have read and signed the CLA. Thank you!'
+          custom-notsigned-prcomment: '👋 Thank you for your contribution! To keep our project sustainable, we need you to accept our dual-licensing terms outlined in our `CONTRIBUTING.md` file.<br/><br/>Please sign the CLA by leaving a comment **exactly** with the text below in this PR:<br/><br/>`I have read and signed the CLA.`'
+          custom-pr-sign-comment: 'I have read and signed the CLA.'
