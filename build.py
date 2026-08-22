@@ -50,8 +50,23 @@ def main():
     
     # Monta o comando do pyinstaller
     build_type = "--onedir" if args.onedir else "--onefile"
+    
+    # 3.1 Cria imagem de splash (se não existir)
+    splash_image = backend_dir / "splash.png"
+    if not splash_image.exists():
+        print("\n=== Criando imagem de Splash temporária ===")
+        # Gera uma imagem simples usando Pillow
+        run_command(f'"{sys.executable}" -c "from PIL import Image, ImageDraw, ImageFont; img = Image.new(\'RGB\', (800, 450), color=\'#0f172a\'); d = ImageDraw.Draw(img); d.text((250, 200), \'Carregando PokerApp...\', fill=\'#3b82f6\'); img.save(\'splash.png\')"')
+        # Tenta mover, se falhar cria um arquivo de fallback silencioso (apenas para não quebrar o build se o PIL falhar)
+        if Path("splash.png").exists():
+            shutil.move("splash.png", splash_image)
+
     pyinstaller_command = (
         f'"{sys.executable}" -m PyInstaller --name PokerApp --clean --noconfirm --windowed {build_type} '
+        f'--splash splash.png '
+        f'--exclude-module pandas '
+        f'--exclude-module streamlit '
+        f'--exclude-module altair '
         f'--add-data "../frontend/out{os.pathsep}frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
@@ -136,51 +151,8 @@ if __name__ == "__main__":
     with open(log_path, "a", encoding="utf-8") as log_file:
         log_file.write("\\n--- Iniciando PokerApp ---\\n")
 
-    loading_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Carregando PokerApp...</title>
-        <style>
-            body {
-                background-color: #0f172a;
-                color: #f8fafc;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                font-family: system-ui, -apple-system, sans-serif;
-            }
-            .loader {
-                border: 4px solid #334155;
-                border-top: 4px solid #3b82f6;
-                border-radius: 50%;
-                width: 50px;
-                height: 50px;
-                animation: spin 1s linear infinite;
-                margin-bottom: 24px;
-            }
-            h2 { font-weight: 500; margin-bottom: 8px; }
-            p { color: #94a3b8; margin: 0; }
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="loader"></div>
-        <h2>Iniciando Poker Analytics Dashboard</h2>
-        <p>Carregando base de dados e componentes em memória...</p>
-    </body>
-    </html>
-    """
-
-    # Abre a janela nativa imediatamente com a tela de carregamento HTML
-    window = webview.create_window("Poker Analytics Dashboard", html=loading_html, width=1280, height=800)
+    # Abre a janela nativa
+    window = webview.create_window("Poker Analytics Dashboard", url="about:blank", width=1280, height=800)
 
     # Inicia o FastAPI em uma thread secundária
     server_thread = threading.Thread(target=start_server, daemon=True)
@@ -190,6 +162,13 @@ if __name__ == "__main__":
     monitor_thread = threading.Thread(target=check_and_redirect, args=(window,), daemon=True)
     monitor_thread.start()
     
+    # Tenta fechar o Splash Screen do PyInstaller agora que o backend iniciou a interface
+    try:
+        import pyi_splash
+        pyi_splash.close()
+    except Exception:
+        pass
+
     # Bloqueia o processo principal aqui até a janela ser fechada
     webview.start(debug=False)
     
