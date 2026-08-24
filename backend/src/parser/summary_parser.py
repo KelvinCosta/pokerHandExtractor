@@ -30,11 +30,25 @@ class SummaryParser:
 
     def _resolve_safe_path(self, filepath: str) -> Optional[str]:
         try:
-            resolved_path = Path(str(filepath)).expanduser().resolve(strict=False)
+            raw_value = str(filepath).strip()
+            candidate = Path(raw_value)
+
             if self.allowed_base_dir is not None:
-                base_dir = self.allowed_base_dir.resolve(strict=False)
-                if os.path.commonpath([str(base_dir), str(resolved_path)]) != str(base_dir):
+                base_dir = self.allowed_base_dir.resolve(strict=True)
+
+                # In constrained mode, reject explicit absolute/home-based inputs
+                # and always anchor relative inputs to the allowed base directory.
+                if raw_value.startswith("~") or candidate.is_absolute():
                     return None
+
+                resolved_path = (base_dir / candidate).resolve(strict=False)
+                try:
+                    resolved_path.relative_to(base_dir)
+                except ValueError:
+                    return None
+                return str(resolved_path)
+
+            resolved_path = candidate.expanduser().resolve(strict=False)
             return str(resolved_path)
         except Exception:
             return None
