@@ -79,8 +79,13 @@ async def upload_and_process(
         
     target_dir = bronze_dir / safe_platform / safe_hero_name
     target_dir.mkdir(parents=True, exist_ok=True)
+
+    resolved_bronze_dir = bronze_dir.resolve(strict=True)
+    resolved_target_dir = target_dir.resolve(strict=True)
+    if os.path.commonpath([str(resolved_bronze_dir), str(resolved_target_dir)]) != str(resolved_bronze_dir):
+        raise HTTPException(status_code=400, detail="Diretório de destino inválido")
     
-    summary_parser = SummaryParser(allowed_base_dir=str(target_dir))
+    summary_parser = SummaryParser(allowed_base_dir=str(resolved_target_dir))
     
     saved_files = []
     used_basenames = set()
