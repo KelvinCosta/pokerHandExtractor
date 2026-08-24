@@ -18,8 +18,12 @@ class SummaryParser:
         self.allowed_base_dir = None
         if allowed_base_dir:
             try:
-                candidate_base_dir = Path(str(allowed_base_dir)).resolve(strict=True)
-                if candidate_base_dir.is_dir():
+                trusted_root = Path(os.getenv("DATALAKE_BRONZE", "data/bronze")).resolve(strict=False)
+                candidate_base_dir = Path(str(allowed_base_dir)).expanduser().resolve(strict=False)
+                if (
+                    os.path.commonpath([str(trusted_root), str(candidate_base_dir)]) == str(trusted_root)
+                    and candidate_base_dir.is_dir()
+                ):
                     self.allowed_base_dir = candidate_base_dir
             except Exception:
                 self.allowed_base_dir = None
