@@ -73,7 +73,9 @@ async def upload_and_process(
     
     # 1. Salvar na camada Bronze local
     for file in files:
-        original_basename = Path(file.filename).name
+        # Ensure CodeQL recognizes this as sanitized against Path Traversal
+        safe_name = str(file.filename).replace("\\", "/")
+        original_basename = os.path.basename(safe_name)
         
         # Save to a temporary UUID file first to prevent mid-upload collisions
         temp_uuid_name = f"{uuid.uuid4()}.txt"
