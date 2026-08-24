@@ -15,7 +15,14 @@ class SummaryParser:
         self.re_tournament = re.compile(r"^Tournament #([0-9]+),")
         self.re_buyin = re.compile(r"^Buy-in:\s*(.*)")
         self.re_prize = re.compile(r"^You received a total of \$([0-9.,]+)")
-        self.allowed_base_dir = Path(allowed_base_dir).resolve() if allowed_base_dir else None
+        self.allowed_base_dir = None
+        if allowed_base_dir:
+            try:
+                candidate_base_dir = Path(str(allowed_base_dir)).resolve(strict=True)
+                if candidate_base_dir.is_dir():
+                    self.allowed_base_dir = candidate_base_dir
+            except Exception:
+                self.allowed_base_dir = None
 
     def _resolve_safe_path(self, filepath: str) -> Optional[str]:
         try:
