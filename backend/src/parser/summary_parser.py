@@ -27,12 +27,13 @@ class SummaryParser:
 
     def is_summary_file(self, filepath: str) -> bool:
         """Verifica se o arquivo é um Tournament Summary (geralmente bem pequeno)"""
+        safe_path = os.path.abspath(str(filepath))
         try:
             # Se o arquivo for muito grande, não é um summary
-            if os.path.getsize(filepath) > 5000:
+            if not os.path.exists(safe_path) or os.path.getsize(safe_path) > 5000:
                 return False
                 
-            with open(filepath, "r", encoding="utf-8-sig") as f:
+            with open(safe_path, "r", encoding="utf-8-sig") as f:
                 first_line = f.readline().strip()
                 # O summary sempre começa com "Tournament #"
                 return first_line.startswith("Tournament #")
@@ -40,12 +41,16 @@ class SummaryParser:
             return False
 
     def parse_file(self, filepath: str) -> Optional[TournamentSummary]:
+        safe_path = os.path.abspath(str(filepath))
+        if not os.path.exists(safe_path):
+            return None
+            
         try:
             t_id = None
             buy_in = 0.0
             prize = 0.0
             
-            with open(filepath, "r", encoding="utf-8-sig") as f:
+            with open(safe_path, "r", encoding="utf-8-sig") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
