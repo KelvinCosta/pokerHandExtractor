@@ -71,7 +71,8 @@ def main():
     args = parser.parse_args()
     
     bronze_dir = Path(os.getenv("DATALAKE_BRONZE"))
-    silver_dir = Path(os.getenv("DATALAKE_SILVER")) / args.user_id
+    safe_user_id = os.path.basename(str(args.user_id))
+    silver_dir = Path(os.getenv("DATALAKE_SILVER")) / safe_user_id
     
     bronze_dir.mkdir(parents=True, exist_ok=True)
     silver_dir.mkdir(parents=True, exist_ok=True)

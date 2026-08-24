@@ -47,7 +47,7 @@ async def upload_and_process(
     if not files:
         raise HTTPException(status_code=400, detail="Nenhum arquivo enviado")
 
-    user_id = str(current_user.id)
+    user_id = os.path.basename(str(current_user.id))
     
     bronze_dir = Path(os.getenv("DATALAKE_BRONZE", "data/bronze")) / user_id
     silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / user_id
@@ -57,7 +57,13 @@ async def upload_and_process(
     
     migrate_bronze_layer(bronze_dir)
     
-    target_dir = bronze_dir / platform.lower() / hero_name
+    safe_platform = os.path.basename(platform.replace("\\", "/").lower())
+    safe_hero_name = os.path.basename(hero_name.replace("\\", "/"))
+    
+    if not safe_platform or not safe_hero_name:
+        raise HTTPException(status_code=400, detail="Plataforma ou nome de herói inválidos")
+        
+    target_dir = bronze_dir / safe_platform / safe_hero_name
     target_dir.mkdir(parents=True, exist_ok=True)
     
     summary_parser = SummaryParser()
@@ -180,7 +186,7 @@ async def upload_and_process(
 @router.get("/processed")
 async def get_processed_files(current_user: User = Depends(get_current_user)):
     try:
-        silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / str(current_user.id)
+        silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / os.path.basename(str(current_user.id))
         
         # Check version
         try:
@@ -213,7 +219,7 @@ async def reprocess_datalake(current_user: User = Depends(get_current_user)):
     from src.parser.tokenizer import TokenizerFactory
     from src.fsm.states import InitState
     
-    user_id = str(current_user.id)
+    user_id = os.path.basename(str(current_user.id))
     ETL_VERSION = CURRENT_ETL_VERSION
     
     bronze_dir = Path(os.getenv("DATALAKE_BRONZE", "data/bronze")) / user_id
