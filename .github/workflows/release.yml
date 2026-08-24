@@ -51,13 +51,23 @@ jobs:
       - name: Build Application
         run: python build.py
         
+      - name: Zip Build (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path backend/dist/PokerApp -DestinationPath PokerApp-Windows.zip
+
+      - name: Zip Build (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cd backend/dist
+          zip -r ../../PokerApp-Linux.zip PokerApp
+          
       - name: Create Release and Upload Asset
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           files: |
-            backend/dist/PokerApp.exe
-            backend/dist/PokerApp
+            PokerApp-Windows.zip
+            PokerApp-Linux.zip
           fail_on_unmatched_files: false
           generate_release_notes: true
         env:
