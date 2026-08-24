@@ -144,7 +144,8 @@ def _load_user_datalake(user_id: str) -> dict:
             return _DATALAKE_CACHE[user_id]
 
         try:
-            silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / str(user_id)
+            safe_user_id = os.path.basename(str(user_id))
+            silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / safe_user_id
             parquet_files = list(silver_dir.glob("hands_part_*.parquet"))
             
             if not parquet_files:
