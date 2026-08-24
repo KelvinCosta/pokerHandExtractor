@@ -1,5 +1,4 @@
 import os
-import re
 import shutil
 import tempfile
 import uuid
@@ -21,30 +20,6 @@ from src.api.dependencies import invalidate_cache
 CURRENT_ETL_VERSION = "v6.00"
 
 router = APIRouter(prefix="/api/etl", tags=["ETL Upload"])
-
-def _sanitize_path_component(value: str, field_name: str, lowercase: bool = False) -> str:
-    normalized = str(value).strip()
-    if lowercase:
-        normalized = normalized.lower()
-
-    if not normalized or normalized in {".", ".."}:
-        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
-
-    if "/" in normalized or "\\" in normalized:
-        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
-
-    if not re.fullmatch(r"[A-Za-z0-9_-]+", normalized):
-        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
-
-    return normalized
-
-def _safe_child_dir(base_dir: Path, *components: str) -> Path:
-    resolved_base = base_dir.resolve(strict=True)
-    candidate = resolved_base.joinpath(*components)
-    resolved_candidate = candidate.resolve(strict=False)
-    if os.path.commonpath([str(resolved_base), str(resolved_candidate)]) != str(resolved_base):
-        raise HTTPException(status_code=400, detail="Diretório de destino inválido")
-    return resolved_candidate
 
 def migrate_bronze_layer(bronze_dir: Path):
     """
@@ -82,23 +57,23 @@ async def upload_and_process(
     
     migrate_bronze_layer(bronze_dir)
     
-    safe_platform = _sanitize_path_component(platform, "Plataforma", lowercase=True)
-    safe_hero_name = _sanitize_path_component(hero_name, "Nome de herói")
-
-    resolved_bronze_dir = bronze_dir.resolve(strict=True)
-    resolved_target_dir = _safe_child_dir(resolved_bronze_dir, safe_platform, safe_hero_name)
-    resolved_target_dir.mkdir(parents=True, exist_ok=True)
-
-    summary_parser = SummaryParser(allowed_base_dir=str(resolved_target_dir))
+    safe_platform = os.path.basename(platform.replace("\\", "/").lower())
+    safe_hero_name = os.path.basename(hero_name.replace("\\", "/"))
+    
+    if not safe_platform or not safe_hero_name:
+        raise HTTPException(status_code=400, detail="Plataforma ou nome de herói inválidos")
+        
+    target_dir = bronze_dir / safe_platform / safe_hero_name
+    target_dir.mkdir(parents=True, exist_ok=True)
+    
+    summary_parser = SummaryParser()
     
     saved_files = []
     used_basenames = set()
     
     # 1. Salvar na camada Bronze local
     for file in files:
-        # Ensure CodeQL recognizes this as sanitized against Path Traversal
-        safe_name = str(file.filename).replace("\\", "/")
-        original_basename = os.path.basename(safe_name)
+        original_basename = Path(file.filename).name
         
         # Save to a temporary UUID file first to prevent mid-upload collisions
         temp_uuid_name = f"{uuid.uuid4()}.txt"
@@ -170,7 +145,7 @@ async def upload_and_process(
         
     tokenizer = TokenizerFactory.get_tokenizer(platform, hero_name=hero_name)
     initial_state = InitState(platform=platform, hero_name=hero_name)
-    summary_parser = SummaryParser(allowed_base_dir=str(target_dir))
+    summary_parser = SummaryParser()
     
     summaries_to_save = []
     hands_files_to_process = []
