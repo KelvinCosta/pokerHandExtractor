@@ -60,5 +60,6 @@ jobs:
             backend/dist/PokerApp
           fail_on_unmatched_files: false
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-test') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
