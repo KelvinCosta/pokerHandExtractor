@@ -1,5 +1,6 @@
 import re
 import os
+from pathlib import Path
 from typing import Optional, Dict
 from pydantic import BaseModel
 
@@ -10,10 +11,48 @@ class TournamentSummary(BaseModel):
     source_file: str
 
 class SummaryParser:
-    def __init__(self):
+    def __init__(self, allowed_base_dir: Optional[str] = None):
         self.re_tournament = re.compile(r"^Tournament #([0-9]+),")
         self.re_buyin = re.compile(r"^Buy-in:\s*(.*)")
         self.re_prize = re.compile(r"^You received a total of \$([0-9.,]+)")
+        self.allowed_base_dir = None
+        if allowed_base_dir:
+            try:
+                trusted_root = Path(os.getenv("DATALAKE_BRONZE", "data/bronze")).resolve(strict=False)
+                candidate_base_dir = Path(str(allowed_base_dir)).expanduser().resolve(strict=False)
+                if (
+                    os.path.commonpath([str(trusted_root), str(candidate_base_dir)]) == str(trusted_root)
+                    and candidate_base_dir.is_dir()
+                ):
+                    self.allowed_base_dir = candidate_base_dir
+            except Exception:
+                self.allowed_base_dir = None
+
+    def _resolve_safe_path(self, filepath: str) -> Optional[str]:
+        try:
+            raw_value = str(filepath).strip()
+            candidate = Path(raw_value).expanduser()
+
+            if self.allowed_base_dir is not None:
+                base_dir = self.allowed_base_dir.resolve(strict=True)
+
+                # In constrained mode, always resolve to a canonical absolute path
+                # and enforce that it stays inside the allowed base directory.
+                if candidate.is_absolute():
+                    resolved_path = candidate.resolve(strict=False)
+                else:
+                    resolved_path = (base_dir / candidate).resolve(strict=False)
+
+                try:
+                    resolved_path.relative_to(base_dir)
+                except ValueError:
+                    return None
+                return str(resolved_path)
+
+            resolved_path = candidate.resolve(strict=False)
+            return str(resolved_path)
+        except Exception:
+            return None
 
     def _safe_float(self, val_str: str) -> float:
         # Remover ponto final (caso a frase termine com ponto, ex: "$0.5.")
@@ -27,12 +66,15 @@ class SummaryParser:
 
     def is_summary_file(self, filepath: str) -> bool:
         """Verifica se o arquivo é um Tournament Summary (geralmente bem pequeno)"""
+        safe_path = self._resolve_safe_path(filepath)
+        if not safe_path:
+            return False
         try:
             # Se o arquivo for muito grande, não é um summary
-            if os.path.getsize(filepath) > 5000:
+            if not os.path.isfile(safe_path) or os.path.getsize(safe_path) > 5000:
                 return False
                 
-            with open(filepath, "r", encoding="utf-8-sig") as f:
+            with open(safe_path, "r", encoding="utf-8-sig") as f:
                 first_line = f.readline().strip()
                 # O summary sempre começa com "Tournament #"
                 return first_line.startswith("Tournament #")
@@ -40,12 +82,16 @@ class SummaryParser:
             return False
 
     def parse_file(self, filepath: str) -> Optional[TournamentSummary]:
+        safe_path = self._resolve_safe_path(filepath)
+        if not safe_path or not os.path.isfile(safe_path):
+            return None
+            
         try:
             t_id = None
             buy_in = 0.0
             prize = 0.0
             
-            with open(filepath, "r", encoding="utf-8-sig") as f:
+            with open(safe_path, "r", encoding="utf-8-sig") as f:
                 for line in f:
                     line = line.strip()
                     if not line:
