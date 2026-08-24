@@ -19,9 +19,11 @@ class SummaryParser:
 
     def _resolve_safe_path(self, filepath: str) -> Optional[str]:
         try:
-            resolved_path = Path(str(filepath)).resolve()
+            resolved_path = Path(str(filepath)).expanduser().resolve(strict=False)
             if self.allowed_base_dir is not None:
-                resolved_path.relative_to(self.allowed_base_dir)
+                base_dir = self.allowed_base_dir.resolve(strict=False)
+                if os.path.commonpath([str(base_dir), str(resolved_path)]) != str(base_dir):
+                    return None
             return str(resolved_path)
         except Exception:
             return None
@@ -43,7 +45,7 @@ class SummaryParser:
             return False
         try:
             # Se o arquivo for muito grande, não é um summary
-            if not os.path.exists(safe_path) or os.path.getsize(safe_path) > 5000:
+            if not os.path.isfile(safe_path) or os.path.getsize(safe_path) > 5000:
                 return False
                 
             with open(safe_path, "r", encoding="utf-8-sig") as f:
@@ -55,7 +57,7 @@ class SummaryParser:
 
     def parse_file(self, filepath: str) -> Optional[TournamentSummary]:
         safe_path = self._resolve_safe_path(filepath)
-        if not safe_path or not os.path.exists(safe_path):
+        if not safe_path or not os.path.isfile(safe_path):
             return None
             
         try:
