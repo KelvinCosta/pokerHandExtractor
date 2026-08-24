@@ -66,7 +66,7 @@ async def upload_and_process(
     target_dir = bronze_dir / safe_platform / safe_hero_name
     target_dir.mkdir(parents=True, exist_ok=True)
     
-    summary_parser = SummaryParser()
+    summary_parser = SummaryParser(allowed_base_dir=str(target_dir))
     
     saved_files = []
     used_basenames = set()

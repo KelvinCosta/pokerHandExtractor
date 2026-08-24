@@ -1,5 +1,6 @@
 import re
 import os
+from pathlib import Path
 from typing import Optional, Dict
 from pydantic import BaseModel
 
@@ -10,10 +11,20 @@ class TournamentSummary(BaseModel):
     source_file: str
 
 class SummaryParser:
-    def __init__(self):
+    def __init__(self, allowed_base_dir: Optional[str] = None):
         self.re_tournament = re.compile(r"^Tournament #([0-9]+),")
         self.re_buyin = re.compile(r"^Buy-in:\s*(.*)")
         self.re_prize = re.compile(r"^You received a total of \$([0-9.,]+)")
+        self.allowed_base_dir = Path(allowed_base_dir).resolve() if allowed_base_dir else None
+
+    def _resolve_safe_path(self, filepath: str) -> Optional[str]:
+        try:
+            resolved_path = Path(str(filepath)).resolve()
+            if self.allowed_base_dir is not None:
+                resolved_path.relative_to(self.allowed_base_dir)
+            return str(resolved_path)
+        except Exception:
+            return None
 
     def _safe_float(self, val_str: str) -> float:
         # Remover ponto final (caso a frase termine com ponto, ex: "$0.5.")
@@ -27,7 +38,9 @@ class SummaryParser:
 
     def is_summary_file(self, filepath: str) -> bool:
         """Verifica se o arquivo é um Tournament Summary (geralmente bem pequeno)"""
-        safe_path = os.path.abspath(str(filepath))
+        safe_path = self._resolve_safe_path(filepath)
+        if not safe_path:
+            return False
         try:
             # Se o arquivo for muito grande, não é um summary
             if not os.path.exists(safe_path) or os.path.getsize(safe_path) > 5000:
@@ -41,8 +54,8 @@ class SummaryParser:
             return False
 
     def parse_file(self, filepath: str) -> Optional[TournamentSummary]:
-        safe_path = os.path.abspath(str(filepath))
-        if not os.path.exists(safe_path):
+        safe_path = self._resolve_safe_path(filepath)
+        if not safe_path or not os.path.exists(safe_path):
             return None
             
         try:
