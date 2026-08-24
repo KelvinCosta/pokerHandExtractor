@@ -38,6 +38,14 @@ def _sanitize_path_component(value: str, field_name: str, lowercase: bool = Fals
 
     return normalized
 
+def _safe_child_dir(base_dir: Path, *components: str) -> Path:
+    resolved_base = base_dir.resolve(strict=True)
+    candidate = resolved_base.joinpath(*components)
+    resolved_candidate = candidate.resolve(strict=False)
+    if os.path.commonpath([str(resolved_base), str(resolved_candidate)]) != str(resolved_base):
+        raise HTTPException(status_code=400, detail="Diretório de destino inválido")
+    return resolved_candidate
+
 def migrate_bronze_layer(bronze_dir: Path):
     """
     Migrates flat files in the bronze directory to a hierarchical structure:
@@ -76,15 +84,11 @@ async def upload_and_process(
     
     safe_platform = _sanitize_path_component(platform, "Plataforma", lowercase=True)
     safe_hero_name = _sanitize_path_component(hero_name, "Nome de herói")
-        
-    target_dir = bronze_dir / safe_platform / safe_hero_name
-    target_dir.mkdir(parents=True, exist_ok=True)
 
     resolved_bronze_dir = bronze_dir.resolve(strict=True)
-    resolved_target_dir = target_dir.resolve(strict=True)
-    if os.path.commonpath([str(resolved_bronze_dir), str(resolved_target_dir)]) != str(resolved_bronze_dir):
-        raise HTTPException(status_code=400, detail="Diretório de destino inválido")
-    
+    resolved_target_dir = _safe_child_dir(resolved_bronze_dir, safe_platform, safe_hero_name)
+    resolved_target_dir.mkdir(parents=True, exist_ok=True)
+
     summary_parser = SummaryParser(allowed_base_dir=str(resolved_target_dir))
     
     saved_files = []
