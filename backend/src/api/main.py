@@ -54,7 +54,7 @@ if getattr(sys, 'frozen', False):
     frontend_dir = os.path.join(sys._MEIPASS, "frontend_out")
 else:
     # Normal execution
-    frontend_dir = os.path.join(os.path.dirname(__file__), "../../../frontend/out")
+    frontend_dir = str((root_dir.parent / "frontend" / "out").resolve())
 
 if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

@@ -67,7 +67,7 @@ def main():
         f'--exclude-module pandas '
         f'--exclude-module streamlit '
         f'--exclude-module altair '
-        f'--add-data "../frontend/out{os.pathsep}frontend_out" '
+        f'--add-data "{frontend_out.resolve()}{os.pathsep}frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
         '--hidden-import "uvicorn.loops.auto" '
