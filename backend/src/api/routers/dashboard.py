@@ -718,8 +718,7 @@ def debug_tournaments_dup(user_id: str = "335f7c35-320e-4671-a90e-e57062792e5a")
             "prefixes": prefixes
         }
     except Exception as e:
-        import traceback
-        return {"error": str(e), "trace": traceback.format_exc()}
+        return {"error": str(e)}
 
 
 @router.post("/ranges")
@@ -801,8 +800,7 @@ def get_ranges(filters: DashboardFilters, user_id: str = "335f7c35-320e-4671-a90
         }
         
     except Exception as e:
-        import traceback
-        return {"error": str(e), "trace": traceback.format_exc()}
+        return {"error": str(e)}
 
 # trigger 3
 
