@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="Build script for PokerApp")
     parser.add_argument("--skip-frontend", action="store_true", help="Pula o build do frontend (Next.js)")
     parser.add_argument("--skip-deps", action="store_true", help="Pula a instalação de dependências (pnpm e pip)")
-    parser.add_argument("--onefile", action="store_true", help="Gera um único .exe em vez de uma pasta (Atenção: Pode causar falso-positivo em antivírus)")
+    parser.add_argument("--onedir", action="store_true", help="Gera uma pasta com os arquivos em vez de um único .exe (Build muito mais rápido e inicialização instantânea do app)")
     args = parser.parse_args()
 
     root_dir = Path(__file__).resolve().parent
@@ -49,7 +49,7 @@ def main():
     print("\n=== Empacotando Backend + Frontend (PyInstaller) ===")
     
     # Monta o comando do pyinstaller
-    build_type = "--onefile" if args.onefile else "--onedir"
+    build_type = "--onedir" if args.onedir else "--onefile"
     
     # 3.1 Cria imagem de splash (se não existir)
     splash_image = backend_dir / "splash.png"
@@ -67,9 +67,6 @@ def main():
         f'--exclude-module pandas '
         f'--exclude-module streamlit '
         f'--exclude-module altair '
-        f'--collect-all pythonnet '
-        f'--collect-all clr_loader '
-        f'--collect-all pywebview '
         f'--add-data "{frontend_out.resolve()}{os.pathsep}frontend_out" '
         '--hidden-import "uvicorn.logging" '
         '--hidden-import "uvicorn.loops" '
@@ -191,12 +188,12 @@ if __name__ == "__main__":
         
     print("\n=== Build Concluída com Sucesso! ===")
     exe_name = 'PokerApp.exe' if os.name == 'nt' else 'PokerApp'
-    if args.onefile:
+    if args.onedir:
+        print(f"O aplicativo está disponível em: {backend_dir / 'dist' / 'PokerApp'}")
+        print(f"Basta acessar a pasta e executar o {exe_name}!")
+    else:
         print(f"O executável está disponível em: {backend_dir / 'dist' / exe_name}")
         print("Basta executar esse arquivo! Uma janela de aplicativo nativa se abrirá.")
-    else:
-        print(f"O aplicativo está disponível em: {backend_dir / 'dist' / 'PokerApp'}")
-        print(f"Basta acessar a pasta (zipá-la para enviar aos usuários) e executar o {exe_name}!")
 
 if __name__ == "__main__":
     main()
