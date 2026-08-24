@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -20,6 +21,22 @@ from src.api.dependencies import invalidate_cache
 CURRENT_ETL_VERSION = "v6.00"
 
 router = APIRouter(prefix="/api/etl", tags=["ETL Upload"])
+
+def _sanitize_path_component(value: str, field_name: str, lowercase: bool = False) -> str:
+    normalized = str(value).strip()
+    if lowercase:
+        normalized = normalized.lower()
+
+    if not normalized or normalized in {".", ".."}:
+        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
+
+    if "/" in normalized or "\\" in normalized:
+        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
+
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", normalized):
+        raise HTTPException(status_code=400, detail=f"{field_name} inválido")
+
+    return normalized
 
 def migrate_bronze_layer(bronze_dir: Path):
     """
@@ -57,11 +74,8 @@ async def upload_and_process(
     
     migrate_bronze_layer(bronze_dir)
     
-    safe_platform = os.path.basename(platform.replace("\\", "/").lower())
-    safe_hero_name = os.path.basename(hero_name.replace("\\", "/"))
-    
-    if not safe_platform or not safe_hero_name:
-        raise HTTPException(status_code=400, detail="Plataforma ou nome de herói inválidos")
+    safe_platform = _sanitize_path_component(platform, "Plataforma", lowercase=True)
+    safe_hero_name = _sanitize_path_component(hero_name, "Nome de herói")
         
     target_dir = bronze_dir / safe_platform / safe_hero_name
     target_dir.mkdir(parents=True, exist_ok=True)
