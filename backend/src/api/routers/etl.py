@@ -161,7 +161,7 @@ async def upload_and_process(
         
     tokenizer = TokenizerFactory.get_tokenizer(platform, hero_name=hero_name)
     initial_state = InitState(platform=platform, hero_name=hero_name)
-    summary_parser = SummaryParser()
+    summary_parser = SummaryParser(allowed_base_dir=str(target_dir))
     
     summaries_to_save = []
     hands_files_to_process = []
