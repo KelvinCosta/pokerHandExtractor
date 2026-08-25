@@ -38,7 +38,7 @@ def migrate_bronze_layer(bronze_dir: Path):
                 print(f"Error moving legacy file {f.name}: {e}")
 
 @router.post("/upload")
-async def upload_and_process(
+def upload_and_process(
     platform: str = Form(...),
     hero_name: str = Form(...),
     files: List[UploadFile] = File(...),
@@ -184,7 +184,7 @@ async def upload_and_process(
     }
 
 @router.get("/processed")
-async def get_processed_files(current_user: User = Depends(get_current_user)):
+def get_processed_files(current_user: User = Depends(get_current_user)):
     try:
         silver_dir = Path(os.getenv("DATALAKE_SILVER", "data/silver")) / os.path.basename(str(current_user.id))
         
@@ -208,7 +208,7 @@ async def get_processed_files(current_user: User = Depends(get_current_user)):
         return {"processed": [], "version_mismatch": False}
 
 @router.post("/reprocess")
-async def reprocess_datalake(current_user: User = Depends(get_current_user)):
+def reprocess_datalake(current_user: User = Depends(get_current_user)):
     """
     Reads all raw files from the local Bronze layer and rebuilds the Silver layer.
     Used when the ETL schema changes (e.g., adding hole cards).
