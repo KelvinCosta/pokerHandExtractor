@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/dashboard", tags=["Dashboard BI"])
 from ..dependencies import _load_user_datalake
 
 @router.post("/metadata")
-async def get_dashboard_metadata(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_dashboard_metadata(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     cache_entry = _load_user_datalake(current_user.id)
     df = cache_entry.get("df_hands")
     
@@ -55,7 +55,7 @@ async def get_dashboard_metadata(filters: DashboardFilters, current_user: User =
     }
 
 @router.get("/hand/{hand_id}")
-async def get_hand_details(hand_id: str, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_hand_details(hand_id: str, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     cache_entry = _load_user_datalake(current_user.id)
     df = cache_entry.get("df_hands")
     
@@ -75,7 +75,7 @@ async def get_hand_details(hand_id: str, current_user: User = Depends(get_curren
     return hand_dict
 
 @router.post("/health")
-async def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_health_metrics(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     from src.api.dependencies import get_filtered_tournaments_df
     
     df = get_filtered_hands_df(filters, current_user)
@@ -126,7 +126,7 @@ async def get_health_metrics(filters: DashboardFilters, current_user: User = Dep
     }
 
 @router.post("/health/stake-breakdown")
-async def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_stake_breakdown(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return []
@@ -176,7 +176,7 @@ async def get_stake_breakdown(filters: DashboardFilters, current_user: User = De
     return result
 
 @router.post("/preflop")
-async def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_preflop_chart(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_hands_df(filters, current_user)
     if df.height == 0:
         return {
@@ -207,7 +207,7 @@ async def get_preflop_chart(filters: DashboardFilters, current_user: User = Depe
     }
 
 @router.post("/profit-trend")
-async def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_profit_trend(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     from src.api.dependencies import get_filtered_tournaments_df
     
     df = get_filtered_hands_df(filters, current_user)
@@ -267,7 +267,7 @@ async def get_profit_trend(filters: DashboardFilters, current_user: User = Depen
     ]).to_dicts()
 
 @router.post("/monthly-profit")
-async def get_monthly_profit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_monthly_profit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     from src.api.dependencies import get_filtered_tournaments_df
     
     df = get_filtered_hands_df(filters, current_user)
@@ -312,7 +312,7 @@ async def get_monthly_profit(filters: DashboardFilters, current_user: User = Dep
     return monthly_df.to_dicts()
 
 @router.post("/analytics")
-async def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_analytics_bento(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
@@ -382,7 +382,7 @@ async def get_analytics_bento(filters: DashboardFilters, current_user: User = De
     }
 
 @router.post("/engines/postflop")
-async def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_postflop_engines(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {
@@ -448,7 +448,7 @@ async def get_postflop_engines(filters: DashboardFilters, current_user: User = D
 from ..schemas.filters import DashboardFilters, HandsListFilters
 
 @router.post("/hands")
-async def get_hands_list(filters: HandsListFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_hands_list(filters: HandsListFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return {"data": [], "total": 0, "page": filters.page, "limit": filters.limit}
@@ -519,7 +519,7 @@ async def get_hands_list(filters: HandsListFilters, current_user: User = Depends
     }
 
 @router.post("/engines/action-distribution")
-async def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_action_distribution(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
@@ -575,7 +575,7 @@ async def get_action_distribution(filters: DashboardFilters, current_user: User 
     return result
 
 @router.post("/biggest-rivals")
-async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_biggest_rivals(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     df = get_filtered_df(filters, current_user)
     if df.height == 0:
         return []
@@ -653,7 +653,7 @@ async def get_biggest_rivals(filters: DashboardFilters, current_user: User = Dep
     return result
 
 @router.post("/tournaments")
-async def get_tournaments_list(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
+def get_tournaments_list(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> List[Dict[str, Any]]:
     from src.api.dependencies import get_filtered_tournaments_df
     
     df_t = get_filtered_tournaments_df(filters, current_user)
@@ -766,7 +766,7 @@ class HandNoteRequest(BaseModel):
     note: str
 
 @router.get("/hand/{hand_id}/note")
-async def get_hand_note(hand_id: str, current_user: User = Depends(get_current_user)):
+def get_hand_note(hand_id: str, current_user: User = Depends(get_current_user)):
     from src.database.models import get_session, HandNoteRecord
     db = get_session()
     try:
@@ -776,7 +776,7 @@ async def get_hand_note(hand_id: str, current_user: User = Depends(get_current_u
         db.close()
 
 @router.post("/hand/{hand_id}/note")
-async def save_hand_note(hand_id: str, req: HandNoteRequest, current_user: User = Depends(get_current_user)):
+def save_hand_note(hand_id: str, req: HandNoteRequest, current_user: User = Depends(get_current_user)):
     from src.database.models import get_session, HandNoteRecord
     import uuid
     db = get_session()
@@ -801,7 +801,7 @@ class VillainNoteRequest(BaseModel):
     note: str
 
 @router.get("/villains/{player}/tag")
-async def get_villain_tag(player: str, current_user: User = Depends(get_current_user)):
+def get_villain_tag(player: str, current_user: User = Depends(get_current_user)):
     from src.database.models import get_session, VillainNoteRecord
     db = get_session()
     try:
@@ -811,7 +811,7 @@ async def get_villain_tag(player: str, current_user: User = Depends(get_current_
         db.close()
 
 @router.post("/villains/{player}/tag")
-async def save_villain_tag(player: str, req: VillainNoteRequest, current_user: User = Depends(get_current_user)):
+def save_villain_tag(player: str, req: VillainNoteRequest, current_user: User = Depends(get_current_user)):
     from src.database.models import get_session, VillainNoteRecord
     import uuid
     db = get_session()
@@ -833,7 +833,7 @@ async def save_villain_tag(player: str, req: VillainNoteRequest, current_user: U
         db.close()
 
 @router.post("/engines/cbet-textures")
-async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_cbet_textures(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     from src.api.dependencies import get_filtered_df, get_filtered_hands_df
     df = get_filtered_df(filters, current_user)
     df_hands = get_filtered_hands_df(filters, current_user)
@@ -944,7 +944,7 @@ async def get_cbet_textures(filters: DashboardFilters, current_user: User = Depe
     }
 
 @router.post("/engines/river-audit")
-async def get_river_audit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+def get_river_audit(filters: DashboardFilters, current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
     from src.api.dependencies import get_filtered_df, get_filtered_hands_df
     df = get_filtered_df(filters, current_user)
     df_hands = get_filtered_hands_df(filters, current_user)

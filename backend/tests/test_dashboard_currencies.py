@@ -1,7 +1,6 @@
 import pytest
 import polars as pl
 from unittest.mock import patch, MagicMock
-import asyncio
 
 # Vamos mockar o DataFrame retornado pelos filtros para simular um cenário onde
 # o usuário jogou torneios (lucro em fichas) e cash games (lucro em dólares).
@@ -35,7 +34,7 @@ def test_stake_breakdown_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = asyncio.run(get_stake_breakdown(filters, user))
+    result = get_stake_breakdown(filters, user)
     
     # Devemos ter 2 stakes: "Tournament" e "NL100"
     assert len(result) == 2
@@ -63,7 +62,7 @@ def test_biggest_rivals_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = asyncio.run(get_biggest_rivals(filters, user))
+    result = get_biggest_rivals(filters, user)
     
     # Devemos ter 2 vilões: "Vilao" e "Outro"
     assert len(result) == 2
@@ -91,7 +90,7 @@ def test_analytics_currencies(mock_get_filtered, mock_df):
     filters = DashboardFilters()
     user = User(id="test_user")
     
-    result = asyncio.run(get_analytics_bento(filters, user))
+    result = get_analytics_bento(filters, user)
     
     # O mock_df original não tem lógica avançada de WTSD, WWSF (requer action_type específicos), 
     # mas a red line profit por padrão agrupa tudo se hero_went_to_sd estiver vazio.
