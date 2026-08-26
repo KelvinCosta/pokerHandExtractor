@@ -10,7 +10,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from extractor import process_stream, main
-from src.parser.tokenizer import GGPokerTokenizer
+from src.parser.tokenizers.ggpoker import GGPokerTokenizer
 from src.domain.models import ActionType
 from src.fsm.states import InitState
 
