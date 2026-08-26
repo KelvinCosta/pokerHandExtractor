@@ -197,6 +197,9 @@ export function ImportView() {
                 className="w-full rounded-lg border border-input bg-zinc-900/60 px-3 py-2 text-sm text-foreground outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20"
               >
                 <option value="ggpoker">GGPoker</option>
+                <option value="pokerstars">PokerStars</option>
+                <option value="partypoker">PartyPoker</option>
+                <option value="ipoker">iPoker Network</option>
               </select>
             </div>
             <div className="space-y-1.5">
@@ -234,7 +237,7 @@ export function ImportView() {
                 {" "}·{" "}
                 <label htmlFor="dir-upload" className="cursor-pointer font-semibold text-primary hover:underline">select folder</label>
               </p>
-              <p className="mt-1 font-mono text-[10px] text-muted-foreground/40">GGPoker .txt format</p>
+              <p className="mt-1 font-mono text-[10px] text-muted-foreground/40">{platform.toUpperCase()} .txt format</p>
               <input id="file-upload" type="file" multiple className="hidden" onChange={handleFileChange} />
               {/* @ts-ignore */}
               <input id="dir-upload" type="file" multiple webkitdirectory="true" className="hidden" onChange={handleFileChange} />
